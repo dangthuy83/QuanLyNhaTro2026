@@ -14,6 +14,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
 | Database | Đã chạy app với MySQL thật; smoke test flow lõi, dịch vụ/chỉ số, chuyển phòng, trả phòng và UI nhập chỉ số theo phòng thành công |
+| GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
 ### Việc cần làm tiếp
@@ -28,6 +29,12 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 6 | In phiếu thu HTML | `window.print()` và CSS print | Trung bình |
 | 7 | Xử lý các rủi ro trong `PROJECT_REVIEW.md` | Tiếp theo: ledger cọc/công nợ, UI nhập chỉ số hàng loạt/preview chốt hóa đơn | Cao |
 | 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
+
+### Quy ước GitHub
+
+- Remote chuẩn của dự án là `origin = https://github.com/dangthuy83/QuanLyNhaTro2026.git`.
+- Khi có thay đổi code hoặc tài liệu đáng kể và đã xác nhận xong, commit rồi push lên `origin/main` để đồng bộ lịch sử làm việc.
+- Nếu thay đổi chỉ mang tính thử nghiệm hoặc local tạm thời, giữ lại ở workspace cho đến khi chốt.
 
 ### Bug cũ đã xác nhận không còn trong backlog
 

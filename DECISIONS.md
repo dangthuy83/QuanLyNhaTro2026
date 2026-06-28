@@ -29,8 +29,15 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 | Tech stack | .NET 8 MVC, Dapper, MySqlConnector, ClosedXML, Bootstrap 5, MySQL |
 | Ngôn ngữ giao diện | Tiếng Việt |
 | Database chuẩn | `Database/schema.sql` |
+| GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định mới nhất | Khi code và schema lệch nhau, lấy `Database/schema.sql` làm nguồn chuẩn, trừ khi có yêu cầu migration schema rõ ràng |
 | Review nghiệp vụ/kỹ thuật | `PROJECT_REVIEW.md` là backlog phân tích rủi ro cần đọc trước khi sửa module hóa đơn, chỉ số, cọc, công nợ |
+
+## 1.1. Quy Ước GitHub
+
+- Remote chuẩn của dự án là `origin = https://github.com/dangthuy83/QuanLyNhaTro2026.git`.
+- Sau khi hoàn tất một thay đổi có ý nghĩa và đã build/test xong, nên commit rồi push lên `origin/main`.
+- Nếu chỉ đang thử nghiệm cục bộ, giữ thay đổi ở workspace cho tới khi chốt.
 
 ---
 
