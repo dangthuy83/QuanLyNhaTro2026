@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi |
+| Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; smoke test flow lõi, dịch vụ/chỉ số, chuyển phòng, trả phòng và UI nhập chỉ số theo phòng thành công |
+| Database | Đã chạy app với MySQL thật ở các phiên trước; phiên này thêm schema `GiaoDichCoc` và migration SQL cho DB hiện hữu |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -21,13 +21,13 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
-| 1 | Thiết kế/xử lý ledger cọc/công nợ | Tránh mất dấu dòng tiền khi thu cọc, trừ nợ, hoàn cọc, chuyển nợ | Cao |
+| 1 | Smoke test ledger cọc với MySQL thật sau khi apply migration | Cần test tạo hợp đồng, chuyển phòng, trả phòng, ghi nhận thu thêm/hoàn cọc | Cao |
 | 2 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*` | Thấp |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | UI xử lý chênh lệch cọc khi chuyển phòng | Dựa trên `DaXuLyChenhLechCoc` | Trung bình |
 | 6 | In phiếu thu HTML | `window.print()` và CSS print | Trung bình |
-| 7 | Xử lý các rủi ro trong `PROJECT_REVIEW.md` | Tiếp theo: ledger cọc/công nợ, UI nhập chỉ số hàng loạt/preview chốt hóa đơn | Cao |
+| 7 | Xử lý các rủi ro trong `PROJECT_REVIEW.md` | Tiếp theo: rà báo cáo công nợ sau ledger, UI nhập chỉ số hàng loạt/preview chốt hóa đơn | Cao |
 | 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 
 ### Quy ước GitHub
@@ -640,6 +640,58 @@ Chưa làm:
 
 ---
 
+### Phiên 21 - Ledger Cọc Và Xử Lý Công Nợ Phi Tiền Mặt
+
+Ngày: 28/06/2026
+
+Quyết định nghiệp vụ:
+
+- Thêm `GiaoDichCoc` làm ledger cọc theo hợp đồng.
+- `HopDong.TienCoc` là số cọc thỏa thuận; số cọc thực đang giữ lấy từ tổng ledger.
+- `GiaoDichCoc.SoTien` là delta có dấu:
+  - `ThuCoc`, `ThuThemCoc`: tăng số dư.
+  - `HoanCoc`, `TruNo`: giảm số dư.
+  - `DieuChinh`: tăng/giảm để chuyển cọc hoặc điều chỉnh chênh lệch.
+- Chưa thêm bảng `CongNoLedger` riêng trong phiên này. Để tránh double-count công nợ, dùng `ThanhToan` phi tiền mặt:
+  - `KetChuyenNo` khi nợ cũ được snapshot sang hóa đơn/hợp đồng mới.
+  - `TruCoc` khi trả phòng dùng cọc để tất toán nợ.
+
+Đã làm:
+
+- Thêm model/repository/service cho `GiaoDichCoc`.
+- Thêm `CongNoSettlementService` để phân bổ bút toán xử lý nợ vào các hóa đơn còn nợ và cập nhật `HoaDon.SoTienDaThu`/`TrangThaiThanhToan` trong transaction.
+- Khi tạo hợp đồng, tự ghi `ThuCoc` nếu có tiền cọc.
+- Khi chuyển phòng:
+  - Chuyển số dư cọc thực tế từ hợp đồng cũ sang hợp đồng mới bằng `DieuChinh`.
+  - Nếu có nợ xuyên hợp đồng, ghi `ThanhToan.HinhThuc = KetChuyenNo` trên hóa đơn cũ để tránh báo cáo công nợ tính trùng với `TienNoKyTruoc` của hóa đơn mới.
+  - Cập nhật `DaXuLyChenhLechCoc` theo số dư cọc thực tế so với cọc thỏa thuận của hợp đồng mới.
+- Khi trả phòng:
+  - Tính preview theo số dư cọc thực tế.
+  - Ghi `TruNo` trong ledger và `ThanhToan.HinhThuc = TruCoc` để cấn trừ nợ bằng cọc.
+  - Ghi `HoanCoc` cho phần cọc còn lại.
+  - Cập nhật `HopDong.TienCocHoanLai`.
+- Thêm `GiaoDichCocController` và `Views/GiaoDichCoc/Index.cshtml` để xem ledger và ghi nhận giao dịch thủ công.
+- Thêm link ledger cọc từ chi tiết hợp đồng.
+- Thêm `Database/updates/20260628_add_giao_dich_coc.sql` cho DB hiện hữu.
+- Sửa lỗi nhỏ ở `ChuyenPhongController`: khi render lại form lỗi, danh sách phòng trống phải loại theo `PhongId` cũ, không phải `HopDongCuId`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+Chưa làm:
+
+- Chưa apply migration vào MySQL thật vì connection string hiện trong `appsettings.json` là placeholder.
+- Chưa smoke test runtime ledger cọc trên DB thật.
+- Chưa dựng `CongNoLedger` riêng; hiện xử lý rủi ro double-count bằng bút toán `ThanhToan` phi tiền mặt.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -658,6 +710,8 @@ Chưa làm:
 | 15 | `HoaDonRepository.GetCongNoAsync` | Tính ngày quá hạn bằng `hd.Thang + 1` có thể thành tháng 13 | Dùng `DATE_ADD` từ ngày đầu kỳ hóa đơn |
 | 16 | `PhongController`, `Views/Phong` | Tạo/sửa phòng có nguy cơ gửi `NhaId = 0` khi bảng `Nha` rỗng hoặc form không có dropdown | Thêm dropdown chọn Nhà, cảnh báo khi chưa có Nhà và validate server-side `NhaId` |
 | 20 | `ChiSoController`, `Views/ChuyenPhong` | Flow chuyển phòng không có UI nhập chỉ số cho phòng mới vì phòng mới chưa có hợp đồng | Thêm nhập chỉ số theo `PhongId` + kỳ và link từ màn chuyển phòng |
+| 21 | `ChuyenPhongService`, `TraPhongService`, `GiaoDichCoc` | Cọc chỉ là số tĩnh trên hợp đồng, nợ chuyển kỳ có nguy cơ double-count | Thêm ledger cọc và bút toán `ThanhToan` phi tiền mặt `KetChuyenNo`/`TruCoc` |
+| 21 | `ChuyenPhongController` | Render lại form lỗi loại phòng theo `HopDongCuId` thay vì `PhongId` cũ | Nạp lại hợp đồng cũ và loại đúng `PhongId` |
 
 ---
 

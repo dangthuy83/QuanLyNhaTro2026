@@ -1,0 +1,270 @@
+using Dapper;
+using MySqlConnector;
+using System.Data;
+using QuanLyNhaTro.Models;
+using QuanLyNhaTro.Repositories;
+
+namespace QuanLyNhaTro.Services;
+
+public class GiaoDichCocService(
+    IDbConnection db,
+    HopDongRepository hopDongRepo,
+    GiaoDichCocRepository giaoDichCocRepo,
+    CongNoSettlementService congNoSettlementService)
+{
+    public async Task<decimal> GetSoDuHienTaiAsync(int hopDongId)
+    {
+        var hopDong = await hopDongRepo.GetByIdAsync(hopDongId)
+            ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+
+        var soDu = await giaoDichCocRepo.GetSoDuAsync(hopDongId);
+        var giaoDich = await giaoDichCocRepo.GetByHopDongAsync(hopDongId);
+        return giaoDich.Any() ? soDu : hopDong.TienCoc;
+    }
+
+    public async Task GhiNhanThuCongAsync(
+        int hopDongId,
+        string loaiGiaoDich,
+        decimal soTien,
+        DateTime ngayGiaoDich,
+        int? hoaDonId,
+        string? ghiChu)
+    {
+        var conn = (MySqlConnection)db;
+        if (conn.State != ConnectionState.Open)
+            await conn.OpenAsync();
+
+        await using var tx = await conn.BeginTransactionAsync();
+        try
+        {
+            var hopDong = await LoadHopDongAsync(conn, tx, hopDongId)
+                ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+
+            await EnsureOpeningBalanceAsync(conn, tx, hopDong);
+
+            decimal delta = NormalizeDelta(loaiGiaoDich, soTien);
+            await InsertDeltaAsync(conn, tx, hopDongId, loaiGiaoDich, delta, ngayGiaoDich, hoaDonId, ghiChu);
+
+            if (loaiGiaoDich == "TruNo")
+            {
+                decimal soTienTruNo = Math.Abs(delta);
+                decimal daTatToan = hoaDonId.HasValue
+                    ? await congNoSettlementService.ThanhToanHoaDonAsync(
+                        conn,
+                        tx,
+                        hoaDonId.Value,
+                        soTienTruNo,
+                        ngayGiaoDich,
+                        "TruCoc",
+                        $"Tru no vao coc. {ghiChu}".Trim())
+                    : await congNoSettlementService.ThanhToanNoAsync(
+                        conn,
+                        tx,
+                        hopDongId,
+                        soTienTruNo,
+                        ngayGiaoDich,
+                        "TruCoc",
+                        $"Tru no vao coc. {ghiChu}".Trim());
+
+                if (daTatToan != soTienTruNo)
+                    throw new InvalidOperationException("So tien tru no lon hon no hoa don con lai.");
+            }
+
+            await CapNhatDaXuLyChenhLechAsync(conn, tx, hopDongId);
+
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task GhiNhanThuCocBanDauAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hopDongId,
+        decimal soTien,
+        DateTime ngayGiaoDich,
+        string? ghiChu)
+    {
+        if (soTien <= 0) return;
+
+        await InsertDeltaAsync(conn, tx, hopDongId, "ThuCoc", soTien, ngayGiaoDich, null, ghiChu);
+    }
+
+    public async Task ChuyenCocSangHopDongMoiAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        HopDong hopDongCu,
+        int hopDongMoiId,
+        decimal tienCocMoi,
+        DateTime ngayGiaoDich)
+    {
+        await EnsureOpeningBalanceAsync(conn, tx, hopDongCu);
+
+        decimal soDuCu = await giaoDichCocRepo.GetSoDuAsync(conn, tx, hopDongCu.Id);
+        if (soDuCu > 0)
+        {
+            await InsertDeltaAsync(
+                conn,
+                tx,
+                hopDongCu.Id,
+                "DieuChinh",
+                -soDuCu,
+                ngayGiaoDich,
+                null,
+                $"Chuyen coc sang hop dong #{hopDongMoiId}");
+
+            await InsertDeltaAsync(
+                conn,
+                tx,
+                hopDongMoiId,
+                "DieuChinh",
+                soDuCu,
+                ngayGiaoDich,
+                null,
+                $"Nhan coc tu hop dong #{hopDongCu.Id}");
+        }
+
+        await conn.ExecuteAsync(
+            "UPDATE HopDong SET DaXuLyChenhLechCoc = @DaXuLy WHERE Id = @Id",
+            new { Id = hopDongMoiId, DaXuLy = soDuCu == tienCocMoi },
+            tx);
+    }
+
+    public async Task<KetQuaTatToanCoc> TatToanCocKhiTraPhongAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        HopDong hopDong,
+        int? hoaDonId,
+        decimal tongNoTruocXuLyCoc,
+        DateTime ngayGiaoDich,
+        string? ghiChu)
+    {
+        await EnsureOpeningBalanceAsync(conn, tx, hopDong);
+
+        decimal soDu = await giaoDichCocRepo.GetSoDuAsync(conn, tx, hopDong.Id);
+        decimal soTienTruNo = Math.Min(soDu, Math.Max(0, tongNoTruocXuLyCoc));
+
+        if (soTienTruNo > 0)
+        {
+            await InsertDeltaAsync(
+                conn,
+                tx,
+                hopDong.Id,
+                "TruNo",
+                -soTienTruNo,
+                ngayGiaoDich,
+                hoaDonId,
+                $"Tru no vao coc khi tra phong. {ghiChu}".Trim());
+        }
+
+        decimal soDuSauTruNo = soDu - soTienTruNo;
+        decimal soTienHoanCoc = Math.Max(0, soDuSauTruNo);
+
+        if (soTienHoanCoc > 0)
+        {
+            await InsertDeltaAsync(
+                conn,
+                tx,
+                hopDong.Id,
+                "HoanCoc",
+                -soTienHoanCoc,
+                ngayGiaoDich,
+                null,
+                $"Hoan coc khi tra phong. {ghiChu}".Trim());
+        }
+
+        return new KetQuaTatToanCoc(
+            SoDuCocTruocXuLy: soDu,
+            SoTienTruNo: soTienTruNo,
+            SoTienHoanCoc: soTienHoanCoc,
+            KhachConNoThem: Math.Max(0, tongNoTruocXuLyCoc - soTienTruNo));
+    }
+
+    private async Task EnsureOpeningBalanceAsync(MySqlConnection conn, MySqlTransaction tx, HopDong hopDong)
+    {
+        if (await giaoDichCocRepo.HasAnyAsync(conn, tx, hopDong.Id)) return;
+        if (hopDong.TienCoc <= 0) return;
+
+        await InsertDeltaAsync(
+            conn,
+            tx,
+            hopDong.Id,
+            "ThuCoc",
+            hopDong.TienCoc,
+            hopDong.NgayBatDau,
+            null,
+            "Khoi tao ledger tu HopDong.TienCoc");
+    }
+
+    private async Task InsertDeltaAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hopDongId,
+        string loaiGiaoDich,
+        decimal delta,
+        DateTime ngayGiaoDich,
+        int? hoaDonId,
+        string? ghiChu)
+    {
+        if (delta == 0) return;
+
+        decimal soDuHienTai = await giaoDichCocRepo.GetSoDuAsync(conn, tx, hopDongId);
+        decimal soDuMoi = soDuHienTai + delta;
+        if (soDuMoi < 0)
+            throw new InvalidOperationException("So du coc khong du de ghi nhan giao dich nay.");
+
+        await giaoDichCocRepo.InsertAsync(conn, tx, new GiaoDichCoc
+        {
+            HopDongId = hopDongId,
+            LoaiGiaoDich = loaiGiaoDich,
+            SoTien = delta,
+            SoDuSauGiaoDich = soDuMoi,
+            NgayGiaoDich = ngayGiaoDich,
+            HoaDonId = hoaDonId,
+            GhiChu = ghiChu
+        });
+    }
+
+    private async Task CapNhatDaXuLyChenhLechAsync(MySqlConnection conn, MySqlTransaction tx, int hopDongId)
+    {
+        var hopDong = await LoadHopDongAsync(conn, tx, hopDongId);
+        if (hopDong?.HopDongTruocId == null) return;
+
+        decimal soDu = await giaoDichCocRepo.GetSoDuAsync(conn, tx, hopDongId);
+        await conn.ExecuteAsync(
+            "UPDATE HopDong SET DaXuLyChenhLechCoc = @DaXuLy WHERE Id = @Id",
+            new { Id = hopDongId, DaXuLy = soDu == hopDong.TienCoc },
+            tx);
+    }
+
+    private static decimal NormalizeDelta(string loaiGiaoDich, decimal soTien)
+    {
+        if (soTien == 0)
+            throw new InvalidOperationException("So tien giao dich coc phai khac 0.");
+
+        var amount = Math.Abs(soTien);
+        return loaiGiaoDich switch
+        {
+            "ThuCoc" or "ThuThemCoc" => amount,
+            "HoanCoc" or "TruNo" => -amount,
+            "DieuChinh" => soTien,
+            _ => throw new InvalidOperationException("Loai giao dich coc khong hop le.")
+        };
+    }
+
+    private static async Task<HopDong?> LoadHopDongAsync(MySqlConnection conn, MySqlTransaction tx, int hopDongId)
+        => await conn.QueryFirstOrDefaultAsync<HopDong>(
+            "SELECT * FROM HopDong WHERE Id = @Id",
+            new { Id = hopDongId },
+            tx);
+}
+
+public sealed record KetQuaTatToanCoc(
+    decimal SoDuCocTruocXuLy,
+    decimal SoTienTruNo,
+    decimal SoTienHoanCoc,
+    decimal KhachConNoThem);

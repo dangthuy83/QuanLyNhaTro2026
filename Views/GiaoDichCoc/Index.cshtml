@@ -1,0 +1,122 @@
+@model QuanLyNhaTro.Models.GiaoDichCocViewModel
+@{
+    ViewData["Title"] = "Ledger coc";
+    string FormatDelta(decimal value) => value >= 0 ? $"+{value:N0}" : value.ToString("N0");
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDong.Id"
+       class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h5 class="mb-0">Ledger coc - @Model.HopDong.Phong?.TenPhong</h5>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="card-title text-muted mb-0">Lich su giao dich</h6>
+                    <span class="badge bg-primary fs-6">So du: @Model.SoDuCoc.ToString("N0") d</span>
+                </div>
+
+                @if (Model.GiaoDich.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ngay</th>
+                                    <th>Loai</th>
+                                    <th class="text-end">Phat sinh</th>
+                                    <th class="text-end">So du sau</th>
+                                    <th>Hoa don</th>
+                                    <th>Ghi chu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var gd in Model.GiaoDich)
+                                {
+                                    <tr>
+                                        <td>@gd.NgayGiaoDich.ToString("dd/MM/yyyy")</td>
+                                        <td><span class="badge bg-light text-dark border">@gd.LoaiGiaoDich</span></td>
+                                        <td class="text-end fw-semibold @(gd.SoTien >= 0 ? "text-success" : "text-danger")">
+                                            @FormatDelta(gd.SoTien)
+                                        </td>
+                                        <td class="text-end">@gd.SoDuSauGiaoDich.ToString("N0")</td>
+                                        <td>
+                                            @if (gd.HoaDonId.HasValue)
+                                            {
+                                                <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@gd.HoaDonId">#@gd.HoaDonId</a>
+                                            }
+                                        </td>
+                                        <td>@gd.GhiChu</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Chua co giao dich coc. So du dang lay tu HopDong.TienCoc.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">Ghi nhan giao dich</h6>
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="hopDongId" value="@Model.HopDong.Id" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Loai giao dich</label>
+                        <select name="loaiGiaoDich" class="form-select">
+                            <option value="ThuThemCoc">ThuThemCoc</option>
+                            <option value="HoanCoc">HoanCoc</option>
+                            <option value="TruNo">TruNo</option>
+                            <option value="DieuChinh">DieuChinh</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">So tien</label>
+                        <input name="soTien" type="number" step="10000" class="form-control" required />
+                        <div class="form-text">DieuChinh cho phep nhap so am neu can giam so du.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ngay giao dich</label>
+                        <input name="ngayGiaoDich" type="date" class="form-control"
+                               value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hoa don lien quan</label>
+                        <input name="hoaDonId" type="number" min="1" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chu</label>
+                        <input name="ghiChu" class="form-control" />
+                    </div>
+                    <button class="btn btn-primary w-100">Luu giao dich</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -11,7 +11,8 @@ public class HopDongController(
     PhongRepository phongRepo,
     KhachThueRepository khachThueRepo,
     HopDongService hopDongService,
-    PhongService phongService) : Controller
+    PhongService phongService,
+    GiaoDichCocService giaoDichCocService) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -26,6 +27,7 @@ public class HopDongController(
         if (hd == null) return NotFound();
 
         ViewBag.DanhSachKhach = await hdKhachRepo.GetByHopDongAsync(id);
+        ViewBag.SoDuCoc = await giaoDichCocService.GetSoDuHienTaiAsync(id);
         return View(hd);
     }
 

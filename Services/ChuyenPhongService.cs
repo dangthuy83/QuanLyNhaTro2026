@@ -11,7 +11,9 @@ public class ChuyenPhongService(
     HoaDonRepository hoaDonRepo,
     PhongRepository phongRepo,
     PhongDichVuRepository phongDvRepo,
-    LichSuThayDoiGiaRepository lichSuRepo)
+    LichSuThayDoiGiaRepository lichSuRepo,
+    GiaoDichCocService giaoDichCocService,
+    CongNoSettlementService congNoSettlementService)
 {
     public async Task<(int HopDongMoiId, int HoaDonCuId, int HoaDonMoiId)> ThucHienAsync(
         ChuyenPhongViewModel vm)
@@ -159,6 +161,27 @@ public class ChuyenPhongService(
             await conn.ExecuteAsync(
                 "UPDATE HoaDon SET HoaDonGhepId=@Ghep WHERE Id=@Id",
                 new { Ghep = hdCuId, Id = hdMoiHdId }, tx);
+
+            if (noXuyen > 0)
+            {
+                await congNoSettlementService.ThanhToanNoAsync(
+                    conn,
+                    tx,
+                    vm.HopDongCuId,
+                    noXuyen,
+                    vm.NgayChuyenDi,
+                    "KetChuyenNo",
+                    $"Ket chuyen no sang hop dong #{hdMoiId}",
+                    [hdCuId]);
+            }
+
+            await giaoDichCocService.ChuyenCocSangHopDongMoiAsync(
+                conn,
+                tx,
+                hdCu,
+                hdMoiId,
+                vm.TienCocMoi,
+                vm.NgayChuyenDi);
 
             await tx.CommitAsync();
             return (hdMoiId, hdCuId, hdMoiHdId);

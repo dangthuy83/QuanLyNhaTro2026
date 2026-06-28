@@ -12,7 +12,9 @@ public class TraPhongService(
     PhongRepository phongRepo,
     PhongDichVuRepository phongDvRepo,
     KhachThueRepository khachRepo,
-    LichSuThayDoiGiaRepository lichSuRepo)
+    LichSuThayDoiGiaRepository lichSuRepo,
+    GiaoDichCocService giaoDichCocService,
+    CongNoSettlementService congNoSettlementService)
 {
     public async Task<TraPhongViewModel> TinhPreviewAsync(int hopDongId, DateTime ngayTraPhong)
     {
@@ -53,13 +55,15 @@ public class TraPhongService(
 
         decimal tongNo = await hoaDonRepo.GetTongNoConLaiAsync(hopDongId);
         if (canSinhHd) tongNo += tienPhongProRata + tongDichVuThangCuoi;
+        decimal soDuCoc = await giaoDichCocService.GetSoDuHienTaiAsync(hopDongId);
+        decimal tienTruNoTuCoc = Math.Min(soDuCoc, Math.Max(0, tongNo));
 
         return new TraPhongViewModel
         {
             HopDongId = hopDongId,
             TenPhong = phong?.TenPhong ?? $"Phong #{hd.PhongId}",
             TenKhachChinh = khach?.HoTen ?? "(chua co khach)",
-            TienCoc = hd.TienCoc,
+            TienCoc = soDuCoc,
             NgayTraPhong = ngayTraPhong,
             CanSinhHoaDonMoi = canSinhHd,
             SoNgayO = soNgayO,
@@ -67,7 +71,9 @@ public class TraPhongService(
             TienPhongProRata = tienPhongProRata,
             TongTienDichVuThangCuoi = tongDichVuThangCuoi,
             TongNoConLai = tongNo,
-            TienHoanCoc = hd.TienCoc - tongNo
+            TienTruNoTuCoc = tienTruNoTuCoc,
+            TienHoanCoc = soDuCoc - tongNo,
+            KhachConNoThem = Math.Max(0, tongNo - soDuCoc)
         };
     }
 
@@ -179,9 +185,36 @@ public class TraPhongService(
                 new { Id = hd.PhongId },
                 tx);
 
-            await tx.CommitAsync();
+            decimal tongNoTruocXuLyCoc = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
+            var ketQuaCoc = await giaoDichCocService.TatToanCocKhiTraPhongAsync(
+                conn,
+                tx,
+                hd,
+                hoaDonCuoiId,
+                tongNoTruocXuLyCoc,
+                ngayTraPhong,
+                ghiChu);
 
-            decimal tongNoConLai = await hoaDonRepo.GetTongNoConLaiAsync(hopDongId);
+            if (ketQuaCoc.SoTienTruNo > 0)
+            {
+                await congNoSettlementService.ThanhToanNoAsync(
+                    conn,
+                    tx,
+                    hopDongId,
+                    ketQuaCoc.SoTienTruNo,
+                    ngayTraPhong,
+                    "TruCoc",
+                    $"Tru no vao coc khi tra phong hop dong #{hopDongId}");
+            }
+
+            decimal tongNoConLai = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
+
+            await conn.ExecuteAsync(
+                "UPDATE HopDong SET TienCocHoanLai = @TienCocHoanLai WHERE Id = @Id",
+                new { Id = hopDongId, TienCocHoanLai = ketQuaCoc.SoTienHoanCoc },
+                tx);
+
+            await tx.CommitAsync();
 
             return new KetQuaTraPhongViewModel
             {
@@ -189,9 +222,11 @@ public class TraPhongService(
                 TenKhachChinh = khach?.HoTen ?? "",
                 NgayTraPhong = ngayTraPhong,
                 HoaDonCuoiId = hoaDonCuoiId,
-                TienCoc = hd.TienCoc,
+                TienCoc = ketQuaCoc.SoDuCocTruocXuLy,
                 TongNoConLai = tongNoConLai,
-                TienHoanCoc = hd.TienCoc - tongNoConLai,
+                TienTruNoTuCoc = ketQuaCoc.SoTienTruNo,
+                TienHoanCoc = ketQuaCoc.SoTienHoanCoc - ketQuaCoc.KhachConNoThem,
+                KhachConNoThem = ketQuaCoc.KhachConNoThem,
                 CoNoTon = tongNoConLai > 0
             };
         }
@@ -305,6 +340,20 @@ public class TraPhongService(
             new { PhongId = phongId, DichVuId = dichVuId, Thang = thang, Nam = nam },
             tx);
     }
+
+    private static async Task<decimal> TinhTongNoConLaiAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hopDongId)
+        => await conn.ExecuteScalarAsync<decimal>(
+            """
+            SELECT COALESCE(SUM(TongCong - SoTienDaThu), 0)
+            FROM HoaDon
+            WHERE HopDongId = @HopDongId
+              AND TongCong > SoTienDaThu
+            """,
+            new { HopDongId = hopDongId },
+            tx);
 
     private sealed record ChiTietDichVuTam(
         int DichVuId,

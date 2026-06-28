@@ -24,6 +24,7 @@ builder.Services.AddScoped<HopDongKhachThueRepository>();
 builder.Services.AddScoped<HoaDonRepository>();
 builder.Services.AddScoped<ChiTietHoaDonRepository>();
 builder.Services.AddScoped<ThanhToanRepository>();
+builder.Services.AddScoped<GiaoDichCocRepository>();
 builder.Services.AddScoped<DichVuRepository>();
 builder.Services.AddScoped<PhongDichVuRepository>();
 builder.Services.AddScoped<ChiSoDienNuocRepository>();
@@ -37,6 +38,8 @@ builder.Services.AddScoped<PhongService>();
 builder.Services.AddScoped<ExcelService>();
 builder.Services.AddScoped<ChuyenPhongService>();
 builder.Services.AddScoped<TraPhongService>();
+builder.Services.AddScoped<GiaoDichCocService>();
+builder.Services.AddScoped<CongNoSettlementService>();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();

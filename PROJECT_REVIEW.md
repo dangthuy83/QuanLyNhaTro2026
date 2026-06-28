@@ -59,6 +59,13 @@ Da xu ly trong phien 20:
 - Man chuyen phong co link nhap chi so phong moi, tu dong gan thang/nam theo `NgayChuyenDi` va quay lai flow chuyen phong sau khi luu.
 - Nhap chi so chi hien dich vu `TheoChiSo` dang gan cho phong qua `PhongDichVu`.
 
+Da xu ly trong phien 21:
+
+- Them ledger coc `GiaoDichCoc` de audit thu coc, thu them, hoan coc, tru no va dieu chinh/chuyen coc.
+- Tao hop dong ghi `ThuCoc`; chuyen phong ghi `DieuChinh` am/duong de chuyen so du coc thuc te sang hop dong moi.
+- Tra phong ghi `TruNo`/`HoanCoc` va cap nhat `HopDong.TienCocHoanLai`.
+- Chong double-count cong no chuyen hop dong bang `ThanhToan.HinhThuc = KetChuyenNo`; tru no vao coc bang `ThanhToan.HinhThuc = TruCoc`.
+
 ---
 
 ## 2. Cac lo hong can sua ngay
@@ -188,11 +195,11 @@ Quy uoc da chot va da sua:
 - Don gia dich vu tra lich su gia ap dung theo ky.
 - Preview tra phong hien them tong dich vu thang cuoi de khop voi tong no du kien.
 
-### 2.5. Them ledger cho coc
+### 2.5. Them ledger cho coc - DA XU LY TOI THIEU PHIEN 21
 
-Hien tai `HopDong.TienCoc`, `TienCocHoanLai`, `DaXuLyChenhLechCoc` chua du de audit dong tien coc.
+`HopDong.TienCoc`, `TienCocHoanLai`, `DaXuLyChenhLechCoc` khong con la noi duy nhat theo doi coc. Phien 21 da them `GiaoDichCoc` lam ledger toi thieu.
 
-Can them bang:
+Bang da them:
 
 ```sql
 CREATE TABLE GiaoDichCoc (
@@ -200,6 +207,7 @@ CREATE TABLE GiaoDichCoc (
     HopDongId INT NOT NULL,
     LoaiGiaoDich VARCHAR(30) NOT NULL,
     SoTien DECIMAL(12,0) NOT NULL,
+    SoDuSauGiaoDich DECIMAL(12,0) NOT NULL DEFAULT 0,
     NgayGiaoDich DATE NOT NULL,
     HoaDonId INT NULL,
     GhiChu VARCHAR(255) NULL,
@@ -215,13 +223,13 @@ Loai giao dich de xuat:
 ThuCoc | ThuThemCoc | HoanCoc | TruNo | DieuChinh
 ```
 
-Nguyen tac: coc la tien that, can quan ly nhu so quy, khong chi ghi trong `GhiChu`.
+Nguyen tac da chot: `SoTien` la delta co dau. `ThuCoc`/`ThuThemCoc` tang so du; `HoanCoc`/`TruNo` giam so du; `DieuChinh` dung cho chuyen coc/chinh lech. `SoDuSauGiaoDich` la snapshot audit nhanh.
 
-### 2.6. Chong double count cong no da chuyen ky
+### 2.6. Chong double count cong no da chuyen ky - DA XU LY TOI THIEU PHIEN 21
 
 `HoaDon.TienNoKyTruoc` la snapshot dung ve mat hien thi. Nhung khi bao cao tong no nhieu ky, can tranh tinh ca hoa don cu con no va hoa don moi da carry no cu.
 
-Rui ro hien tai:
+Rui ro cu:
 
 ```sql
 SUM(TongCong - SoTienDaThu)
@@ -229,10 +237,12 @@ SUM(TongCong - SoTienDaThu)
 
 co the double count neu ky moi da gom no ky truoc vao `TienNoKyTruoc`.
 
-Huong xu ly:
+Huong xu ly da ap dung:
 
-- Cach tot: them `CongNoLedger` de quan ly phat sinh/thu/ket chuyen no.
-- Cach nhe hon: them co `DaChuyenNoSangKySau` vao `HoaDon`, va query cong no bo qua phan da ket chuyen.
+- Chua them `CongNoLedger` rieng.
+- Khi no cu duoc dua vao `TienNoKyTruoc` cua hoa don moi, he thong ghi `ThanhToan.HinhThuc = KetChuyenNo` tren cac hoa don cu de chung khong con xuat hien trong bao cao cong no.
+- Khi tra phong dung coc de tru no, he thong ghi `GiaoDichCoc.LoaiGiaoDich = TruNo` va dong thoi ghi `ThanhToan.HinhThuc = TruCoc` de hoa don duoc tat toan dung.
+- Neu sau nay can audit cong no day du hon, co the them `CongNoLedger`, nhung phien 21 da xu ly rui ro double-count trong bao cao hien co.
 
 ---
 

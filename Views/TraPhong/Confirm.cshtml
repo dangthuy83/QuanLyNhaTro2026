@@ -56,11 +56,18 @@
                             <td class="text-muted">Tổng nợ còn lại</td>
                             <td class="text-end fw-semibold text-danger">@Model.TongNoConLai.ToString("N0") đ</td>
                         </tr>
+                        @if (Model.TienTruNoTuCoc > 0)
+                        {
+                            <tr>
+                                <td class="text-muted">Tru no vao coc</td>
+                                <td class="text-end fw-semibold text-warning">@Model.TienTruNoTuCoc.ToString("N0") d</td>
+                            </tr>
+                        }
                         <tr class="table-light">
                             <td class="fw-bold">Tiền cọc</td>
                             <td class="text-end fw-bold">@Model.TienCoc.ToString("N0") đ</td>
                         </tr>
-                        <tr class="@(Model.TienHoanCoc >= 0 ? "table-success" : "table-danger")">
+                        <tr class="@(Model.KhachConNoThem > 0 ? "table-danger" : "table-success")">
                             <td class="fw-bold">@(Model.TienHoanCoc >= 0 ? "Hoàn cọc cho khách" : "Khách còn nợ thêm")</td>
                             <td class="text-end fw-bold fs-5">@Math.Abs(Model.TienHoanCoc).ToString("N0") đ</td>
                         </tr>

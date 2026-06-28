@@ -16,7 +16,6 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 | 4 | Có cần UI xử lý chênh lệch cọc khi chuyển phòng không? Hiện `DaXuLyChenhLechCoc` đã có trong `HopDong`, nhưng chưa có màn hình thu/hoàn phần chênh lệch. | Chuyển phòng | Trung bình |
 | 5 | Có cần in phiếu thu HTML bằng `window.print()` không, bên cạnh xuất Excel? | Thu tiền, hóa đơn | Trung bình |
 | 6 | Cần thống nhất nhãn `LoaiDoiTuong` trong `LichSuThayDoiGia`: code hiện dùng `Phong` và `DichVu`, còn comment trong schema cũ từng mô tả theo `HopDong`/`PhongDichVu`. | Lịch sử giá | Trung bình |
-| 7 | Thiết kế ledger cho cọc và công nợ để không mất dấu dòng tiền khi thu cọc, trừ cọc, hoàn cọc, chuyển nợ. | Cọc, công nợ | Cao |
 
 ---
 
@@ -67,7 +66,7 @@ Nguyên tắc phân tầng:
 
 ## 3. Schema Hiện Hành
 
-Schema có 13 bảng:
+Schema có 14 bảng:
 
 | Bảng | Vai trò |
 |---|---|
@@ -82,6 +81,7 @@ Schema có 13 bảng:
 | `HoaDon` | Hóa đơn theo hợp đồng và kỳ |
 | `ChiTietHoaDon` | Dòng dịch vụ của hóa đơn |
 | `ThanhToan` | Lịch sử thu tiền |
+| `GiaoDichCoc` | Ledger tiền cọc theo hợp đồng |
 | `ThuChi` | Thu chi ngoài tiền phòng |
 | `LichSuThayDoiGia` | Lịch sử thay đổi giá |
 
@@ -141,6 +141,13 @@ SoTienDaThu >= TongCong      -> DaThu
 ```
 
 `ThanhToan` và cập nhật `HoaDon.SoTienDaThu` phải nằm trong cùng một transaction.
+
+`ThanhToan.HinhThuc` có thể dùng thêm các hình thức phi tiền mặt để xử lý nghiệp vụ công nợ:
+
+- `KetChuyenNo`: tất toán hóa đơn cũ khi nợ được snapshot sang hóa đơn/hợp đồng mới, tránh báo cáo công nợ bị double-count.
+- `TruCoc`: tất toán hóa đơn bằng tiền cọc khi trả phòng.
+
+Các dòng này không phải thu tiền mặt mới; chúng là bút toán xử lý công nợ.
 
 ### 4.7 Ngày vào, ngày ra, ngày chuyển phòng
 
@@ -226,7 +233,23 @@ Sinh 2 hóa đơn liên kết qua `HoaDonGhepId`:
 - Trả giữa tháng hoặc kỳ không trọn tháng và chưa có hóa đơn tháng đó: sinh hóa đơn pro-rata.
 - Trả giữa tháng hoặc kỳ không trọn tháng nhưng đã có hóa đơn tháng đó: không sinh hóa đơn mới.
 - Hóa đơn trả phòng tính dịch vụ `TheoChiSo` theo chỉ số, dịch vụ `CoDinh` thu trọn một lần nếu hóa đơn tháng cuối được sinh.
-- `TienHoanCoc = TienCoc - TongNoConLai`; nếu âm thì khách còn nợ thêm.
+- `TienHoanCoc = SoDuCocThucTe - TongNoConLai`; nếu âm thì khách còn nợ thêm.
+
+### Ledger cọc
+
+`GiaoDichCoc` là ledger tiền cọc theo hợp đồng. `HopDong.TienCoc` là số cọc thỏa thuận, còn số cọc thực đang giữ phải xem từ tổng ledger.
+
+Quy ước `GiaoDichCoc.SoTien` là delta có dấu:
+
+- `ThuCoc`, `ThuThemCoc`: số dương, làm tăng số dư cọc.
+- `HoanCoc`, `TruNo`: số âm, làm giảm số dư cọc.
+- `DieuChinh`: số dương hoặc âm, dùng cho chuyển cọc giữa hợp đồng hoặc điều chỉnh chênh lệch.
+
+`SoDuSauGiaoDich` là snapshot sau từng dòng để audit nhanh.
+
+Khi tạo hợp đồng mới, hệ thống ghi `ThuCoc` nếu `TienCoc > 0`.
+Khi chuyển phòng, hệ thống ghi `DieuChinh` âm ở hợp đồng cũ và `DieuChinh` dương ở hợp đồng mới để chuyển số dư cọc thực tế. Nếu số dư cọc nhận sang khác `HopDongMoi.TienCoc`, `DaXuLyChenhLechCoc = false` cho đến khi thu thêm/hoàn/điều chỉnh đủ.
+Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và `ThanhToan.HinhThuc = TruCoc`; phần còn lại nếu có được ghi `HoanCoc`.
 
 ---
 
@@ -251,6 +274,8 @@ Sinh 2 hóa đơn liên kết qua `HoaDonGhepId`:
 - Da test voi MySQL that flow gan dich vu theo phong, nhap chi so binh thuong, nhap chi so reset, lap hoa don co dich vu va xac nhan `ChiTietHoaDon.ChiSoDienNuocId`.
 - Da test voi MySQL that flow chuyen phong va tra phong giua thang co ca dich vu theo chi so va dich vu co dinh.
 - UI nhap chi so ho tro nhap truc tiep theo `PhongId` + ky, de phong moi co the nhap chi so truoc khi thuc hien chuyen phong.
+- Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
+- Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
 - Đồng bộ code theo `Database/schema.sql`.
 - `dotnet build --no-restore` thành công với 0 warning, 0 error.
 

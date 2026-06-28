@@ -9,7 +9,8 @@ public class HopDongService(
     IDbConnection db,
     HopDongRepository hopDongRepo,
     HopDongKhachThueRepository hdKhachRepo,
-    PhongRepository phongRepo)
+    PhongRepository phongRepo,
+    GiaoDichCocService giaoDichCocService)
 {
     public async Task<int> TaoHopDongAsync(HopDong hopDong, int[] khachThueIds, int? khachChinhId)
     {
@@ -29,6 +30,13 @@ public class HopDongService(
             var hopDongId = await hopDongRepo.InsertAsync(conn, tx, hopDong);
             await CapNhatKhachThueAsync(conn, tx, hopDongId, khachThueIds, khachChinhId);
             await phongRepo.UpdateTrangThaiAsync(conn, tx, hopDong.PhongId, "DangThue");
+            await giaoDichCocService.GhiNhanThuCocBanDauAsync(
+                conn,
+                tx,
+                hopDongId,
+                hopDong.TienCoc,
+                hopDong.NgayBatDau,
+                "Thu coc ban dau khi tao hop dong");
 
             await tx.CommitAsync();
             return hopDongId;

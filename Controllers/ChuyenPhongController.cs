@@ -36,8 +36,7 @@ public class ChuyenPhongController(
     {
         if (!ModelState.IsValid)
         {
-            vm.DsPhongTrong = (await phongRepo.GetPhongTrongAsync())
-                              .Where(p => p.Id != vm.HopDongCuId);
+            await NapLaiFormAsync(vm);
             return View(vm);
         }
 
@@ -50,9 +49,17 @@ public class ChuyenPhongController(
         catch (Exception ex)
         {
             ModelState.AddModelError("", ex.Message);
-            vm.DsPhongTrong = (await phongRepo.GetPhongTrongAsync())
-                              .Where(p => p.Id != vm.HopDongCuId);
+            await NapLaiFormAsync(vm);
             return View(vm);
         }
+    }
+
+    private async Task NapLaiFormAsync(ChuyenPhongViewModel vm)
+    {
+        var hdCu = await hopDongRepo.GetByIdAsync(vm.HopDongCuId);
+        vm.TenPhongCu = hdCu?.Phong?.TenPhong ?? vm.TenPhongCu;
+        vm.TienCocCu = hdCu?.TienCoc ?? vm.TienCocCu;
+        vm.DsPhongTrong = (await phongRepo.GetPhongTrongAsync())
+            .Where(p => hdCu == null || p.Id != hdCu.PhongId);
     }
 }

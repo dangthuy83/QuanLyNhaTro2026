@@ -11,6 +11,8 @@ public class HopDong
     public string TrangThai { get; set; } = "DangHieuLuc"; // DangHieuLuc | DaKetThuc | DaHuy | DaChuyenPhong
     public int? HopDongTruocId { get; set; }               // Liên kết khi chuyển phòng
     public bool DaXuLyChenhLechCoc { get; set; } = false;  // Đã xử lý chênh lệch cọc chưa
+    public DateTime? NgayTraPhongThucTe { get; set; }
+    public decimal? TienCocHoanLai { get; set; }
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
 

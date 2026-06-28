@@ -4,6 +4,7 @@
     ViewData["ActiveMenu"] = "hopdong";
     var danhSachKhach = ViewBag.DanhSachKhach as IEnumerable<QuanLyNhaTro.Models.HopDongKhachThue> ?? [];
     bool dangHieuLuc = Model.TrangThai == "DangHieuLuc";
+    decimal soDuCoc = ViewBag.SoDuCoc is decimal value ? value : Model.TienCoc;
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
@@ -37,13 +38,19 @@
                             @Model.Phong?.TenPhong
                         </a>
                     </dd>
+                    <dt class="col-5">So du coc</dt>
+                    <dd class="col-7">
+                        <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id">
+                            @soDuCoc.ToString("N0") d
+                        </a>
+                    </dd>
                     <dt class="col-5">Ngày bắt đầu</dt> <dd class="col-7">@Model.NgayBatDau.ToString("dd/MM/yyyy")</dd>
                     <dt class="col-5">Ngày kết thúc</dt><dd class="col-7">@(Model.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Không xác định")</dd>
                     <dt class="col-5">Giá thuê TT</dt>   <dd class="col-7">@Model.TienThueThoaThuan.ToString("N0") đ</dd>
                     <dt class="col-5">Tiền cọc</dt>      <dd class="col-7">@Model.TienCoc.ToString("N0") đ</dd>
                     <dt class="col-5">Trạng thái</dt>
                     <dd class="col-7">
-                        @(Model.TrangThai switch {
+                        @Html.Raw(Model.TrangThai switch {
                             "DangHieuLuc"   => "<span class='badge bg-success'>Đang hiệu lực</span>",
                             "DaKetThuc"     => "<span class='badge bg-secondary'>Đã kết thúc</span>",
                             "DaHuy"         => "<span class='badge bg-danger'>Đã huỷ</span>",
@@ -107,6 +114,10 @@
                         <a asp-controller="HoaDon" asp-action="Create" asp-route-hopDongId="@Model.Id"
                            class="btn btn-sm btn-success">
                             <i class="bi bi-receipt me-1"></i>Lập hóa đơn
+                        </a>
+                        <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-wallet2 me-1"></i>Ledger coc
                         </a>
                         <form asp-action="KetThuc" asp-route-id="@Model.Id" method="post"
                               onsubmit="return confirm('Xác nhận kết thúc hợp đồng?')">
