@@ -25,6 +25,58 @@
     </div>
 }
 
+@if (Model.CanXuLyChenhLechCoc)
+{
+    var chenhLech = Model.ChenhLechCoc;
+    <div class="alert alert-warning shadow-sm">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <div class="fw-semibold mb-1">Chenh lech coc chuyen phong chua xu ly</div>
+                <div class="small">
+                    Coc thoa thuan: <strong>@Model.HopDong.TienCoc.ToString("N0") d</strong>
+                    <span class="mx-2">|</span>
+                    So du dang giu: <strong>@Model.SoDuCoc.ToString("N0") d</strong>
+                    <span class="mx-2">|</span>
+                    Chenh lech:
+                    <strong class="@(chenhLech > 0 ? "text-success" : "text-danger")">
+                        @FormatDelta(chenhLech) d
+                    </strong>
+                </div>
+                <div class="small text-muted mt-1">
+                    @(chenhLech > 0
+                        ? "Can thu them coc de khop hop dong moi."
+                        : chenhLech < 0
+                            ? "Can hoan lai coc de khop hop dong moi."
+                            : "So du da khop, chi can danh dau hoan tat.")
+                </div>
+            </div>
+            <form asp-action="XuLyChenhLech" method="post" class="d-flex flex-wrap align-items-end gap-2">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="hopDongId" value="@Model.HopDong.Id" />
+                <div>
+                    <label class="form-label small mb-1">Ngay giao dich</label>
+                    <input name="ngayGiaoDich" type="date" class="form-control form-control-sm"
+                           value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div>
+                    <label class="form-label small mb-1">Ghi chu</label>
+                    <input name="ghiChu" class="form-control form-control-sm"
+                           value="Xu ly chenh lech coc chuyen phong" />
+                </div>
+                <button class="btn btn-warning btn-sm">
+                    Xu ly chenh lech
+                </button>
+            </form>
+        </div>
+    </div>
+}
+else if (Model.LaHopDongChuyenPhong)
+{
+    <div class="alert alert-success py-2">
+        Chenh lech coc chuyen phong da duoc xu ly.
+    </div>
+}
+
 <div class="row g-3">
     <div class="col-lg-8">
         <div class="card shadow-sm">

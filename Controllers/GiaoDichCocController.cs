@@ -53,4 +53,29 @@ public class GiaoDichCocController(
 
         return RedirectToAction(nameof(Index), new { hopDongId });
     }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> XuLyChenhLech(
+        int hopDongId,
+        DateTime ngayGiaoDich,
+        string? ghiChu)
+    {
+        try
+        {
+            var result = await giaoDichCocService.XuLyChenhLechChuyenPhongAsync(
+                hopDongId,
+                ngayGiaoDich,
+                ghiChu);
+
+            TempData["Success"] = result.LoaiGiaoDich == null
+                ? "Chenh lech coc da khop, da danh dau hoan tat."
+                : $"Da ghi nhan {result.LoaiGiaoDich} {Math.Abs(result.SoTienChenhLech):N0} d.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index), new { hopDongId });
+    }
 }

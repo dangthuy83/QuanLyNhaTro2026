@@ -81,6 +81,84 @@ public class GiaoDichCocService(
         }
     }
 
+    public async Task<KetQuaXuLyChenhLechCoc> XuLyChenhLechChuyenPhongAsync(
+        int hopDongId,
+        DateTime ngayGiaoDich,
+        string? ghiChu)
+    {
+        var conn = (MySqlConnection)db;
+        if (conn.State != ConnectionState.Open)
+            await conn.OpenAsync();
+
+        await using var tx = await conn.BeginTransactionAsync();
+        try
+        {
+            var hopDong = await LoadHopDongAsync(conn, tx, hopDongId)
+                ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+
+            if (hopDong.HopDongTruocId == null)
+                throw new InvalidOperationException("Chi xu ly chenh lech coc cho hop dong sinh tu chuyen phong.");
+
+            bool coLedger = await giaoDichCocRepo.HasAnyAsync(conn, tx, hopDongId);
+            decimal soDuTruoc = coLedger
+                ? await giaoDichCocRepo.GetSoDuAsync(conn, tx, hopDongId)
+                : hopDong.TienCoc;
+            decimal chenhLech = hopDong.TienCoc - soDuTruoc;
+            string? loaiGiaoDich = null;
+
+            if (chenhLech > 0)
+            {
+                loaiGiaoDich = "ThuThemCoc";
+                await InsertDeltaAsync(
+                    conn,
+                    tx,
+                    hopDongId,
+                    loaiGiaoDich,
+                    chenhLech,
+                    ngayGiaoDich,
+                    null,
+                    $"Xu ly chenh lech coc chuyen phong. {ghiChu}".Trim());
+            }
+            else if (chenhLech < 0)
+            {
+                loaiGiaoDich = "HoanCoc";
+                await InsertDeltaAsync(
+                    conn,
+                    tx,
+                    hopDongId,
+                    loaiGiaoDich,
+                    chenhLech,
+                    ngayGiaoDich,
+                    null,
+                    $"Xu ly chenh lech coc chuyen phong. {ghiChu}".Trim());
+            }
+
+            decimal soDuSau = coLedger || chenhLech != 0
+                ? await giaoDichCocRepo.GetSoDuAsync(conn, tx, hopDongId)
+                : soDuTruoc;
+
+            bool daXuLy = soDuSau == hopDong.TienCoc;
+            await conn.ExecuteAsync(
+                "UPDATE HopDong SET DaXuLyChenhLechCoc = @DaXuLy WHERE Id = @Id",
+                new { Id = hopDongId, DaXuLy = daXuLy },
+                tx);
+
+            await tx.CommitAsync();
+            return new KetQuaXuLyChenhLechCoc(
+                SoDuTruoc: soDuTruoc,
+                SoDuSau: soDuSau,
+                TienCocThoaThuan: hopDong.TienCoc,
+                SoTienChenhLech: chenhLech,
+                LoaiGiaoDich: loaiGiaoDich,
+                DaXuLy: daXuLy);
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
+    }
+
     public async Task GhiNhanThuCocBanDauAsync(
         MySqlConnection conn,
         MySqlTransaction tx,
@@ -268,3 +346,11 @@ public sealed record KetQuaTatToanCoc(
     decimal SoTienTruNo,
     decimal SoTienHoanCoc,
     decimal KhachConNoThem);
+
+public sealed record KetQuaXuLyChenhLechCoc(
+    decimal SoDuTruoc,
+    decimal SoDuSau,
+    decimal TienCocThoaThuan,
+    decimal SoTienChenhLech,
+    string? LoaiGiaoDich,
+    bool DaXuLy);

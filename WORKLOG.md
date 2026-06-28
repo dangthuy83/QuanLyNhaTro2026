@@ -25,7 +25,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 2 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*` | Thấp |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
-| 5 | UI xử lý chênh lệch cọc khi chuyển phòng | Dựa trên `DaXuLyChenhLechCoc` | Trung bình |
+| 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
 | 6 | In phiếu thu HTML | `window.print()` và CSS print | Trung bình |
 | 7 | Xử lý các rủi ro trong `PROJECT_REVIEW.md` | Tiếp theo: rà báo cáo công nợ sau ledger, UI nhập chỉ số hàng loạt/preview chốt hóa đơn | Cao |
 | 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
@@ -735,6 +735,49 @@ Ghi chú:
 
 - App test cổng `5098` đã dừng sau khi test.
 - Dữ liệu smoke test `TEST_LEDGER_182206` còn trong DB thật để đối chiếu nếu cần; có thể dọn sau.
+
+---
+
+### Phiên 23 - UI Xử Lý Chênh Lệch Cọc Khi Chuyển Phòng
+
+Ngày: 28/06/2026
+
+Đã làm:
+
+- Thêm trạng thái tính toán vào `GiaoDichCocViewModel`:
+  - Hợp đồng có sinh từ chuyển phòng hay không.
+  - Có cần xử lý chênh lệch cọc hay không.
+  - Chênh lệch giữa `HopDong.TienCoc` và số dư cọc ledger.
+- Thêm `GiaoDichCocService.XuLyChenhLechChuyenPhongAsync`:
+  - Chỉ cho xử lý hợp đồng có `HopDongTruocId`.
+  - Nếu số dư cọc thấp hơn cọc thỏa thuận, ghi `ThuThemCoc`.
+  - Nếu số dư cọc cao hơn cọc thỏa thuận, ghi `HoanCoc`.
+  - Nếu đã khớp, chỉ cập nhật `DaXuLyChenhLechCoc = true`.
+  - Toàn bộ chạy trong transaction.
+- Thêm action `GiaoDichCocController.XuLyChenhLech`.
+- Trên màn ledger cọc, thêm khối cảnh báo chênh lệch và nút xử lý tự động.
+- Trên chi tiết hợp đồng mới sau chuyển phòng, nếu còn chênh lệch cọc thì hiển thị cảnh báo và link sang ledger.
+- Cập nhật `DECISIONS.md` để bỏ UI chênh lệch cọc khỏi nhóm còn thiếu.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5099`:
+
+- Mở ledger hợp đồng `#9` từ smoke test trước.
+- UI hiển thị đúng chênh lệch `+500,000` vì số dư cọc đang giữ `1,000,000`, cọc thỏa thuận hợp đồng mới `1,500,000`.
+- Bấm `Xu ly chenh lech` thành công:
+  - Sinh ledger `ThuThemCoc = +500,000`.
+  - Số dư cọc sau xử lý `1,500,000`.
+  - Cảnh báo chuyển sang trạng thái đã xử lý.
+  - Chi tiết hợp đồng `#9` không còn cảnh báo chênh lệch cọc.
+- Browser console không có warning/error liên quan.
 
 ---
 

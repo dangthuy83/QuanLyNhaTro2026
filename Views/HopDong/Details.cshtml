@@ -26,6 +26,20 @@
     </div>
 }
 
+@if (Model.HopDongTruocId.HasValue && !Model.DaXuLyChenhLechCoc)
+{
+    <div class="alert alert-warning d-flex align-items-center justify-content-between gap-3">
+        <div>
+            <strong>Chenh lech coc chuyen phong chua xu ly.</strong>
+            Vao ledger coc de thu them hoac hoan lai phan chenh lech.
+        </div>
+        <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id"
+           class="btn btn-sm btn-warning">
+            Xu ly coc
+        </a>
+    </div>
+}
+
 <div class="row g-3">
     <div class="col-md-6">
         <div class="card shadow-sm">

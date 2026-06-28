@@ -13,7 +13,6 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 | 1 | Khi trả phòng còn nợ, có cần cờ riêng đánh dấu "đã trừ nợ vào cọc" trong `HopDong` không, hay lưu vào `GhiChu` là đủ? | Trả phòng, hoàn cọc, công nợ | Trung bình |
 | 2 | Có thêm index cho các cột hay dùng trong `WHERE`/`JOIN` không? Ví dụ `HopDong.PhongId`, `HoaDon.HopDongId`, `ThanhToan.HoaDonId`, `ChiSoDienNuoc.PhongId`. | Tối ưu khi dữ liệu lớn | Thấp |
 | 3 | Thông báo nhắc nợ chỉ gửi cho chủ nhà bằng Telegram Bot, hay gửi thêm khách thuê qua ZNS/SMS? | Module thông báo | Thấp |
-| 4 | Có cần UI xử lý chênh lệch cọc khi chuyển phòng không? Hiện `DaXuLyChenhLechCoc` đã có trong `HopDong`, nhưng chưa có màn hình thu/hoàn phần chênh lệch. | Chuyển phòng | Trung bình |
 | 5 | Có cần in phiếu thu HTML bằng `window.print()` không, bên cạnh xuất Excel? | Thu tiền, hóa đơn | Trung bình |
 | 6 | Cần thống nhất nhãn `LoaiDoiTuong` trong `LichSuThayDoiGia`: code hiện dùng `Phong` và `DichVu`, còn comment trong schema cũ từng mô tả theo `HopDong`/`PhongDichVu`. | Lịch sử giá | Trung bình |
 
@@ -249,6 +248,7 @@ Quy ước `GiaoDichCoc.SoTien` là delta có dấu:
 
 Khi tạo hợp đồng mới, hệ thống ghi `ThuCoc` nếu `TienCoc > 0`.
 Khi chuyển phòng, hệ thống ghi `DieuChinh` âm ở hợp đồng cũ và `DieuChinh` dương ở hợp đồng mới để chuyển số dư cọc thực tế. Nếu số dư cọc nhận sang khác `HopDongMoi.TienCoc`, `DaXuLyChenhLechCoc = false` cho đến khi thu thêm/hoàn/điều chỉnh đủ.
+UI xử lý chênh lệch nằm ở màn ledger cọc của hợp đồng mới. Hệ thống tự tính `HopDong.TienCoc - SoDuCoc`; nếu dương thì ghi `ThuThemCoc`, nếu âm thì ghi `HoanCoc`, sau đó cập nhật `DaXuLyChenhLechCoc`.
 Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và `ThanhToan.HinhThuc = TruCoc`; phần còn lại nếu có được ghi `HoanCoc`.
 
 ---
@@ -276,6 +276,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI nhap chi so ho tro nhap truc tiep theo `PhongId` + ky, de phong moi co the nhap chi so truoc khi thuc hien chuyen phong.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
+- UI xử lý chênh lệch cọc khi chuyển phòng ngay trên màn ledger cọc.
 - Đồng bộ code theo `Database/schema.sql`.
 - `dotnet build --no-restore` thành công với 0 warning, 0 error.
 
@@ -286,7 +287,6 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ### Tính năng còn thiếu
 
-- UI xử lý chênh lệch cọc khi chuyển phòng.
 - In phiếu thu HTML.
 - Thông báo nhắc nợ.
 
