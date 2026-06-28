@@ -1,0 +1,170 @@
+@model QuanLyNhaTro.Models.HoaDon
+@{
+    ViewData["Title"] = $"Hóa đơn {Model.Thang}/{Model.Nam}";
+    ViewData["ActiveMenu"] = "hoadon";
+    bool chuaDaThu = Model.TrangThaiThanhToan != "DaThu";
+    decimal conLai = Model.TongCong - Model.SoTienDaThu;
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
+       class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <a asp-action="XuatPhieuThu" asp-route-id="@Model.Id"
+       class="btn btn-sm btn-outline-success ms-2">
+        <i class="bi bi-file-earmark-excel"></i> Xuất phiếu thu
+    </a>
+    <h5 class="mb-0">Hóa đơn @Model.Thang/@Model.Nam — @Model.HopDong?.Phong?.TenPhong</h5>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<div class="row g-3">
+    <!-- Cột trái: nội dung hóa đơn -->
+    <div class="col-md-7">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">Chi tiết hóa đơn</h6>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td>Tiền phòng
+                                @if (Model.SoNgayO.HasValue)
+                                {
+                                    <small class="text-muted">(@Model.SoNgayO/@Model.SoNgayTrongThang ngày)</small>
+                                }
+                            </td>
+                            <td class="text-end">@Model.TienPhong.ToString("N0") đ</td>
+                        </tr>
+                        @foreach (var ct in Model.ChiTiet)
+                        {
+                            <tr>
+                                <td>
+                                    @ct.TenDichVu
+                                    <small class="text-muted">(@ct.SoLuong.ToString("N2") × @ct.DonGia.ToString("N0"))</small>
+                                </td>
+                                <td class="text-end">@ct.ThanhTien.ToString("N0") đ</td>
+                            </tr>
+                        }
+                        @if (Model.TienNoKyTruoc != 0)
+                        {
+                            <tr class="@(Model.TienNoKyTruoc > 0 ? "text-danger" : "text-success")">
+                                <td>@(Model.TienNoKyTruoc > 0 ? "Nợ kỳ trước" : "Dư kỳ trước")</td>
+                                <td class="text-end">@Model.TienNoKyTruoc.ToString("N0") đ</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-semibold">
+                        <tr>
+                            <td>Tổng cộng</td>
+                            <td class="text-end fs-6">@Model.TongCong.ToString("N0") đ</td>
+                        </tr>
+                        <tr>
+                            <td>Đã thu</td>
+                            <td class="text-end text-success">@Model.SoTienDaThu.ToString("N0") đ</td>
+                        </tr>
+                        @if (conLai > 0)
+                        {
+                            <tr class="text-danger">
+                                <td>Còn lại</td>
+                                <td class="text-end">@conLai.ToString("N0") đ</td>
+                            </tr>
+                        }
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Lịch sử thu tiền -->
+        @if (Model.DanhSachThanhToan.Any())
+        {
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-2">Lịch sử thu tiền</h6>
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr><th>Ngày thu</th><th>Hình thức</th><th class="text-end">Số tiền</th><th>Ghi chú</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var tt in Model.DanhSachThanhToan)
+                            {
+                                <tr>
+                                    <td>@tt.NgayThu.ToString("dd/MM/yyyy")</td>
+                                    <td>@tt.HinhThuc</td>
+                                    <td class="text-end">@tt.SoTien.ToString("N0") đ</td>
+                                    <td>@tt.GhiChu</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Cột phải: thu tiền -->
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-2">Trạng thái</h6>
+                @(Model.TrangThaiThanhToan switch {
+                    "DaThu"      => "<span class='badge bg-success fs-6 px-3 py-2'>Đã thu đủ</span>",
+                    "ThuMotPhan" => "<span class='badge bg-warning text-dark fs-6 px-3 py-2'>Thu một phần</span>",
+                    _            => "<span class='badge bg-danger fs-6 px-3 py-2'>Chưa thu</span>"
+                })
+            </div>
+        </div>
+
+        @if (chuaDaThu)
+        {
+            <div class="card shadow-sm border-success">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">Thu tiền</h6>
+                    <form asp-action="ThuTien" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="hoaDonId" value="@Model.Id" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Số tiền (đ)</label>
+                            <input name="soTien" type="number" min="1" class="form-control"
+                                   value="@conLai" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Hình thức</label>
+                            <select name="hinhThuc" class="form-select">
+                                <option value="TienMat">Tiền mặt</option>
+                                <option value="ChuyenKhoan">Chuyển khoản</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Ghi chú</label>
+                            <input name="ghiChu" class="form-control" />
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-cash me-1"></i>Xác nhận thu tiền
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (Model.SoTienDaThu == 0)
+        {
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="mt-2"
+                  onsubmit="return confirm('Xoá hóa đơn này?')">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-danger btn-sm w-100">
+                    <i class="bi bi-trash me-1"></i>Xoá hóa đơn
+                </button>
+            </form>
+        }
+    </div>
+</div>

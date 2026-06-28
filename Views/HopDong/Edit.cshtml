@@ -1,0 +1,80 @@
+@model QuanLyNhaTro.Models.HopDong
+@{
+    ViewData["Title"] = "Sửa hợp đồng";
+    ViewData["ActiveMenu"] = "hopdong";
+    var danhSachKhach = ViewBag.DanhSachKhach as IEnumerable<QuanLyNhaTro.Models.KhachThue> ?? [];
+    var khachHienTai  = ViewBag.KhachHienTai  as IEnumerable<QuanLyNhaTro.Models.HopDongKhachThue> ?? [];
+    var khachHienTaiIds = khachHienTai.Select(k => k.KhachThueId).ToHashSet();
+    var khachChinhId    = khachHienTai.FirstOrDefault(k => k.LaDaiDien)?.KhachThueId;
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="mb-0">Sửa hợp đồng — @Model.Phong?.TenPhong</h5>
+</div>
+
+<div class="card shadow-sm" style="max-width:640px">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="PhongId" />
+            <input type="hidden" asp-for="TrangThai" />
+
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Ngày bắt đầu</label>
+                    <input asp-for="NgayBatDau" type="date" class="form-control" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Ngày kết thúc</label>
+                    <input asp-for="NgayKetThuc" type="date" class="form-control" />
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Giá thuê thỏa thuận (đ)</label>
+                    <input asp-for="TienThueThoaThuan" type="number" min="0" class="form-control" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Tiền cọc (đ)</label>
+                    <input asp-for="TienCoc" type="number" min="0" class="form-control" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Khách thuê</label>
+                <div class="border rounded p-2" style="max-height:200px; overflow-y:auto">
+                    @foreach (var k in danhSachKhach)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="khachThueIds" value="@k.Id" id="k_@k.Id"
+                                   checked="@khachHienTaiIds.Contains(k.Id)" />
+                            <label class="form-check-label" for="k_@k.Id">
+                                @k.HoTen @(k.SoDienThoai != null ? $"({k.SoDienThoai})" : "")
+                                <input type="radio" name="khachChinhId" value="@k.Id"
+                                       class="ms-2"
+                                       checked="@(k.Id == khachChinhId)" />
+                                <small class="text-muted">chính</small>
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Ghi chú</label>
+                <textarea asp-for="GhiChu" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Huỷ</a>
+            </div>
+        </form>
+    </div>
+</div>

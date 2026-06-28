@@ -1,0 +1,23 @@
+@model QuanLyNhaTro.Models.KhachThue
+@{
+    ViewData["Title"] = "Thêm khách thuê";
+    ViewData["ActiveMenu"] = "khachthue";
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h5 class="mb-0">Thêm khách thuê</h5>
+</div>
+
+<div class="card shadow-sm" style="max-width:680px">
+    <div class="card-body">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            @await Html.PartialAsync("_KhachThueForm", Model)
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Lưu</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Huỷ</a>
+            </div>
+        </form>
+    </div>
+</div>

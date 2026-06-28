@@ -1,0 +1,115 @@
+@model QuanLyNhaTro.Models.ChuyenPhongViewModel
+@{ ViewData["Title"] = "Chuyen phong"; }
+
+<h4>Chuyen phong - <span class="text-primary">@Model.TenPhongCu</span></h4>
+<p class="text-muted">Tu dong sinh 2 hoa don thang chuyen va tao hop dong moi.</p>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2" style="max-width:560px">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card shadow-sm" style="max-width:560px">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="HopDongCuId" />
+            <div class="mb-3">
+                <label class="form-label">Ngay chuyen di <span class="text-danger">*</span></label>
+                <input asp-for="NgayChuyenDi" type="date" class="form-control" />
+                <div class="form-text">Ngay cuoi o phong cu. Phong moi tinh tu ngay hom sau.</div>
+            </div>
+
+            <hr>
+            <h6 class="fw-bold">Phong moi</h6>
+            <div class="mb-3">
+                <label class="form-label">Chon phong <span class="text-danger">*</span></label>
+                <select asp-for="PhongMoiId" class="form-select">
+                    <option value="">-- Chon phong trong --</option>
+                    @foreach (var p in Model.DsPhongTrong)
+                    {
+                        <option value="@p.Id">@p.TenPhong - @p.GiaThueMacDinh.ToString("N0") d/thang</option>
+                    }
+                </select>
+                <span asp-validation-for="PhongMoiId" class="text-danger small"></span>
+                <div class="form-text">
+                    Neu phong moi co dich vu theo chi so, hay nhap chi so ky chuyen truoc khi xac nhan.
+                </div>
+                <a id="linkNhapChiSoPhongMoi"
+                   href="#"
+                   class="btn btn-sm btn-outline-primary mt-2 disabled"
+                   aria-disabled="true">
+                    <i class="bi bi-speedometer2"></i> Nhap chi so phong moi
+                </a>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col">
+                    <label class="form-label">Tien thue moi (d) <span class="text-danger">*</span></label>
+                    <input asp-for="TienThueMoi" type="number" class="form-control" min="0" step="50000" />
+                    <span asp-validation-for="TienThueMoi" class="text-danger small"></span>
+                </div>
+                <div class="col">
+                    <label class="form-label">Tien coc moi (d)</label>
+                    <input asp-for="TienCocMoi" type="number" class="form-control" min="0" step="100000" />
+                    <div class="form-text">Coc cu: @Model.TienCocCu.ToString("N0") d</div>
+                </div>
+            </div>
+
+            <div class="alert alert-info py-2 small">
+                <i class="bi bi-info-circle"></i>
+                DV <strong>Co dinh</strong> chi tinh o hoa don phong moi.
+                DV <strong>Theo chi so</strong> can co chi so phong cu va phong moi trong ky chuyen.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary">Xac nhan chuyen phong</button>
+                <a asp-controller="HopDong" asp-action="Details"
+                   asp-route-id="@Model.HopDongCuId" class="btn btn-outline-secondary">Huy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const phongSelect = document.querySelector("[name='PhongMoiId']");
+        const ngayChuyenDiInput = document.querySelector("[name='NgayChuyenDi']");
+        const link = document.getElementById("linkNhapChiSoPhongMoi");
+        const baseUrl = "@Url.Action("NhapTheoPhong", "ChiSo")";
+        const hopDongCuId = "@Model.HopDongCuId";
+
+        const syncLink = () => {
+            const phongId = phongSelect?.value;
+            const ngayChuyenDi = ngayChuyenDiInput?.value;
+
+            if (!phongId || !ngayChuyenDi) {
+                link.href = "#";
+                link.classList.add("disabled");
+                link.setAttribute("aria-disabled", "true");
+                return;
+            }
+
+            const date = new Date(`${ngayChuyenDi}T00:00:00`);
+            const thang = date.getMonth() + 1;
+            const nam = date.getFullYear();
+            const params = new URLSearchParams({
+                phongId,
+                thang,
+                nam,
+                returnHopDongId: hopDongCuId
+            });
+
+            link.href = `${baseUrl}?${params.toString()}`;
+            link.classList.remove("disabled");
+            link.removeAttribute("aria-disabled");
+        };
+
+        phongSelect?.addEventListener("change", syncLink);
+        ngayChuyenDiInput?.addEventListener("change", syncLink);
+        syncLink();
+    })();
+</script>

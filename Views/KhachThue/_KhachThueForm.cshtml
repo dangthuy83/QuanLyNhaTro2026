@@ -1,0 +1,54 @@
+@model QuanLyNhaTro.Models.KhachThue
+
+<div class="mb-3">
+    <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
+    <input asp-for="HoTen" class="form-control" required />
+    <span asp-validation-for="HoTen" class="text-danger small"></span>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6">
+        <label class="form-label fw-semibold">Số điện thoại</label>
+        <input asp-for="SoDienThoai" class="form-control" />
+    </div>
+    <div class="col-6">
+        <label class="form-label fw-semibold">Ngày sinh</label>
+        <input asp-for="NgaySinh" type="date" class="form-control" />
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-semibold">Số CCCD</label>
+    <input asp-for="CCCD" class="form-control" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-semibold">Quê quán</label>
+    <input asp-for="QueQuan" class="form-control" />
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6">
+        <label class="form-label fw-semibold">Ảnh CCCD mặt trước</label>
+        <input type="file" name="anhCCCDMatTruoc" class="form-control" accept="image/*" />
+        @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatTruoc))
+        {
+            <img src="@Model.AnhCCCDMatTruoc" alt="CCCD mặt trước" class="mt-2 rounded" style="max-height:120px;" />
+            <input type="hidden" asp-for="AnhCCCDMatTruoc" />
+        }
+    </div>
+    <div class="col-6">
+        <label class="form-label fw-semibold">Ảnh CCCD mặt sau</label>
+        <input type="file" name="anhCCCDMatSau" class="form-control" accept="image/*" />
+        @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatSau))
+        {
+            <img src="@Model.AnhCCCDMatSau" alt="CCCD mặt sau" class="mt-2 rounded" style="max-height:120px;" />
+            <input type="hidden" asp-for="AnhCCCDMatSau" />
+        }
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-semibold">Ghi chú</label>
+    <textarea asp-for="GhiChu" class="form-control" rows="2"></textarea>
+</div>

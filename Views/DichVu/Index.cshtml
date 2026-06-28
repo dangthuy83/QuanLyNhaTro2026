@@ -1,0 +1,104 @@
+@model IEnumerable<QuanLyNhaTro.Models.DichVu>
+@{
+    ViewData["Title"] = "Dịch vụ";
+    ViewData["ActiveMenu"] = "dichvu";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Danh mục dịch vụ</h5>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalThemDV">
+        <i class="bi bi-plus-lg me-1"></i>Thêm dịch vụ
+    </button>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card shadow-sm" style="max-width:640px">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr><th>Tên dịch vụ</th><th>Loại tính phí</th><th>Đơn vị</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var dv in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@dv.TenDichVu</td>
+                        <td><span class="badge bg-light text-dark border">@dv.LoaiTinhPhiHienThi</span></td>
+                        <td>@dv.DonViTinh</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    onclick="suaDichVu(@dv.Id, '@dv.TenDichVu', '@dv.LoaiTinhPhi', '@dv.DonViTinh')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="4" class="text-center text-muted py-4">Chưa có dịch vụ nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalThemDV" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h6 class="modal-title">Thêm dịch vụ</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    @await Html.PartialAsync("_DichVuForm", new QuanLyNhaTro.Models.DichVu())
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSuaDV" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h6 class="modal-title">Sửa dịch vụ</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editId" />
+                <div class="modal-body">
+                    @await Html.PartialAsync("_DichVuForm", new QuanLyNhaTro.Models.DichVu())
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu thay đổi</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function suaDichVu(id, ten, loai, donVi) {
+    document.getElementById('editId').value = id;
+    const m = document.getElementById('modalSuaDV');
+    m.querySelector('[name=TenDichVu]').value = ten;
+    m.querySelector('[name=LoaiTinhPhi]').value = loai;
+    m.querySelector('[name=DonViTinh]').value = donVi || '';
+    new bootstrap.Modal(m).show();
+}
+</script>
+}

@@ -1,0 +1,32 @@
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
+body {
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+}
+
+#sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#sidebar .nav-link.active {
+    background-color: #0d6efd;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────────── */
+.table th {
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6c757d;
+}
+
+/* ── Badges trạng thái ──────────────────────────────────────────────────────── */
+.badge-dang-hieu-luc  { background-color: #198754; }
+.badge-da-ket-thuc    { background-color: #6c757d; }
+.badge-da-huy         { background-color: #dc3545; }
+.badge-da-chuyen-phong{ background-color: #0dcaf0; color: #000; }
+
+.badge-chua-thu       { background-color: #ffc107; color: #000; }
+.badge-thu-mot-phan   { background-color: #fd7e14; }
+.badge-da-thu         { background-color: #198754; }

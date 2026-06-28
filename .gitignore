@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+.vs/
+appsettings.Development.json
+.appdata/
+.dotnet/
+.nuget/
+.agents/
+.codex/
+.tmp-*.log
+*.log

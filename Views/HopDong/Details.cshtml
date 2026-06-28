@@ -1,0 +1,126 @@
+@model QuanLyNhaTro.Models.HopDong
+@{
+    ViewData["Title"] = "Chi tiết hợp đồng";
+    ViewData["ActiveMenu"] = "hopdong";
+    var danhSachKhach = ViewBag.DanhSachKhach as IEnumerable<QuanLyNhaTro.Models.HopDongKhachThue> ?? [];
+    bool dangHieuLuc = Model.TrangThai == "DangHieuLuc";
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h5 class="mb-0">Hợp đồng — @Model.Phong?.TenPhong</h5>
+    @if (dangHieuLuc)
+    {
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-auto me-1">
+            <i class="bi bi-pencil me-1"></i>Sửa
+        </a>
+    }
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">Thông tin hợp đồng</h6>
+                <dl class="row mb-0">
+                    <dt class="col-5">Phòng</dt>
+                    <dd class="col-7">
+                        <a asp-controller="Phong" asp-action="Details" asp-route-id="@Model.PhongId">
+                            @Model.Phong?.TenPhong
+                        </a>
+                    </dd>
+                    <dt class="col-5">Ngày bắt đầu</dt> <dd class="col-7">@Model.NgayBatDau.ToString("dd/MM/yyyy")</dd>
+                    <dt class="col-5">Ngày kết thúc</dt><dd class="col-7">@(Model.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Không xác định")</dd>
+                    <dt class="col-5">Giá thuê TT</dt>   <dd class="col-7">@Model.TienThueThoaThuan.ToString("N0") đ</dd>
+                    <dt class="col-5">Tiền cọc</dt>      <dd class="col-7">@Model.TienCoc.ToString("N0") đ</dd>
+                    <dt class="col-5">Trạng thái</dt>
+                    <dd class="col-7">
+                        @(Model.TrangThai switch {
+                            "DangHieuLuc"   => "<span class='badge bg-success'>Đang hiệu lực</span>",
+                            "DaKetThuc"     => "<span class='badge bg-secondary'>Đã kết thúc</span>",
+                            "DaHuy"         => "<span class='badge bg-danger'>Đã huỷ</span>",
+                            _               => $"<span class='badge bg-light text-dark border'>{Model.TrangThai}</span>"
+                        })
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">Khách thuê</h6>
+                @if (danhSachKhach.Any())
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var hdk in danhSachKhach)
+                        {
+                            <li class="mb-1">
+                                <a asp-controller="KhachThue" asp-action="Details"
+                                   asp-route-id="@hdk.KhachThueId" class="text-decoration-none">
+                                    @hdk.KhachThue?.HoTen
+                                </a>
+                                @if (hdk.LaDaiDien)
+                                {
+                                    <span class="badge bg-primary ms-1">Chính</span>
+                                }
+                                <small class="text-muted ms-1">@hdk.KhachThue?.SoDienThoai</small>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Chưa có khách.</p>
+                }
+            </div>
+        </div>
+
+        @if (dangHieuLuc)
+        {
+            <div class="card shadow-sm border-warning">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">Thao tác</h6>
+                    <div class="d-flex gap-2 flex-wrap">
+                        @if (dangHieuLuc)
+                        {
+                            <a asp-controller="ChuyenPhong" asp-action="Create"
+                               asp-route-hopDongId="@Model.Id"
+                               class="btn btn-sm btn-warning me-1">
+                                <i class="bi bi-arrow-left-right"></i> Chuyển phòng
+                            </a>
+                            <a asp-controller="TraPhong" asp-action="Confirm"
+                               asp-route-hopDongId="@Model.Id"
+                               class="btn btn-sm btn-danger me-1">
+                                <i class="bi bi-door-open"></i> Trả phòng
+                            </a>
+                        }
+                        <a asp-controller="HoaDon" asp-action="Create" asp-route-hopDongId="@Model.Id"
+                           class="btn btn-sm btn-success">
+                            <i class="bi bi-receipt me-1"></i>Lập hóa đơn
+                        </a>
+                        <form asp-action="KetThuc" asp-route-id="@Model.Id" method="post"
+                              onsubmit="return confirm('Xác nhận kết thúc hợp đồng?')">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-warning">Kết thúc HĐ</button>
+                        </form>
+                        <form asp-action="Huy" asp-route-id="@Model.Id" method="post"
+                              onsubmit="return confirm('Xác nhận huỷ hợp đồng?')">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-danger">Huỷ HĐ</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

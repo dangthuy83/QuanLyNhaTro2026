@@ -1,0 +1,45 @@
+@model QuanLyNhaTro.Models.KetQuaTraPhongViewModel
+@{ ViewData["Title"] = "Trả phòng thành công"; }
+<div class="text-center my-4">
+    <i class="bi bi-check-circle-fill text-success" style="font-size:3rem"></i>
+    <h4 class="mt-2">Trả phòng thành công</h4>
+    <p class="text-muted">@Model.TenKhachChinh — @Model.TenPhong — ngày @Model.NgayTraPhong.ToString("dd/MM/yyyy")</p>
+</div>
+<div class="card shadow-sm mx-auto" style="max-width:480px">
+    <div class="card-header fw-semibold">Tóm tắt thanh toán cuối</div>
+    <div class="card-body">
+        <table class="table table-sm mb-0">
+            <tbody>
+                <tr><td class="text-muted">Tiền cọc</td><td class="text-end">@Model.TienCoc.ToString("N0") đ</td></tr>
+                <tr><td class="text-muted">Tổng nợ còn lại</td><td class="text-end text-danger">@Model.TongNoConLai.ToString("N0") đ</td></tr>
+                <tr class="@(Model.TienHoanCoc >= 0 ? "table-success" : "table-danger") fw-bold">
+                    <td>@(Model.TienHoanCoc >= 0 ? "Hoàn cọc cho khách" : "Khách còn nợ thêm")</td>
+                    <td class="text-end fs-5">@Math.Abs(Model.TienHoanCoc).ToString("N0") đ</td>
+                </tr>
+            </tbody>
+        </table>
+        @if (Model.CoNoTon)
+        {
+            <div class="alert alert-warning mt-3 py-2 small">
+                <i class="bi bi-exclamation-triangle"></i>
+                Còn nợ tồn. Xem <a asp-controller="BaoCao" asp-action="CongNo">Báo cáo công nợ</a>.
+            </div>
+        }
+        @if (Model.HoaDonCuoiId.HasValue)
+        {
+            <div class="alert alert-info mt-3 py-2 small">
+                <i class="bi bi-receipt"></i>
+                Đã sinh hóa đơn tháng cuối
+                <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.HoaDonCuoiId">
+                    #@Model.HoaDonCuoiId
+                </a>
+            </div>
+        }
+    </div>
+    <div class="card-footer d-flex gap-2">
+        <a asp-controller="Phong" asp-action="Index" class="btn btn-primary btn-sm">
+            <i class="bi bi-house"></i> Danh sách phòng
+        </a>
+        <a asp-controller="BaoCao" asp-action="CongNo" class="btn btn-outline-secondary btn-sm">Xem công nợ</a>
+    </div>
+</div>

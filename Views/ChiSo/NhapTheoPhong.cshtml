@@ -1,0 +1,146 @@
+@{
+    ViewData["Title"] = "Nhap chi so theo phong";
+    ViewData["ActiveMenu"] = "chiso";
+    var phong = ViewBag.Phong as QuanLyNhaTro.Models.Phong;
+    var thang = (int)ViewBag.Thang;
+    var nam = (int)ViewBag.Nam;
+    int? returnHopDongId = ViewBag.ReturnHopDongId is int id ? id : null;
+    var dichVuList = ViewBag.DichVuTheoChiSo as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? [];
+    var chiSoHienTai = ViewBag.ChiSoHienTai as Dictionary<int, QuanLyNhaTro.Models.ChiSoDienNuoc> ?? [];
+    var chiSoDauTheoDichVu = ViewBag.ChiSoDauTheoDichVu as Dictionary<int, decimal> ?? [];
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var cancelUrl = returnHopDongId.HasValue
+        ? Url.Action("Create", "ChuyenPhong", new { hopDongId = returnHopDongId.Value })
+        : Url.Action("Index", "ChiSo", new { thang, nam });
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a href="@cancelUrl" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h5 class="mb-0">Nhap chi so - @phong?.TenPhong - @thang/@nam</h5>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!dichVuList.Any())
+{
+    <div class="alert alert-warning">
+        Phong nay chua gan dich vu nao loai <strong>Theo chi so</strong>. Hay gan dich vu cho phong truoc khi nhap chi so.
+    </div>
+    <a href="@cancelUrl" class="btn btn-outline-secondary">Quay lai</a>
+}
+else
+{
+    <div class="card shadow-sm" style="max-width:760px">
+        <div class="card-body">
+            <form asp-action="NhapTheoPhong" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="phongId" value="@phong?.Id" />
+                <input type="hidden" name="thang" value="@thang" />
+                <input type="hidden" name="nam" value="@nam" />
+                <input type="hidden" name="returnHopDongId" value="@returnHopDongId" />
+
+                @foreach (var dv in dichVuList)
+                {
+                    chiSoHienTai.TryGetValue(dv.Id, out var cs);
+                    var chiSoDau = chiSoDauTheoDichVu.TryGetValue(dv.Id, out var dau) ? dau : 0;
+                    var loaiGhiNhan = cs?.LoaiGhiNhan ?? QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong;
+                    var isReset = loaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiReset;
+                    <input type="hidden" name="dichVuIds" value="@dv.Id" />
+                    <input type="hidden" name="chiSoIds" value="@(cs?.Id ?? 0)" />
+
+                    <div class="mb-4 border-bottom pb-3" data-meter-row data-chi-so-dau="@chiSoDau.ToString(inv)">
+                        <p class="fw-semibold mb-2">@dv.TenDichVu (@dv.DonViTinh)</p>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Chi so dau</label>
+                                <input type="text" class="form-control form-control-sm"
+                                       value="@chiSoDau.ToString("N2")" disabled />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Chi so cuoi <span class="text-danger">*</span></label>
+                                <input type="number" name="chiSoCuois" step="0.01" min="@chiSoDau.ToString(inv)"
+                                       class="form-control form-control-sm"
+                                       value="@(cs?.ChiSoCuoi.ToString(inv) ?? chiSoDau.ToString(inv))"
+                                       required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Loai ghi nhan</label>
+                                <select name="loaiGhiNhans" class="form-select form-select-sm" data-loai>
+                                    <option value="BinhThuong" selected="@(loaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong)">Binh thuong</option>
+                                    <option value="Reset" selected="@isReset">Reset / thay dong ho</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mt-2 @(isReset ? "" : "d-none")" data-reset-fields>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Chi so truoc reset</label>
+                                <input type="number" name="chiSoTruocResets" step="0.01" min="@chiSoDau.ToString(inv)"
+                                       class="form-control form-control-sm"
+                                       value="@(cs?.ChiSoTruocReset.HasValue == true ? cs.ChiSoTruocReset.Value.ToString(inv) : "")" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Chi so sau reset</label>
+                                <input type="number" name="chiSoSauResets" step="0.01" min="0"
+                                       class="form-control form-control-sm"
+                                       value="@(cs?.ChiSoSauReset.HasValue == true ? cs.ChiSoSauReset.Value.ToString(inv) : "")"
+                                       placeholder="0" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Ly do</label>
+                                <input type="text" name="lyDoDieuChinhs" maxlength="255"
+                                       class="form-control form-control-sm"
+                                       value="@(cs?.LyDoDieuChinh ?? "")"
+                                       placeholder="Reset, hong, thay dong ho..." />
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            Binh thuong: san luong = chi so cuoi - chi so dau.
+                            Reset: san luong = (chi so truoc reset - chi so dau) + (chi so cuoi - chi so sau reset).
+                        </small>
+                        @if (cs != null)
+                        {
+                            <div class="small text-muted mt-1">San luong hien tai: @cs.SoLuongTieuThu.ToString("N2")</div>
+                        }
+                    </div>
+                }
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Luu chi so</button>
+                    <a href="@cancelUrl" class="btn btn-outline-secondary">Huy</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll("[data-meter-row]").forEach(row => {
+            const select = row.querySelector("[data-loai]");
+            const resetFields = row.querySelector("[data-reset-fields]");
+            const chiSoCuoi = row.querySelector("input[name='chiSoCuois']");
+
+            const syncResetFields = () => {
+                const isReset = select.value === "Reset";
+                resetFields.classList.toggle("d-none", !isReset);
+                chiSoCuoi.min = isReset ? "0" : row.dataset.chiSoDau;
+            };
+
+            select.addEventListener("change", syncResetFields);
+            syncResetFields();
+        });
+    </script>
+}

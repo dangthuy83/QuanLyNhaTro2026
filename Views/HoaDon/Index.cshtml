@@ -1,0 +1,103 @@
+@model IEnumerable<QuanLyNhaTro.Models.HoaDon>
+@{
+    ViewData["Title"] = "Hóa đơn";
+    ViewData["ActiveMenu"] = "hoadon";
+    var thang = (int)ViewBag.Thang;
+    var nam   = (int)ViewBag.Nam;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h5 class="mb-0">Hóa đơn — @thang/@nam</h5>
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <select name="thang" class="form-select form-select-sm" style="width:90px">
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(m == thang)">Tháng @m</option>
+            }
+        </select>
+        <input name="nam" type="number" class="form-control form-control-sm" style="width:90px"
+               value="@nam" min="2020" max="2099" />
+        <button class="btn btn-sm btn-outline-primary">Xem</button>
+    </form>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Phòng</th>
+                    <th class="text-end">Tiền phòng</th>
+                    <th class="text-end">Dịch vụ</th>
+                    <th class="text-end">Nợ KT</th>
+                    <th class="text-end">Tổng cộng</th>
+                    <th class="text-end">Đã thu</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var hd in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@hd.Id" class="fw-semibold text-decoration-none">
+                            @hd.HopDong?.Phong?.TenPhong
+                        </a></td>
+                        <td class="text-end">@hd.TienPhong.ToString("N0")</td>
+                        <td class="text-end">@hd.TongTienDichVu.ToString("N0")</td>
+                        <td class="text-end @(hd.TienNoKyTruoc > 0 ? "text-danger" : "")">
+                            @hd.TienNoKyTruoc.ToString("N0")
+                        </td>
+                        <td class="text-end fw-semibold">@hd.TongCong.ToString("N0")</td>
+                        <td class="text-end">@hd.SoTienDaThu.ToString("N0")</td>
+                        <td>@TrangThaiBadge(hd.TrangThaiThanhToan)</td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@hd.Id"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">Không có hóa đơn nào trong kỳ này.</td></tr>
+                }
+            </tbody>
+            @if (Model.Any())
+            {
+                <tfoot class="table-light fw-semibold">
+                    <tr>
+                        <td>Tổng</td>
+                        <td class="text-end">@Model.Sum(h => h.TienPhong).ToString("N0")</td>
+                        <td class="text-end">@Model.Sum(h => h.TongTienDichVu).ToString("N0")</td>
+                        <td class="text-end">@Model.Sum(h => h.TienNoKyTruoc).ToString("N0")</td>
+                        <td class="text-end">@Model.Sum(h => h.TongCong).ToString("N0")</td>
+                        <td class="text-end">@Model.Sum(h => h.SoTienDaThu).ToString("N0")</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>
+
+@functions {
+    static string TrangThaiBadge(string tt) => tt switch
+    {
+        "DaThu"      => "<span class='badge bg-success'>Đã thu</span>",
+        "ThuMotPhan" => "<span class='badge bg-warning text-dark'>Thu một phần</span>",
+        _            => "<span class='badge bg-danger'>Chưa thu</span>"
+    };
+}

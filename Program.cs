@@ -1,0 +1,56 @@
+using MySqlConnector;
+using System.Data;
+using QuanLyNhaTro.Repositories;
+using QuanLyNhaTro.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ── MVC ──────────────────────────────────────────────────────────────────────
+builder.Services.AddControllersWithViews();
+
+// ── Database (Dapper + MySqlConnector) ───────────────────────────────────────
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+builder.Services.AddTransient<IDbConnection>(_ =>
+    new MySqlConnection(connectionString));
+
+// ── Repositories ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<NhaRepository>();
+builder.Services.AddScoped<PhongRepository>();
+builder.Services.AddScoped<KhachThueRepository>();
+builder.Services.AddScoped<HopDongRepository>();
+builder.Services.AddScoped<HopDongKhachThueRepository>();
+builder.Services.AddScoped<HoaDonRepository>();
+builder.Services.AddScoped<ChiTietHoaDonRepository>();
+builder.Services.AddScoped<ThanhToanRepository>();
+builder.Services.AddScoped<DichVuRepository>();
+builder.Services.AddScoped<PhongDichVuRepository>();
+builder.Services.AddScoped<ChiSoDienNuocRepository>();
+builder.Services.AddScoped<LichSuThayDoiGiaRepository>();
+builder.Services.AddScoped<ThuChiRepository>();
+
+// ── Services ─────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<HoaDonService>();
+builder.Services.AddScoped<HopDongService>();
+builder.Services.AddScoped<PhongService>();
+builder.Services.AddScoped<ExcelService>();
+builder.Services.AddScoped<ChuyenPhongService>();
+builder.Services.AddScoped<TraPhongService>();
+
+// ── Build ─────────────────────────────────────────────────────────────────────
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+}
+
+app.UseStaticFiles();
+app.UseRouting();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();

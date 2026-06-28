@@ -1,0 +1,65 @@
+@model IEnumerable<QuanLyNhaTro.Models.KhachThue>
+@{
+    ViewData["Title"] = "Khách thuê";
+    ViewData["ActiveMenu"] = "khachthue";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Danh sách khách thuê</h5>
+    <a asp-action="Create" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Thêm khách
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Họ tên</th>
+                    <th>Điện thoại</th>
+                    <th>CCCD</th>
+                    <th>Ngày sinh</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var k in Model)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@k.Id" class="fw-semibold text-decoration-none">
+                                @k.HoTen
+                            </a>
+                        </td>
+                        <td>@k.SoDienThoai</td>
+                        <td>@k.CCCD</td>
+                        <td>@(k.NgaySinh?.ToString("dd/MM/yyyy") ?? "—")</td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@k.Id" class="btn btn-sm btn-outline-secondary me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@k.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('Xoá khách @k.HoTen?')">
+                                @Html.AntiForgeryToken()
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">Chưa có khách nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

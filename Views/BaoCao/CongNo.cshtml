@@ -1,0 +1,87 @@
+@model IEnumerable<QuanLyNhaTro.Models.BaoCaoCongNoViewModel>
+@{ ViewData["Title"] = "Báo Cáo Công Nợ"; }
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Báo Cáo Công Nợ</h4>
+    <a asp-action="XuatCongNo" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-file-earmark-excel"></i> Xuất Excel
+    </a>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card border-0 bg-danger bg-opacity-10">
+            <div class="card-body py-2">
+                <div class="text-muted small">Tổng nợ</div>
+                <div class="fw-bold text-danger fs-5">@((ViewBag.TongNo as decimal? ?? 0m).ToString("N0")) đ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 bg-warning bg-opacity-10">
+            <div class="card-body py-2">
+                <div class="text-muted small">Khách đang ở</div>
+                <div class="fw-bold text-warning fs-5">@((ViewBag.TongNoHienTai as decimal? ?? 0m).ToString("N0")) đ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 bg-secondary bg-opacity-10">
+            <div class="card-body py-2">
+                <div class="text-muted small">Khách đã rời</div>
+                <div class="fw-bold text-secondary fs-5">@((ViewBag.TongNoCu as decimal? ?? 0m).ToString("N0")) đ</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Phòng</th><th>Khách thuê</th><th>SĐT</th><th>Kỳ</th>
+                    <th class="text-end">Tổng cộng</th><th class="text-end">Đã thu</th>
+                    <th class="text-end">Còn lại</th><th>Quá hạn</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">Không có công nợ. 🎉</td></tr>
+                }
+                @foreach (var x in Model)
+                {
+                    <tr class="@(!x.DangOHienTai ? "text-muted" : "")">
+                        <td class="fw-semibold">@x.TenPhong</td>
+                        <td>@x.TenKhachChinh</td>
+                        <td>@x.SoDienThoai</td>
+                        <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
+                        <td class="text-end">@x.TongCong.ToString("N0")</td>
+                        <td class="text-end">@x.SoTienDaThu.ToString("N0")</td>
+                        <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
+                        <td>
+                            @if (x.SoNgayQuaHan > 0)
+                            {
+                                <span class="badge @(x.SoNgayQuaHan>30?"bg-danger":"bg-warning text-dark")">
+                                    @x.SoNgayQuaHan ngày
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-controller="HoaDon" asp-action="Details"
+                               asp-route-id="@x.HoaDonId" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Any())
+            {
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="6" class="text-end">Tổng nợ:</td>
+                        <td class="text-end text-danger">@Model.Sum(x => x.ConLai).ToString("N0") đ</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>

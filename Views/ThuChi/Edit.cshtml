@@ -1,0 +1,16 @@
+@model QuanLyNhaTro.Models.ThuChi
+@{ ViewData["Title"] = "Sửa giao dịch thu chi"; }
+<h4>Sửa giao dịch thu chi</h4>
+<div class="card shadow-sm" style="max-width:520px">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <partial name="_ThuChiForm" model="Model" />
+            <div class="d-flex gap-2 mt-3">
+                <button class="btn btn-primary">Cập nhật</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>

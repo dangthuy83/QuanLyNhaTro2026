@@ -1,0 +1,153 @@
+@model IEnumerable<QuanLyNhaTro.Models.Nha>
+@{
+    ViewData["Title"] = "Nha";
+    ViewData["ActiveMenu"] = "nha";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Quan ly Nha</h5>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalThemNha">
+        <i class="bi bi-plus-lg me-1"></i>Them nha
+    </button>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Tên Nhà</th>
+                    <th>Địa chỉ</th>
+                    <th>Ghi chú</th>
+                    <th>Ngày tạo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var nha in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@nha.TenNha</td>
+                        <td>@nha.DiaChi</td>
+                        <td class="text-muted small">@nha.GhiChu</td>
+                        <td class="text-nowrap">@nha.NgayTao.ToString("dd/MM/yyyy")</td>
+                        <td class="text-end text-nowrap">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary me-1 btn-sua-nha"
+                                    data-id="@nha.Id"
+                                    data-ten="@nha.TenNha"
+                                    data-diachi="@nha.DiaChi"
+                                    data-ghichu="@nha.GhiChu">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form asp-action="Delete" asp-route-id="@nha.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('Xoa nha @nha.TenNha?')">
+                                @Html.AntiForgeryToken()
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">Chưa có nhà nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalThemNha" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h6 class="modal-title">Them nha</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ten nha <span class="text-danger">*</span></label>
+                        <input name="TenNha" class="form-control" maxlength="255" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Dia chi</label>
+                        <input name="DiaChi" class="form-control" maxlength="500" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Ghi chu</label>
+                        <textarea name="GhiChu" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary btn-sm">Luu</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Huy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSuaNha" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editNhaId" />
+                <div class="modal-header">
+                    <h6 class="modal-title">Sua nha</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ten nha <span class="text-danger">*</span></label>
+                        <input name="TenNha" id="editTenNha" class="form-control" maxlength="255" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Dia chi</label>
+                        <input name="DiaChi" id="editDiaChi" class="form-control" maxlength="500" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Ghi chu</label>
+                        <textarea name="GhiChu" id="editGhiChu" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary btn-sm">Luu thay doi</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Huy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.querySelectorAll('.btn-sua-nha').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('editNhaId').value = btn.dataset.id || '';
+            document.getElementById('editTenNha').value = btn.dataset.ten || '';
+            document.getElementById('editDiaChi').value = btn.dataset.diachi || '';
+            document.getElementById('editGhiChu').value = btn.dataset.ghichu || '';
+            new bootstrap.Modal(document.getElementById('modalSuaNha')).show();
+        });
+    });
+</script>
+}

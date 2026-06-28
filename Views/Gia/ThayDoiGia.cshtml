@@ -1,0 +1,85 @@
+@model QuanLyNhaTro.Models.ThayDoiGiaViewModel
+@{ ViewData["Title"] = "Thay đổi giá — " + Model.TenDoiTuong; }
+<h4>Thay đổi giá — <span class="text-primary">@Model.TenDoiTuong</span></h4>
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Thiết lập giá mới</div>
+            <div class="card-body">
+                <form asp-action="LuuThayDoi" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="LoaiDoiTuong" />
+                    <input type="hidden" asp-for="DoiTuongId" />
+                    <input type="hidden" asp-for="TenDoiTuong" />
+                    <div class="mb-3">
+                        <div class="text-muted small">Giá hiện tại</div>
+                        <div class="fw-bold fs-5 text-secondary">@Model.GiaHienTai.ToString("N0") đ</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Giá mới (đ) <span class="text-danger">*</span></label>
+                        <input asp-for="GiaMoi" type="number" class="form-control" min="0" step="50000" />
+                        <span asp-validation-for="GiaMoi" class="text-danger small"></span>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label">Hiệu lực từ tháng</label>
+                            <select asp-for="ThangApDung" class="form-select">
+                                @for (int m = 1; m <= 12; m++)
+                                { <option value="@m">Tháng @m</option> }
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Năm</label>
+                            <input asp-for="NamApDung" type="number" class="form-control" min="2024" max="2099" />
+                        </div>
+                    </div>
+                    <div class="form-text text-warning mb-3">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Chỉ áp dụng cho hóa đơn lập từ kỳ đã chọn trở đi. Hóa đơn cũ không bị ảnh hưởng.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <input asp-for="GhiChu" class="form-control" placeholder="VD: Tăng giá điện theo EVN..." />
+                    </div>
+                    <button class="btn btn-primary w-100">Lưu thay đổi</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Lịch sử thay đổi</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr><th>Hiệu lực từ</th><th class="text-end">Giá cũ</th><th class="text-end">Giá mới</th><th>Ghi chú</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.LichSu.Any())
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-3">Chưa có lịch sử.</td></tr>
+                        }
+                        @foreach (var ls in Model.LichSu)
+                        {
+                            <tr>
+                                <td>T@(ls.ThangApDung)/@ls.NamApDung</td>
+                                <td class="text-end text-muted">@ls.GiaCu.ToString("N0")</td>
+                                <td class="text-end fw-semibold">@ls.GiaMoi.ToString("N0") đ</td>
+                                <td class="text-muted small">@ls.LyDo</td>
+                                <td>
+                                    <form asp-action="Xoa" method="post" onsubmit="return confirm('Xóa?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@ls.Id" />
+                                        <input type="hidden" name="loai" value="@Model.LoaiDoiTuong" />
+                                        <input type="hidden" name="doiTuongId" value="@Model.DoiTuongId" />
+                                        <button class="btn btn-sm btn-outline-danger">Xóa</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

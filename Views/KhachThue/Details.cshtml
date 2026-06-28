@@ -1,0 +1,72 @@
+@model QuanLyNhaTro.Models.KhachThue
+@{
+    ViewData["Title"] = "Chi tiết khách thuê";
+    ViewData["ActiveMenu"] = "khachthue";
+}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h5 class="mb-0">@Model.HoTen</h5>
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-auto">
+        <i class="bi bi-pencil me-1"></i>Sửa
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">Thông tin cá nhân</h6>
+                <dl class="row mb-0">
+                    <dt class="col-5">Họ tên</dt><dd class="col-7">@Model.HoTen</dd>
+                    <dt class="col-5">Điện thoại</dt><dd class="col-7">@(Model.SoDienThoai ?? "-")</dd>
+                    <dt class="col-5">Ngày sinh</dt><dd class="col-7">@(Model.NgaySinh?.ToString("dd/MM/yyyy") ?? "-")</dd>
+                    <dt class="col-5">Quê quán</dt><dd class="col-7">@(Model.QueQuan ?? "-")</dd>
+                    <dt class="col-5">Số CCCD</dt><dd class="col-7">@(Model.CCCD ?? "-")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">Ảnh CCCD</h6>
+                <div class="row g-3">
+                    <div class="col-6">
+                        @if (!string.IsNullOrEmpty(Model.AnhCCCDMatTruoc))
+                        {
+                            <img src="@Model.AnhCCCDMatTruoc" alt="CCCD mặt trước" class="img-fluid rounded" style="max-height:180px;" />
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">Chưa có mặt trước.</p>
+                        }
+                    </div>
+                    <div class="col-6">
+                        @if (!string.IsNullOrEmpty(Model.AnhCCCDMatSau))
+                        {
+                            <img src="@Model.AnhCCCDMatSau" alt="CCCD mặt sau" class="img-fluid rounded" style="max-height:180px;" />
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">Chưa có mặt sau.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.GhiChu))
+    {
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-2">Ghi chú</h6>
+                    <p class="mb-0">@Model.GhiChu</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>

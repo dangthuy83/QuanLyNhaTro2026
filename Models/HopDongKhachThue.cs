@@ -1,0 +1,13 @@
+namespace QuanLyNhaTro.Models;
+
+/// <summary>Bảng liên kết N-N giữa HopDong và KhachThue</summary>
+public class HopDongKhachThue
+{
+    public int Id { get; set; }
+    public int HopDongId { get; set; }
+    public int KhachThueId { get; set; }
+    public bool LaDaiDien { get; set; } = false; // Người đại diện ký hợp đồng
+
+    // Navigation
+    public KhachThue? KhachThue { get; set; }
+}

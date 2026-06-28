@@ -1,0 +1,17 @@
+@model QuanLyNhaTro.Models.DichVu
+
+<div class="mb-2">
+    <label class="form-label small fw-semibold">Tên dịch vụ <span class="text-danger">*</span></label>
+    <input name="TenDichVu" class="form-control form-control-sm" value="@Model.TenDichVu" required />
+</div>
+<div class="mb-2">
+    <label class="form-label small fw-semibold">Loại tính phí</label>
+    <select name="LoaiTinhPhi" class="form-select form-select-sm">
+        <option value="CoDinh" selected="@(Model.LoaiTinhPhi == "CoDinh")">Cố định</option>
+        <option value="TheoChiSo" selected="@(Model.LoaiTinhPhi == "TheoChiSo")">Theo chỉ số</option>
+    </select>
+</div>
+<div class="mb-2">
+    <label class="form-label small fw-semibold">Đơn vị</label>
+    <input name="DonViTinh" class="form-control form-control-sm" value="@Model.DonViTinh" placeholder="kWh, m3, tháng..." />
+</div>

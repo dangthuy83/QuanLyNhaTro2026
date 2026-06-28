@@ -1,0 +1,77 @@
+@{
+    ViewData["Title"] = "Chỉ số điện nước";
+    ViewData["ActiveMenu"] = "chiso";
+    var thang    = (int)ViewBag.Thang;
+    var nam      = (int)ViewBag.Nam;
+    var hopDongs = ViewBag.HopDongs as IEnumerable<QuanLyNhaTro.Models.HopDong> ?? [];
+    var dsChiSo  = ViewBag.DsChiSo  as IEnumerable<QuanLyNhaTro.Models.ChiSoDienNuoc> ?? [];
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h5 class="mb-0">Chỉ số điện nước — @thang/@nam</h5>
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <select name="thang" class="form-select form-select-sm" style="width:90px">
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(m == thang)">Tháng @m</option>
+            }
+        </select>
+        <input name="nam" type="number" class="form-control form-control-sm" style="width:90px"
+               value="@nam" min="2020" max="2099" />
+        <button class="btn btn-sm btn-outline-primary">Xem</button>
+    </form>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Phòng</th>
+                    <th>Đã nhập chỉ số</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var hd in hopDongs)
+                {
+                    var coChiSo = dsChiSo.Any(cs => cs.PhongId == hd.PhongId);
+                    <tr>
+                        <td class="fw-semibold">@hd.Phong?.TenPhong</td>
+                        <td>
+                            @if (coChiSo)
+                            {
+                                <span class="badge bg-success">Đã nhập</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-muted border">Chưa nhập</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Nhap"
+                               asp-route-hopDongId="@hd.Id"
+                               asp-route-thang="@thang"
+                               asp-route-nam="@nam"
+                               class="btn btn-sm @(coChiSo ? "btn-outline-secondary" : "btn-primary")">
+                                @(coChiSo ? "Sửa chỉ số" : "Nhập chỉ số")
+                            </a>
+                        </td>
+                    </tr>
+                }
+                @if (!hopDongs.Any())
+                {
+                    <tr><td colspan="3" class="text-center text-muted py-4">Không có hợp đồng đang hiệu lực.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
