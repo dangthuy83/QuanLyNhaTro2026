@@ -115,7 +115,7 @@
         <div class="card shadow-sm mb-3">
             <div class="card-body">
                 <h6 class="card-title text-muted mb-2">Trạng thái</h6>
-                @(Model.TrangThaiThanhToan switch {
+                @Html.Raw(Model.TrangThaiThanhToan switch {
                     "DaThu"      => "<span class='badge bg-success fs-6 px-3 py-2'>Đã thu đủ</span>",
                     "ThuMotPhan" => "<span class='badge bg-warning text-dark fs-6 px-3 py-2'>Thu một phần</span>",
                     _            => "<span class='badge bg-danger fs-6 px-3 py-2'>Chưa thu</span>"

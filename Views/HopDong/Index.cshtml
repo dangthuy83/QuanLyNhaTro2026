@@ -44,7 +44,7 @@
                         <td>@hd.NgayBatDau.ToString("dd/MM/yyyy")</td>
                         <td class="text-end">@hd.TienThueThoaThuan.ToString("N0") đ</td>
                         <td class="text-end">@hd.TienCoc.ToString("N0") đ</td>
-                        <td>@TrangThaiBadge(hd.TrangThai)</td>
+                        <td>@Html.Raw(TrangThaiBadge(hd.TrangThai))</td>
                         <td class="text-end">
                             <a asp-action="Details" asp-route-id="@hd.Id"
                                class="btn btn-sm btn-outline-secondary">

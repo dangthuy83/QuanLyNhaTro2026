@@ -692,6 +692,52 @@ Chưa làm:
 
 ---
 
+### Phiên 22 - Smoke Test Ledger Cọc Với MySQL Thật
+
+Ngày: 28/06/2026
+
+Đã làm:
+
+- Apply migration `GiaoDichCoc` trên DB thật trước phiên test.
+- Chạy app Development tại `http://127.0.0.1:5098` với MySQL thật.
+- Smoke test dữ liệu tiền tố `TEST_LEDGER_182206`.
+- Test tạo hợp đồng có cọc:
+  - Hợp đồng `#7` tự sinh ledger `ThuCoc = 1,000,000`.
+- Test thu thêm/hoàn cọc thủ công:
+  - `ThuThemCoc = +200,000`.
+  - `HoanCoc = -100,000`.
+  - Số dư cọc còn `1,100,000`.
+- Test chuyển phòng có nợ và chênh cọc:
+  - Hợp đồng cũ `#8` sang hợp đồng mới `#9`.
+  - Hóa đơn nợ cũ `#7` được tất toán bằng `ThanhToan.HinhThuc = KetChuyenNo`.
+  - Hóa đơn mới `#9` có `TienNoKyTruoc = 800,000`.
+  - Số dư cọc chuyển sang hợp đồng mới là `1,000,000`.
+  - `DaXuLyChenhLechCoc = false` vì cọc thỏa thuận mới là `1,500,000`.
+- Test trả phòng còn nợ:
+  - Hợp đồng `#10` trừ nợ vào cọc `700,000`.
+  - Ledger có `TruNo = -700,000` và `HoanCoc = -300,000`.
+  - `ThanhToan.HinhThuc = TruCoc`.
+  - Công nợ còn lại `0`.
+- Rà báo cáo công nợ sau chuyển phòng:
+  - Hóa đơn nợ cũ đã `KetChuyenNo` không còn trong báo cáo.
+  - Hóa đơn mới mang `TienNoKyTruoc` vẫn còn trong báo cáo, đúng nghiệp vụ.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+Ghi chú:
+
+- App test cổng `5098` đã dừng sau khi test.
+- Dữ liệu smoke test `TEST_LEDGER_182206` còn trong DB thật để đối chiếu nếu cần; có thể dọn sau.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |

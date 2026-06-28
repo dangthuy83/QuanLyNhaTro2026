@@ -61,7 +61,7 @@
                         </td>
                         <td class="text-end fw-semibold">@hd.TongCong.ToString("N0")</td>
                         <td class="text-end">@hd.SoTienDaThu.ToString("N0")</td>
-                        <td>@TrangThaiBadge(hd.TrangThaiThanhToan)</td>
+                        <td>@Html.Raw(TrangThaiBadge(hd.TrangThaiThanhToan))</td>
                         <td class="text-end">
                             <a asp-action="Details" asp-route-id="@hd.Id"
                                class="btn btn-sm btn-outline-secondary">
