@@ -147,6 +147,7 @@ SoTienDaThu >= TongCong      -> DaThu
 - `TruCoc`: tất toán hóa đơn bằng tiền cọc khi trả phòng.
 
 Các dòng này không phải thu tiền mặt mới; chúng là bút toán xử lý công nợ.
+Màn chi tiết hóa đơn phải hiển thị `KetChuyenNo` và `TruCoc` bằng nhãn riêng/cảnh báo riêng để tránh hiểu nhầm là khoản tiền mặt/chuyển khoản mới thu.
 
 ### 4.7 Ngày vào, ngày ra, ngày chuyển phòng
 
@@ -315,4 +316,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 20 - 28/06/2026
+Cập nhật lần cuối: Phiên 24 - 28/06/2026

@@ -6,7 +6,7 @@ public class ThanhToan
     public int HoaDonId { get; set; }
     public decimal SoTien { get; set; }
     public DateTime NgayThu { get; set; }
-    public string? HinhThuc { get; set; }   // TienMat | ChuyenKhoan
+    public string? HinhThuc { get; set; }   // TienMat | ChuyenKhoan | KetChuyenNo | TruCoc
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
 }

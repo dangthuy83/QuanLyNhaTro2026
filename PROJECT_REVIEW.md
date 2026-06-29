@@ -66,6 +66,10 @@ Da xu ly trong phien 21:
 - Tra phong ghi `TruNo`/`HoanCoc` va cap nhat `HopDong.TienCocHoanLai`.
 - Chong double-count cong no chuyen hop dong bang `ThanhToan.HinhThuc = KetChuyenNo`; tru no vao coc bang `ThanhToan.HinhThuc = TruCoc`.
 
+Da xu ly trong phien 24:
+
+- Man chi tiet hoa don hien thi rieng `KetChuyenNo` va `TruCoc` bang badge/canh bao de phan biet but toan cong no voi tien mat/chuyen khoan moi thu.
+
 ---
 
 ## 2. Cac lo hong can sua ngay

@@ -4,6 +4,7 @@
     ViewData["ActiveMenu"] = "hoadon";
     bool chuaDaThu = Model.TrangThaiThanhToan != "DaThu";
     decimal conLai = Model.TongCong - Model.SoTienDaThu;
+    bool coButToanPhiTienMat = Model.DanhSachThanhToan.Any(tt => IsButToanPhiTienMat(tt.HinhThuc));
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
@@ -89,6 +90,14 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h6 class="card-title text-muted mb-2">Lịch sử thu tiền</h6>
+                    @if (coButToanPhiTienMat)
+                    {
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            Các dòng <strong>Kết chuyển nợ</strong> và <strong>Trừ cọc</strong>
+                            là bút toán xử lý công nợ, không phải tiền mặt/chuyển khoản mới thu.
+                        </div>
+                    }
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
                             <tr><th>Ngày thu</th><th>Hình thức</th><th class="text-end">Số tiền</th><th>Ghi chú</th></tr>
@@ -98,8 +107,8 @@
                             {
                                 <tr>
                                     <td>@tt.NgayThu.ToString("dd/MM/yyyy")</td>
-                                    <td>@tt.HinhThuc</td>
-                                    <td class="text-end">@tt.SoTien.ToString("N0") đ</td>
+                                    <td>@Html.Raw(HinhThucBadge(tt.HinhThuc))</td>
+                                    <td class="text-end @(IsButToanPhiTienMat(tt.HinhThuc) ? "text-primary" : "")">@tt.SoTien.ToString("N0") đ</td>
                                     <td>@tt.GhiChu</td>
                                 </tr>
                             }
@@ -168,3 +177,18 @@
         }
     </div>
 </div>
+
+@functions {
+    static bool IsButToanPhiTienMat(string? hinhThuc)
+        => hinhThuc is "KetChuyenNo" or "TruCoc";
+
+    static string HinhThucBadge(string? hinhThuc) => hinhThuc switch
+    {
+        "TienMat" => "<span class='badge bg-success'>Tiền mặt</span>",
+        "ChuyenKhoan" => "<span class='badge bg-primary'>Chuyển khoản</span>",
+        "KetChuyenNo" => "<span class='badge bg-info text-dark'>Kết chuyển nợ</span>",
+        "TruCoc" => "<span class='badge bg-warning text-dark'>Trừ cọc</span>",
+        null or "" => "<span class='badge bg-light text-dark border'>Không rõ</span>",
+        _ => $"<span class='badge bg-light text-dark border'>{hinhThuc}</span>"
+    };
+}

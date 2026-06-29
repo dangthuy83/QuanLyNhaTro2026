@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật ở các phiên trước; phiên này thêm schema `GiaoDichCoc` và migration SQL cho DB hiện hữu |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ đã smoke test, phiên này smoke test hiển thị bút toán phi tiền mặt trên chi tiết hóa đơn |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -21,8 +21,8 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
-| 1 | Smoke test ledger cọc với MySQL thật sau khi apply migration | Cần test tạo hợp đồng, chuyển phòng, trả phòng, ghi nhận thu thêm/hoàn cọc | Cao |
-| 2 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*` | Thấp |
+| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*` | Thấp |
+| 2 | Rà thêm báo cáo công nợ sau ledger khi có dữ liệu vận hành thật | Smoke test đã pass với `KetChuyenNo`/`TruCoc`; tiếp tục theo dõi biến thể thu một phần, nợ nhiều hóa đơn | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
@@ -781,6 +781,40 @@ QA với app chạy MySQL thật tại `http://127.0.0.1:5099`:
 
 ---
 
+### Phiên 24 - Hiển Thị Bút Toán Phi Tiền Mặt Trên Hóa Đơn
+
+Ngày: 28/06/2026
+
+Đã làm:
+
+- Sửa `Views/HoaDon/Details.cshtml` để lịch sử thanh toán hiển thị badge riêng cho:
+  - `TienMat`: tiền mặt.
+  - `ChuyenKhoan`: chuyển khoản.
+  - `KetChuyenNo`: kết chuyển nợ.
+  - `TruCoc`: trừ cọc.
+- Nếu hóa đơn có `KetChuyenNo` hoặc `TruCoc`, hiển thị cảnh báo rằng đây là bút toán xử lý công nợ, không phải tiền mặt/chuyển khoản mới thu.
+- Cập nhật comment `ThanhToan.HinhThuc` để ghi rõ các giá trị nghiệp vụ đang dùng.
+- Cập nhật `DECISIONS.md` và `PROJECT_REVIEW.md` về nguyên tắc hiển thị bút toán phi tiền mặt.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5100`:
+
+- Mở `/HoaDon/Details/7`: hóa đơn kết chuyển nợ hiển thị badge/cảnh báo phi tiền mặt, console không có warning/error.
+- Mở `/HoaDon/Details/10`: hóa đơn trừ cọc hiển thị badge/cảnh báo phi tiền mặt, console không có warning/error.
+- Click menu `Hóa đơn` từ chi tiết hóa đơn về danh sách thành công, console vẫn sạch.
+- App test cổng `5100` đã dừng sau khi test.
+- Sau QA, nhãn hiển thị được đổi từ không dấu sang tiếng Việt có dấu (`Kết chuyển nợ`, `Trừ cọc`) và `dotnet build --no-restore` vẫn pass; chưa chạy lại runtime smoke test do lượt chạy escalated bị giới hạn.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -801,6 +835,7 @@ QA với app chạy MySQL thật tại `http://127.0.0.1:5099`:
 | 20 | `ChiSoController`, `Views/ChuyenPhong` | Flow chuyển phòng không có UI nhập chỉ số cho phòng mới vì phòng mới chưa có hợp đồng | Thêm nhập chỉ số theo `PhongId` + kỳ và link từ màn chuyển phòng |
 | 21 | `ChuyenPhongService`, `TraPhongService`, `GiaoDichCoc` | Cọc chỉ là số tĩnh trên hợp đồng, nợ chuyển kỳ có nguy cơ double-count | Thêm ledger cọc và bút toán `ThanhToan` phi tiền mặt `KetChuyenNo`/`TruCoc` |
 | 21 | `ChuyenPhongController` | Render lại form lỗi loại phòng theo `HopDongCuId` thay vì `PhongId` cũ | Nạp lại hợp đồng cũ và loại đúng `PhongId` |
+| 24 | `Views/HoaDon/Details.cshtml` | Dòng `KetChuyenNo`/`TruCoc` in như mã thanh toán thường, dễ hiểu nhầm là tiền mới thu | Hiển thị badge/cảnh báo riêng cho bút toán phi tiền mặt |
 
 ---
 
