@@ -27,7 +27,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
 | 6 | In phiếu thu HTML | `window.print()` và CSS print | Trung bình |
-| 7 | Xử lý các rủi ro trong `PROJECT_REVIEW.md` | Tiếp theo: rà báo cáo công nợ sau ledger, UI nhập chỉ số hàng loạt/preview chốt hóa đơn | Cao |
+| 7 | UI nhập chỉ số hàng loạt/preview chốt hóa đơn | Làm sau khi các màn nghiệp vụ tiền đã đủ dùng | Trung bình |
 | 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 
 ### Quy ước GitHub
@@ -905,6 +905,47 @@ Ghi chú:
 
 ---
 
+### Phiên 27 - Cải Thiện UI Báo Cáo Công Nợ
+
+Ngày: 29/06/2026
+
+Đã làm:
+
+- Thêm thông tin `NhaId`, `TenNha` vào `BaoCaoCongNoViewModel` và query công nợ.
+- Bổ sung filter GET cho màn `BaoCao/CongNo`:
+  - Lọc theo Nhà.
+  - Lọc theo trạng thái hợp đồng.
+  - Lọc theo nhóm quá hạn.
+  - Tìm nhanh theo nhà, phòng, khách thuê, số điện thoại.
+- Đồng bộ filter với xuất Excel công nợ.
+- Cập nhật view báo cáo công nợ:
+  - Thêm thanh filter.
+  - Thêm cột Nhà và Trạng thái.
+  - Thêm card số hóa đơn.
+  - Bảng dùng `table-responsive`.
+- Cập nhật `ExcelService.XuatExcelCongNo` để xuất thêm Nhà và Quá hạn.
+- Sửa CSS layout `#page-content { min-width: 0; }` để bảng rộng chỉ cuộn trong vùng bảng, không kéo ngang toàn trang.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5102`:
+
+- Mở `/BaoCao/CongNo`: render đúng filter, cột Nhà, summary card; console không có warning/error.
+- Lọc `tuKhoa=TEST_DEBT_EDGE_20260629204600` và `quaHan=QuaHan30`: còn đúng 1 hóa đơn, summary và bảng khớp.
+- Link xuất Excel giữ query filter: `/BaoCao/XuatCongNo?quaHan=QuaHan30&tuKhoa=TEST_DEBT_EDGE_20260629204600`.
+- Gọi route xuất Excel trả `200`, content type `.xlsx`, file size `6909` bytes.
+- Sau CSS fix, trang không còn horizontal scroll toàn cục; bảng tự cuộn ngang bên trong `table-responsive`.
+- App test cổng `5102` đã dừng sau khi test.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -927,6 +968,7 @@ Ghi chú:
 | 21 | `ChuyenPhongController` | Render lại form lỗi loại phòng theo `HopDongCuId` thay vì `PhongId` cũ | Nạp lại hợp đồng cũ và loại đúng `PhongId` |
 | 24 | `Views/HoaDon/Details.cshtml` | Dòng `KetChuyenNo`/`TruCoc` in như mã thanh toán thường, dễ hiểu nhầm là tiền mới thu | Hiển thị badge/cảnh báo riêng cho bút toán phi tiền mặt |
 | 25 | `HoaDonService`, `TraPhongService` | Hóa đơn mới/trả phòng mang `TienNoKyTruoc` có thể double-count nếu hóa đơn cũ vẫn nằm trong báo cáo công nợ | Kết chuyển nợ cũ bằng `KetChuyenNo`, dùng tổng nợ trước kỳ, chặn xóa hóa đơn đang mang nợ đã kết chuyển |
+| 27 | `Views/BaoCao/CongNo.cshtml`, `site.css` | Báo cáo công nợ thiếu filter vận hành và bảng rộng kéo ngang toàn trang | Thêm filter, cột Nhà/trạng thái, đồng bộ Excel và giới hạn scroll ngang trong bảng |
 
 ---
 

@@ -12,6 +12,10 @@ body {
     background-color: #0d6efd;
 }
 
+#page-content {
+    min-width: 0;
+}
+
 /* ── Tables ─────────────────────────────────────────────────────────────────── */
 .table th {
     font-weight: 600;

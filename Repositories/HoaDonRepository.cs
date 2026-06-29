@@ -149,6 +149,8 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             SELECT
+                n.Id AS NhaId,
+                n.TenNha,
                 p.TenPhong,
                 COALESCE(k.HoTen, '(chưa có khách)') AS TenKhachChinh,
                 k.SoDienThoai,
@@ -167,6 +169,7 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
             FROM HoaDon hd
             JOIN HopDong hop ON hd.HopDongId = hop.Id
             JOIN Phong p     ON hop.PhongId  = p.Id
+            JOIN Nha n        ON p.NhaId      = n.Id
             LEFT JOIN HopDongKhachThue hkt ON hop.Id = hkt.HopDongId AND hkt.LaDaiDien = 1
             LEFT JOIN KhachThue k          ON hkt.KhachThueId = k.Id
             WHERE hd.SoTienDaThu < hd.TongCong AND hd.TongCong > 0

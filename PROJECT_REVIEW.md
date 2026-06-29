@@ -75,6 +75,11 @@ Da xu ly trong phien 25:
 - Hoa don thuong va hoa don tra phong neu mang no cu vao `TienNoKyTruoc` se ket chuyen/tat toan cac hoa don cu bang `ThanhToan.HinhThuc = KetChuyenNo`, tranh double-count tren bao cao cong no.
 - Khong cho xoa hoa don dang mang `TienNoKyTruoc > 0` bang flow xoa don gian, vi hoa don do dang giu khoan no da ket chuyen.
 
+Da xu ly trong phien 27:
+
+- `BaoCao/CongNo` da co filter Bootstrap toi thieu theo Nha, trang thai hop dong, nhom qua han va tu khoa.
+- Xuat Excel cong no dung chung bo loc voi man hinh va co them cot Nha/Qua han.
+
 ---
 
 ## 2. Cac lo hong can sua ngay
@@ -494,10 +499,10 @@ Nguyen tac tich hop:
 
 Thu tu UI de lam sau khi nghiep vu loi on dinh:
 
-1. `BaoCao/CongNo`: doi sang Syncfusion Grid de filter, sort, format tien, export.
-2. `HoaDon/Index`: grid hoa don theo ky, trang thai thu tien, thao tac thu nhanh.
-3. `ChiSo/Index` va man nhap chi so hang loat: inline edit, validate dong loi, to mau canh bao.
-4. Preview chot hoa don hang loat: grid tong hop tien phong, dich vu, no cu, tong cong, trang thai du lieu.
+1. `HoaDon/Index`: grid hoa don theo ky, trang thai thu tien, thao tac thu nhanh.
+2. `ChiSo/Index` va man nhap chi so hang loat: inline edit, validate dong loi, to mau canh bao.
+3. Preview chot hoa don hang loat: grid tong hop tien phong, dich vu, no cu, tong cong, trang thai du lieu.
+4. `BaoCao/CongNo`: da co filter Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can sort/filter/export nang cao hon.
 5. Dashboard: them Chart/KPI nhe neu can, sau khi cac man thao tac chinh da tot.
 
 Khong lam truoc khi:

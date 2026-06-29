@@ -2,6 +2,8 @@ namespace QuanLyNhaTro.Models;
 
 public class BaoCaoCongNoViewModel
 {
+    public int NhaId { get; set; }
+    public string TenNha { get; set; } = "";
     public string TenPhong { get; set; } = "";
     public string TenKhachChinh { get; set; } = "";
     public string? SoDienThoai { get; set; }

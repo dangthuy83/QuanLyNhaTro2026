@@ -1,13 +1,81 @@
 @model IEnumerable<QuanLyNhaTro.Models.BaoCaoCongNoViewModel>
-@{ ViewData["Title"] = "Báo Cáo Công Nợ"; }
+@{
+    ViewData["Title"] = "Báo cáo công nợ";
+    ViewData["ActiveMenu"] = "baocao";
+
+    var danhSachNha = ViewBag.DanhSachNha as IEnumerable<QuanLyNhaTro.Models.Nha> ?? [];
+    int? nhaId = ViewBag.NhaId as int?;
+    string trangThaiHopDong = ViewBag.TrangThaiHopDong as string ?? "";
+    string quaHan = ViewBag.QuaHan as string ?? "";
+    string tuKhoa = ViewBag.TuKhoa as string ?? "";
+    int soHoaDonNo = ViewBag.SoHoaDonNo as int? ?? Model.Count();
+}
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Báo Cáo Công Nợ</h4>
-    <a asp-action="XuatCongNo" class="btn btn-outline-success btn-sm">
+    <div>
+        <h4 class="mb-0">Báo cáo công nợ</h4>
+        <div class="text-muted small">@soHoaDonNo hóa đơn còn nợ theo bộ lọc hiện tại</div>
+    </div>
+    <a asp-action="XuatCongNo"
+       asp-route-nhaId="@nhaId"
+       asp-route-trangThaiHopDong="@trangThaiHopDong"
+       asp-route-quaHan="@quaHan"
+       asp-route-tuKhoa="@tuKhoa"
+       class="btn btn-outline-success btn-sm">
         <i class="bi bi-file-earmark-excel"></i> Xuất Excel
     </a>
 </div>
+
+<form method="get" class="card shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Nhà</label>
+                <select name="nhaId" class="form-select form-select-sm">
+                    <option value="">Tất cả nhà</option>
+                    @foreach (var nha in danhSachNha)
+                    {
+                        <option value="@nha.Id" selected="@(nhaId == nha.Id)">@nha.TenNha</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Trạng thái</label>
+                <select name="trangThaiHopDong" class="form-select form-select-sm">
+                    <option value="" selected="@(trangThaiHopDong == "")">Tất cả</option>
+                    <option value="DangHieuLuc" selected="@(trangThaiHopDong == "DangHieuLuc")">Đang ở</option>
+                    <option value="DaKetThuc" selected="@(trangThaiHopDong == "DaKetThuc")">Đã rời</option>
+                    <option value="DaChuyenPhong" selected="@(trangThaiHopDong == "DaChuyenPhong")">Đã chuyển phòng</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Quá hạn</label>
+                <select name="quaHan" class="form-select form-select-sm">
+                    <option value="" selected="@(quaHan == "")">Tất cả</option>
+                    <option value="ChuaQuaHan" selected="@(quaHan == "ChuaQuaHan")">Chưa quá hạn</option>
+                    <option value="QuaHan" selected="@(quaHan == "QuaHan")">Đã quá hạn</option>
+                    <option value="QuaHan30" selected="@(quaHan == "QuaHan30")">Quá hạn trên 30 ngày</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Tìm nhanh</label>
+                <input name="tuKhoa" value="@tuKhoa" class="form-control form-control-sm"
+                       placeholder="Nhà, phòng, khách, SĐT" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="bi bi-funnel"></i> Lọc
+                </button>
+                <a asp-action="CongNo" class="btn btn-outline-secondary btn-sm" title="Xóa lọc">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
 <div class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card border-0 bg-danger bg-opacity-10">
             <div class="card-body py-2">
                 <div class="text-muted small">Tổng nợ</div>
@@ -15,7 +83,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card border-0 bg-warning bg-opacity-10">
             <div class="card-body py-2">
                 <div class="text-muted small">Khách đang ở</div>
@@ -23,65 +91,101 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card border-0 bg-secondary bg-opacity-10">
             <div class="card-body py-2">
-                <div class="text-muted small">Khách đã rời</div>
+                <div class="text-muted small">Khách đã rời/chuyển</div>
                 <div class="fw-bold text-secondary fs-5">@((ViewBag.TongNoCu as decimal? ?? 0m).ToString("N0")) đ</div>
             </div>
         </div>
     </div>
-</div>
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Phòng</th><th>Khách thuê</th><th>SĐT</th><th>Kỳ</th>
-                    <th class="text-end">Tổng cộng</th><th class="text-end">Đã thu</th>
-                    <th class="text-end">Còn lại</th><th>Quá hạn</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Any())
-                {
-                    <tr><td colspan="9" class="text-center text-muted py-4">Không có công nợ. 🎉</td></tr>
-                }
-                @foreach (var x in Model)
-                {
-                    <tr class="@(!x.DangOHienTai ? "text-muted" : "")">
-                        <td class="fw-semibold">@x.TenPhong</td>
-                        <td>@x.TenKhachChinh</td>
-                        <td>@x.SoDienThoai</td>
-                        <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
-                        <td class="text-end">@x.TongCong.ToString("N0")</td>
-                        <td class="text-end">@x.SoTienDaThu.ToString("N0")</td>
-                        <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
-                        <td>
-                            @if (x.SoNgayQuaHan > 0)
-                            {
-                                <span class="badge @(x.SoNgayQuaHan>30?"bg-danger":"bg-warning text-dark")">
-                                    @x.SoNgayQuaHan ngày
-                                </span>
-                            }
-                        </td>
-                        <td>
-                            <a asp-controller="HoaDon" asp-action="Details"
-                               asp-route-id="@x.HoaDonId" class="btn btn-sm btn-outline-primary">Chi tiết</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-            @if (Model.Any())
-            {
-                <tfoot class="table-light fw-bold">
-                    <tr>
-                        <td colspan="6" class="text-end">Tổng nợ:</td>
-                        <td class="text-end text-danger">@Model.Sum(x => x.ConLai).ToString("N0") đ</td>
-                        <td colspan="2"></td>
-                    </tr>
-                </tfoot>
-            }
-        </table>
+    <div class="col-md-3">
+        <div class="card border-0 bg-info bg-opacity-10">
+            <div class="card-body py-2">
+                <div class="text-muted small">Số hóa đơn</div>
+                <div class="fw-bold text-info fs-5">@soHoaDonNo</div>
+            </div>
+        </div>
     </div>
 </div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nhà</th>
+                        <th>Phòng</th>
+                        <th>Khách thuê</th>
+                        <th>SĐT</th>
+                        <th>Kỳ</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Tổng cộng</th>
+                        <th class="text-end">Đã thu</th>
+                        <th class="text-end">Còn lại</th>
+                        <th>Quá hạn</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="11" class="text-center text-muted py-4">Không có công nợ theo bộ lọc hiện tại.</td></tr>
+                    }
+                    @foreach (var x in Model)
+                    {
+                        <tr class="@(!x.DangOHienTai ? "text-muted" : "")">
+                            <td class="small">@x.TenNha</td>
+                            <td class="fw-semibold">@x.TenPhong</td>
+                            <td>@x.TenKhachChinh</td>
+                            <td>@x.SoDienThoai</td>
+                            <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
+                            <td>@Html.Raw(TrangThaiBadge(x.TrangThaiHopDong))</td>
+                            <td class="text-end">@x.TongCong.ToString("N0")</td>
+                            <td class="text-end">@x.SoTienDaThu.ToString("N0")</td>
+                            <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
+                            <td>
+                                @if (x.SoNgayQuaHan > 0)
+                                {
+                                    <span class="badge @(x.SoNgayQuaHan > 30 ? "bg-danger" : "bg-warning text-dark")">
+                                        @x.SoNgayQuaHan ngày
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-dark border">Chưa quá hạn</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-controller="HoaDon" asp-action="Details"
+                                   asp-route-id="@x.HoaDonId" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Any())
+                {
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="8" class="text-end">Tổng nợ:</td>
+                            <td class="text-end text-danger">@Model.Sum(x => x.ConLai).ToString("N0") đ</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+@functions {
+    static string TrangThaiBadge(string trangThai) => trangThai switch
+    {
+        "DangHieuLuc" => "<span class='badge bg-success'>Đang ở</span>",
+        "DaKetThuc" => "<span class='badge bg-secondary'>Đã rời</span>",
+        "DaChuyenPhong" => "<span class='badge bg-info text-dark'>Đã chuyển</span>",
+        "DaHuy" => "<span class='badge bg-dark'>Đã hủy</span>",
+        _ => $"<span class='badge bg-light text-dark border'>{trangThai}</span>"
+    };
+}

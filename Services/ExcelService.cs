@@ -194,12 +194,12 @@ public class ExcelService
         var ws = wb.Worksheets.Add("Công Nợ");
 
         ws.Cell("A1").Value = $"BÁO CÁO CÔNG NỢ — {DateTime.Today:dd/MM/yyyy}";
-        ws.Range("A1:G1").Merge().Style
+        ws.Range("A1:I1").Merge().Style
             .Font.SetBold(true).Font.SetFontSize(13)
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
         int row = 3;
-        string[] headers = ["Phòng", "Khách thuê", "SĐT", "Kỳ", "Tổng cộng", "Đã thu", "Còn lại"];
+        string[] headers = ["Nhà", "Phòng", "Khách thuê", "SĐT", "Kỳ", "Tổng cộng", "Đã thu", "Còn lại", "Quá hạn"];
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(row, i + 1).Value = headers[i];
         ws.Row(row).Style.Font.SetBold(true)
@@ -208,14 +208,16 @@ public class ExcelService
 
         foreach (var x in ds)
         {
-            ws.Cell(row, 1).Value = x.TenPhong;
-            ws.Cell(row, 2).Value = x.TenKhachChinh;
-            ws.Cell(row, 3).Value = x.SoDienThoai ?? "";
-            ws.Cell(row, 4).Value = $"T{x.Thang}/{x.Nam}";
-            ws.Cell(row, 5).Value = x.TongCong;
-            ws.Cell(row, 6).Value = x.SoTienDaThu;
-            ws.Cell(row, 7).Value = x.ConLai;
-            for (int c = 5; c <= 7; c++)
+            ws.Cell(row, 1).Value = x.TenNha;
+            ws.Cell(row, 2).Value = x.TenPhong;
+            ws.Cell(row, 3).Value = x.TenKhachChinh;
+            ws.Cell(row, 4).Value = x.SoDienThoai ?? "";
+            ws.Cell(row, 5).Value = $"T{x.Thang}/{x.Nam}";
+            ws.Cell(row, 6).Value = x.TongCong;
+            ws.Cell(row, 7).Value = x.SoTienDaThu;
+            ws.Cell(row, 8).Value = x.ConLai;
+            ws.Cell(row, 9).Value = x.SoNgayQuaHan > 0 ? $"{x.SoNgayQuaHan} ngày" : "Chưa quá hạn";
+            for (int c = 6; c <= 8; c++)
                 ws.Cell(row, c).Style.NumberFormat.Format = "#,##0";
             if (!x.DangOHienTai)
                 ws.Row(row).Style.Font.SetFontColor(XLColor.Gray);
@@ -223,10 +225,10 @@ public class ExcelService
         }
 
         row++;
-        ws.Cell(row, 6).Value = "TỔNG NỢ:";
-        ws.Cell(row, 6).Style.Font.SetBold(true);
-        ws.Cell(row, 7).Value = ds.Sum(x => x.ConLai);
-        ws.Cell(row, 7).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
+        ws.Cell(row, 7).Value = "TỔNG NỢ:";
+        ws.Cell(row, 7).Style.Font.SetBold(true);
+        ws.Cell(row, 8).Value = ds.Sum(x => x.ConLai);
+        ws.Cell(row, 8).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
 
         ws.Columns().AdjustToContents();
         using var ms = new MemoryStream();
