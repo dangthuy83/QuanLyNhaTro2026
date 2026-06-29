@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ đã smoke test ở các phiên trước; phiên này sửa logic kết chuyển nợ để tránh double-count |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ và edge cases kết chuyển nợ đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -22,7 +22,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*` | Thấp |
-| 2 | Runtime smoke test lại các edge case công nợ sau kết chuyển | Cần DB thật: nhiều hóa đơn nợ, lập hóa đơn mới, trả phòng sinh hóa đơn cuối, xóa hóa đơn mang nợ kỳ trước | Cao |
+| 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
@@ -849,6 +849,59 @@ Build succeeded.
 Chưa làm:
 
 - Chưa runtime smoke test với MySQL thật cho các biến thể mới trong phiên này. Cần test tiếp: nhiều hóa đơn nợ -> lập hóa đơn mới, trả phòng có nợ cũ, và thử xóa hóa đơn mang `TienNoKyTruoc > 0`.
+
+---
+
+### Phiên 26 - Smoke Test Edge Cases Công Nợ Sau Kết Chuyển
+
+Ngày: 29/06/2026
+
+Đã làm:
+
+- Tạo console smoke test tạm trong `.agents/SmokeDebtEdges` để gọi trực tiếp service thật và DB MySQL thật; thư mục `.agents/` đang được `.gitignore`.
+- Seed dữ liệu test tiền tố `TEST_DEBT_EDGE_20260629204600`.
+- Chạy 3 edge cases đã đề xuất:
+  - Hợp đồng có 2 hóa đơn nợ -> lập hóa đơn kỳ mới.
+  - Trả phòng có nợ cũ và sinh hóa đơn cuối.
+  - Thử xóa hóa đơn đang mang `TienNoKyTruoc > 0`.
+
+Kết quả smoke test trên MySQL thật:
+
+- Case 1:
+  - Hợp đồng `#11`, hóa đơn nợ cũ `#11`, `#12`, hóa đơn mới `#13`.
+  - `TienNoKyTruoc` hóa đơn mới = `800,000`.
+  - Hóa đơn cũ còn nợ = `0`.
+  - Tổng `KetChuyenNo` trên hóa đơn cũ = `800,000`.
+  - Báo cáo công nợ chỉ còn hóa đơn mới.
+  - Kết quả: pass.
+- Case 2:
+  - Hợp đồng `#12`, hóa đơn nợ cũ `#14`, `#15`, hóa đơn trả phòng `#16`.
+  - Tiền phòng tháng cuối = `300,000`.
+  - `TienNoKyTruoc` hóa đơn trả phòng = `600,000`.
+  - Tổng hóa đơn trả phòng = `900,000`.
+  - Cọc trừ vào hóa đơn trả phòng bằng `TruCoc` = `700,000`.
+  - Hóa đơn cũ còn nợ = `0`; hóa đơn trả phòng còn nợ = `200,000`.
+  - `KetQuaTraPhongViewModel.KhachConNoThem = 200,000`.
+  - Kết quả: pass.
+- Case 3:
+  - Thử xóa hóa đơn `#13` đang mang `TienNoKyTruoc > 0`.
+  - Service chặn đúng với thông báo `Khong the xoa hoa don dang mang no ky truoc da ket chuyen.`
+  - Hóa đơn vẫn tồn tại.
+  - Kết quả: pass.
+
+Kết quả kiểm tra:
+
+```text
+dotnet run --project .agents\SmokeDebtEdges\SmokeDebtEdges.csproj
+Case1.Passed = true
+Case2.Passed = true
+Case3.Passed = true
+```
+
+Ghi chú:
+
+- Dữ liệu smoke test `TEST_DEBT_EDGE_20260629204600` còn trong DB thật để đối chiếu; có thể dọn sau nếu muốn.
+- Console smoke test nằm trong `.agents/` nên không commit vào repo.
 
 ---
 
