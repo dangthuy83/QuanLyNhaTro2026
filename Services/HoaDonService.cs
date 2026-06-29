@@ -1,4 +1,5 @@
 using System.Data;
+using Dapper;
 using MySqlConnector;
 using QuanLyNhaTro.Models;
 using QuanLyNhaTro.Repositories;
@@ -13,7 +14,8 @@ public class HoaDonService(
     HopDongRepository hopDongRepo,
     PhongDichVuRepository phongDichVuRepo,
     ChiSoDienNuocRepository chiSoRepo,
-    LichSuThayDoiGiaRepository lichSuGiaRepo)
+    LichSuThayDoiGiaRepository lichSuGiaRepo,
+    CongNoSettlementService congNoSettlementService)
 {
     public async Task<decimal> LayGiaApDungAsync(
         string loaiDoiTuong,
@@ -141,6 +143,22 @@ public class HoaDonService(
                 await chiTietRepo.InsertAsync(conn, tx, ct);
             }
 
+            if (tienNoKyTruoc > 0)
+            {
+                var daKetChuyen = await congNoSettlementService.ThanhToanNoAsync(
+                    conn,
+                    tx,
+                    hopDongId,
+                    tienNoKyTruoc,
+                    hoaDon.NgayLap,
+                    "KetChuyenNo",
+                    $"Ket chuyen no sang hoa don #{hoaDonId}",
+                    [hoaDonId]);
+
+                if (daKetChuyen != tienNoKyTruoc)
+                    throw new InvalidOperationException("So tien no ky truoc khong khop voi cong no can ket chuyen.");
+            }
+
             await tx.CommitAsync();
             return hoaDonId;
         }
@@ -207,6 +225,9 @@ public class HoaDonService(
             if (hoaDon.SoTienDaThu > 0)
                 throw new InvalidOperationException("Khong the xoa hoa don da co giao dich thu tien.");
 
+            if (hoaDon.TienNoKyTruoc > 0)
+                throw new InvalidOperationException("Khong the xoa hoa don dang mang no ky truoc da ket chuyen.");
+
             await chiTietRepo.DeleteByHoaDonAsync(conn, tx, hoaDonId);
             await hoaDonRepo.DeleteAsync(conn, tx, hoaDonId);
 
@@ -258,9 +279,14 @@ public class HoaDonService(
 
     private async Task<decimal> TinhNoKyTruocAsync(HopDong hopDong, int thang, int nam)
     {
+        var noTruocKy = await TinhTongNoTruocKyAsync(hopDong.Id, thang, nam);
+        if (noTruocKy > 0)
+            return noTruocKy;
+
         var kyTruoc = await hoaDonRepo.GetKyTruocAsync(hopDong.Id, thang, nam);
-        if (kyTruoc != null)
-            return kyTruoc.TongCong - kyTruoc.SoTienDaThu;
+        var duKyTruoc = kyTruoc?.TongCong - kyTruoc?.SoTienDaThu;
+        if (duKyTruoc < 0)
+            return duKyTruoc.Value;
 
         if (hopDong.HopDongTruocId.HasValue)
         {
@@ -271,4 +297,15 @@ public class HoaDonService(
 
         return 0;
     }
+
+    private async Task<decimal> TinhTongNoTruocKyAsync(int hopDongId, int thang, int nam)
+        => await db.ExecuteScalarAsync<decimal>(
+            """
+            SELECT COALESCE(SUM(TongCong - SoTienDaThu), 0)
+            FROM HoaDon
+            WHERE HopDongId = @HopDongId
+              AND TongCong > SoTienDaThu
+              AND (Nam < @Nam OR (Nam = @Nam AND Thang < @Thang))
+            """,
+            new { HopDongId = hopDongId, Thang = thang, Nam = nam });
 }

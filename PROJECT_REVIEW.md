@@ -70,6 +70,11 @@ Da xu ly trong phien 24:
 
 - Man chi tiet hoa don hien thi rieng `KetChuyenNo` va `TruCoc` bang badge/canh bao de phan biet but toan cong no voi tien mat/chuyen khoan moi thu.
 
+Da xu ly trong phien 25:
+
+- Hoa don thuong va hoa don tra phong neu mang no cu vao `TienNoKyTruoc` se ket chuyen/tat toan cac hoa don cu bang `ThanhToan.HinhThuc = KetChuyenNo`, tranh double-count tren bao cao cong no.
+- Khong cho xoa hoa don dang mang `TienNoKyTruoc > 0` bang flow xoa don gian, vi hoa don do dang giu khoan no da ket chuyen.
+
 ---
 
 ## 2. Cac lo hong can sua ngay
@@ -229,7 +234,7 @@ ThuCoc | ThuThemCoc | HoanCoc | TruNo | DieuChinh
 
 Nguyen tac da chot: `SoTien` la delta co dau. `ThuCoc`/`ThuThemCoc` tang so du; `HoanCoc`/`TruNo` giam so du; `DieuChinh` dung cho chuyen coc/chinh lech. `SoDuSauGiaoDich` la snapshot audit nhanh.
 
-### 2.6. Chong double count cong no da chuyen ky - DA XU LY TOI THIEU PHIEN 21
+### 2.6. Chong double count cong no da chuyen ky - DA XU LY PHIEN 25
 
 `HoaDon.TienNoKyTruoc` la snapshot dung ve mat hien thi. Nhung khi bao cao tong no nhieu ky, can tranh tinh ca hoa don cu con no va hoa don moi da carry no cu.
 
@@ -245,8 +250,10 @@ Huong xu ly da ap dung:
 
 - Chua them `CongNoLedger` rieng.
 - Khi no cu duoc dua vao `TienNoKyTruoc` cua hoa don moi, he thong ghi `ThanhToan.HinhThuc = KetChuyenNo` tren cac hoa don cu de chung khong con xuat hien trong bao cao cong no.
+- Phien 25 mo rong quy tac nay cho ca hoa don lap thuong va hoa don tra phong sinh moi, khong chi rieng flow chuyen phong.
+- Hoa don dang mang `TienNoKyTruoc > 0` khong duoc xoa bang flow xoa don gian de tranh mat khoan no da ket chuyen.
 - Khi tra phong dung coc de tru no, he thong ghi `GiaoDichCoc.LoaiGiaoDich = TruNo` va dong thoi ghi `ThanhToan.HinhThuc = TruCoc` de hoa don duoc tat toan dung.
-- Neu sau nay can audit cong no day du hon, co the them `CongNoLedger`, nhung phien 21 da xu ly rui ro double-count trong bao cao hien co.
+- Neu sau nay can audit cong no day du hon, co the them `CongNoLedger`, nhung phien 25 da xu ly rui ro double-count trong bao cao hien co.
 
 ---
 

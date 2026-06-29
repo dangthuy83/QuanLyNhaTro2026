@@ -165,7 +165,7 @@
             </div>
         }
 
-        @if (Model.SoTienDaThu == 0)
+        @if (Model.SoTienDaThu == 0 && Model.TienNoKyTruoc <= 0)
         {
             <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="mt-2"
                   onsubmit="return confirm('Xoá hóa đơn này?')">

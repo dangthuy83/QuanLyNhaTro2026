@@ -116,18 +116,7 @@ public class TraPhongService(
                 decimal giaPhong = await LayGiaPhongAsync(hd, thang, nam);
                 decimal tienPhong = BillingPeriodCalculator.CalculateRoomCharge(giaPhong, soNgayO, soNgayTrongThang);
 
-                decimal noKyTruoc = await conn.ExecuteScalarAsync<decimal>(
-                    """
-                    SELECT COALESCE((
-                        SELECT TongCong - SoTienDaThu
-                        FROM HoaDon
-                        WHERE HopDongId = @HopDongId
-                        ORDER BY Nam DESC, Thang DESC
-                        LIMIT 1
-                    ), 0)
-                    """,
-                    new { HopDongId = hopDongId },
-                    tx);
+                decimal noKyTruoc = await TinhNoKyTruocAsync(conn, tx, hopDongId, thang, nam);
 
                 var chiTietDv = await TinhChiTietDichVuAsync(conn, tx, hd.PhongId, dvPhong, thang, nam);
                 decimal tongDv = chiTietDv.Sum(d => d.ThanhTien);
@@ -161,6 +150,22 @@ public class TraPhongService(
                     tx);
 
                 await InsertChiTietAsync(conn, tx, hoaDonCuoiId.Value, chiTietDv);
+
+                if (noKyTruoc > 0)
+                {
+                    var daKetChuyen = await congNoSettlementService.ThanhToanNoAsync(
+                        conn,
+                        tx,
+                        hopDongId,
+                        noKyTruoc,
+                        ngayTraPhong,
+                        "KetChuyenNo",
+                        $"Ket chuyen no sang hoa don tra phong #{hoaDonCuoiId.Value}",
+                        [hoaDonCuoiId.Value]);
+
+                    if (daKetChuyen != noKyTruoc)
+                        throw new InvalidOperationException("So tien no ky truoc khong khop voi cong no can ket chuyen.");
+                }
             }
 
             await conn.ExecuteAsync(
@@ -354,6 +359,42 @@ public class TraPhongService(
             """,
             new { HopDongId = hopDongId },
             tx);
+
+    private static async Task<decimal> TinhNoKyTruocAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hopDongId,
+        int thang,
+        int nam)
+    {
+        var noTruocKy = await conn.ExecuteScalarAsync<decimal>(
+            """
+            SELECT COALESCE(SUM(TongCong - SoTienDaThu), 0)
+            FROM HoaDon
+            WHERE HopDongId = @HopDongId
+              AND TongCong > SoTienDaThu
+              AND (Nam < @Nam OR (Nam = @Nam AND Thang < @Thang))
+            """,
+            new { HopDongId = hopDongId, Thang = thang, Nam = nam },
+            tx);
+
+        if (noTruocKy > 0)
+            return noTruocKy;
+
+        return await conn.ExecuteScalarAsync<decimal>(
+            """
+            SELECT COALESCE((
+                SELECT TongCong - SoTienDaThu
+                FROM HoaDon
+                WHERE HopDongId = @HopDongId
+                  AND (Nam < @Nam OR (Nam = @Nam AND Thang < @Thang))
+                ORDER BY Nam DESC, Thang DESC
+                LIMIT 1
+            ), 0)
+            """,
+            new { HopDongId = hopDongId, Thang = thang, Nam = nam },
+            tx);
+    }
 
     private sealed record ChiTietDichVuTam(
         int DichVuId,

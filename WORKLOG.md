@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ đã smoke test, phiên này smoke test hiển thị bút toán phi tiền mặt trên chi tiết hóa đơn |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ đã smoke test ở các phiên trước; phiên này sửa logic kết chuyển nợ để tránh double-count |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -22,7 +22,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*` | Thấp |
-| 2 | Rà thêm báo cáo công nợ sau ledger khi có dữ liệu vận hành thật | Smoke test đã pass với `KetChuyenNo`/`TruCoc`; tiếp tục theo dõi biến thể thu một phần, nợ nhiều hóa đơn | Trung bình |
+| 2 | Runtime smoke test lại các edge case công nợ sau kết chuyển | Cần DB thật: nhiều hóa đơn nợ, lập hóa đơn mới, trả phòng sinh hóa đơn cuối, xóa hóa đơn mang nợ kỳ trước | Cao |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
@@ -815,6 +815,43 @@ QA với app chạy MySQL thật tại `http://127.0.0.1:5100`:
 
 ---
 
+### Phiên 25 - Chống Double-Count Công Nợ Khi Kết Chuyển Kỳ
+
+Ngày: 29/06/2026
+
+Đã làm:
+
+- Rà lại edge cases công nợ sau ledger:
+  - Hợp đồng có nhiều hóa đơn nợ.
+  - Hóa đơn mới mang `TienNoKyTruoc`.
+  - Trả phòng sinh hóa đơn cuối và có nợ cũ.
+  - Xóa hóa đơn đang giữ nợ đã kết chuyển.
+- Sửa `HoaDonService.LapHoaDonAsync`:
+  - `TienNoKyTruoc` dương lấy theo tổng nợ các hóa đơn trước kỳ, không chỉ hóa đơn gần nhất.
+  - Sau khi tạo hóa đơn mới, ghi `ThanhToan.HinhThuc = KetChuyenNo` để tất toán các hóa đơn cũ tương ứng.
+  - Vẫn giữ hỗ trợ `TienNoKyTruoc` âm khi khách trả dư kỳ trước.
+- Sửa `TraPhongService.ThucHienAsync`:
+  - Hóa đơn trả phòng sinh mới cũng kết chuyển tổng nợ cũ vào `TienNoKyTruoc`.
+  - Các hóa đơn cũ được tất toán bằng `KetChuyenNo` trước khi dùng cọc `TruCoc`, tránh trừ cọc trên tổng nợ bị double-count.
+- Chặn xóa hóa đơn có `TienNoKyTruoc > 0` trong `HoaDonService.XoaHoaDonAsync`.
+- Ẩn nút xóa trên chi tiết hóa đơn nếu hóa đơn đang mang `TienNoKyTruoc > 0`.
+- Cập nhật `DECISIONS.md` và `PROJECT_REVIEW.md`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+Chưa làm:
+
+- Chưa runtime smoke test với MySQL thật cho các biến thể mới trong phiên này. Cần test tiếp: nhiều hóa đơn nợ -> lập hóa đơn mới, trả phòng có nợ cũ, và thử xóa hóa đơn mang `TienNoKyTruoc > 0`.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -836,6 +873,7 @@ QA với app chạy MySQL thật tại `http://127.0.0.1:5100`:
 | 21 | `ChuyenPhongService`, `TraPhongService`, `GiaoDichCoc` | Cọc chỉ là số tĩnh trên hợp đồng, nợ chuyển kỳ có nguy cơ double-count | Thêm ledger cọc và bút toán `ThanhToan` phi tiền mặt `KetChuyenNo`/`TruCoc` |
 | 21 | `ChuyenPhongController` | Render lại form lỗi loại phòng theo `HopDongCuId` thay vì `PhongId` cũ | Nạp lại hợp đồng cũ và loại đúng `PhongId` |
 | 24 | `Views/HoaDon/Details.cshtml` | Dòng `KetChuyenNo`/`TruCoc` in như mã thanh toán thường, dễ hiểu nhầm là tiền mới thu | Hiển thị badge/cảnh báo riêng cho bút toán phi tiền mặt |
+| 25 | `HoaDonService`, `TraPhongService` | Hóa đơn mới/trả phòng mang `TienNoKyTruoc` có thể double-count nếu hóa đơn cũ vẫn nằm trong báo cáo công nợ | Kết chuyển nợ cũ bằng `KetChuyenNo`, dùng tổng nợ trước kỳ, chặn xóa hóa đơn đang mang nợ đã kết chuyển |
 
 ---
 

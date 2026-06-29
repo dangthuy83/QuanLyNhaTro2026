@@ -128,6 +128,8 @@ Các cột dễ nhầm:
 - `HoaDon.TienNoKyTruoc` là snapshot tại thời điểm lập hóa đơn.
 - Không tính động lại nợ kỳ trước khi xem báo cáo cũ.
 - Nếu hợp đồng mới sinh từ chuyển phòng, hóa đơn đầu tiên của hợp đồng mới có thể mang nợ còn lại từ hợp đồng cũ.
+- Khi một hóa đơn mới mang nợ cũ dương vào `TienNoKyTruoc`, hệ thống phải ghi `ThanhToan.HinhThuc = KetChuyenNo` để tất toán các hóa đơn cũ tương ứng, tránh báo cáo công nợ double-count.
+- Không xóa trực tiếp hóa đơn đang mang `TienNoKyTruoc > 0` bằng flow xóa đơn giản, vì hóa đơn đó đang giữ khoản nợ đã kết chuyển.
 
 ### 4.6 Thanh toán
 
@@ -316,4 +318,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 24 - 28/06/2026
+Cập nhật lần cuối: Phiên 25 - 29/06/2026
