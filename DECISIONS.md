@@ -122,6 +122,7 @@ Các cột dễ nhầm:
 - Nếu `LoaiTinhPhi == "TheoChiSo"`, sản lượng phải tính bằng `ChiSoConsumptionCalculator` từ `ChiSoDienNuoc`.
 - Không dùng số lượng cố định từ `PhongDichVu`.
 - `ChiTietHoaDon.ChiSoDienNuocId` phải được lưu khi dòng dịch vụ dùng chỉ số.
+- Khi preview/chốt hóa đơn hàng loạt, thiếu chỉ số của dịch vụ `TheoChiSo` là lỗi chặn chốt hóa đơn để tránh bỏ sót tiền dịch vụ.
 
 ### 4.5 Nợ kỳ trước
 
@@ -278,6 +279,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - Da test voi MySQL that flow chuyen phong va tra phong giua thang co ca dich vu theo chi so va dich vu co dinh.
 - UI nhap chi so ho tro nhap truc tiep theo `PhongId` + ky, de phong moi co the nhap chi so truoc khi thuc hien chuyen phong.
 - UI nhap chi so hang loat theo ky cho cac phong dang thue co dich vu `TheoChiSo`.
+- Preview chốt hóa đơn hàng loạt theo kỳ: hiển thị hợp đồng đang hiệu lực, trạng thái dữ liệu, nợ kỳ trước, tổng dự kiến và chỉ cho chốt các dòng sẵn sàng.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
 - UI xử lý chênh lệch cọc khi chuyển phòng ngay trên màn ledger cọc.
@@ -320,4 +322,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 29 - 30/06/2026
+Cập nhật lần cuối: Phiên 30 - 30/06/2026

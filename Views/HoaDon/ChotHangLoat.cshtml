@@ -1,0 +1,209 @@
+@model QuanLyNhaTro.Models.HoaDonHangLoatPreviewViewModel
+@{
+    ViewData["Title"] = "Preview chốt hóa đơn";
+    ViewData["ActiveMenu"] = "hoadon";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h5 class="mb-1">Preview chốt hóa đơn - @Model.Thang/@Model.Nam</h5>
+        <div class="text-muted small">Kiểm tra dữ liệu trước khi tạo hóa đơn thật cho các hợp đồng đang hiệu lực.</div>
+    </div>
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <select name="thang" class="form-select form-select-sm" style="width:100px">
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(m == Model.Thang)">Tháng @m</option>
+            }
+        </select>
+        <input name="nam" type="number" class="form-control form-control-sm" style="width:100px"
+               value="@Model.Nam" min="2020" max="2099" />
+        <button class="btn btn-sm btn-outline-primary">Xem</button>
+        <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
+           class="btn btn-sm btn-outline-secondary">Danh sách</a>
+    </form>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Hợp đồng đang hiệu lực</div>
+            <div class="fs-5 fw-semibold">@Model.Rows.Count</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Sẵn sàng chốt</div>
+            <div class="fs-5 fw-semibold text-success">@Model.SoDongSanSang</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Tổng dự kiến hợp lệ</div>
+            <div class="fs-5 fw-semibold">@Model.TongDuKien.ToString("N0") đ</div>
+        </div>
+    </div>
+</div>
+
+<form asp-action="ChotHangLoat" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="thang" value="@Model.Thang" />
+    <input type="hidden" name="nam" value="@Model.Nam" />
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:48px">
+                            <input class="form-check-input" type="checkbox" id="checkAllReady" title="Chọn tất cả dòng sẵn sàng" />
+                        </th>
+                        <th>Phòng / hợp đồng</th>
+                        <th>Dịch vụ và chỉ số</th>
+                        <th class="text-end">Tiền phòng</th>
+                        <th class="text-end">Dịch vụ</th>
+                        <th class="text-end">Nợ kỳ trước</th>
+                        <th class="text-end">Tổng dự kiến</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr class="@(!row.SanSangChot ? "table-warning" : "")">
+                            <td>
+                                <input class="form-check-input ready-check"
+                                       type="checkbox"
+                                       name="hopDongIds"
+                                       value="@row.HopDongId"
+                                       disabled="@(!row.SanSangChot)" />
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@row.HopDong?.Phong?.TenPhong</div>
+                                <div class="text-muted small">
+                                    HĐ #@row.HopDongId
+                                    @if (row.SoNgayO.HasValue && row.SoNgayTrongThang.HasValue)
+                                    {
+                                        <span> · @row.SoNgayO/@row.SoNgayTrongThang ngày</span>
+                                    }
+                                </div>
+                                <div class="text-muted small">
+                                    Từ @row.HopDong?.NgayBatDau.ToString("dd/MM/yyyy")
+                                </div>
+                            </td>
+                            <td>
+                                @if (row.ChiTiet.Any())
+                                {
+                                    <div class="d-flex flex-column gap-1">
+                                        @foreach (var ct in row.ChiTiet)
+                                        {
+                                            <div class="small">
+                                                <span class="fw-semibold">@ct.TenDichVu</span>
+                                                <span class="text-muted">
+                                                    @ct.SoLuong.ToString("N2") x @ct.DonGia.ToString("N0") = @ct.ThanhTien.ToString("N0") đ
+                                                </span>
+                                                @if (ct.CanChiSo)
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Đã có chỉ số</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Chưa có dòng dịch vụ phát sinh.</span>
+                                }
+                            </td>
+                            <td class="text-end">@row.TienPhong.ToString("N0")</td>
+                            <td class="text-end">@row.TongTienDichVu.ToString("N0")</td>
+                            <td class="text-end @(row.TienNoKyTruoc > 0 ? "text-danger fw-semibold" : "")">@row.TienNoKyTruoc.ToString("N0")</td>
+                            <td class="text-end fw-semibold">@row.TongCong.ToString("N0")</td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1 mb-1">
+                                    @if (row.CoHoaDonDaCo)
+                                    {
+                                        <a asp-action="Details" asp-route-id="@row.HoaDonDaCo!.Id"
+                                           class="badge bg-secondary text-decoration-none">Đã có hóa đơn #@row.HoaDonDaCo!.Id</a>
+                                    }
+                                    @if (row.ThieuChiSo)
+                                    {
+                                        <span class="badge bg-danger">Thiếu chỉ số</span>
+                                    }
+                                    @if (row.ThieuDichVu)
+                                    {
+                                        <span class="badge bg-warning text-dark">Thiếu dịch vụ</span>
+                                    }
+                                    @if (row.CoNoKyTruoc)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Có nợ kỳ trước</span>
+                                    }
+                                    @if (row.SanSangChot)
+                                    {
+                                        <span class="badge bg-success">Sẵn sàng chốt</span>
+                                    }
+                                </div>
+
+                                @foreach (var loi in row.Loi)
+                                {
+                                    <div class="small text-danger">@loi</div>
+                                }
+                                @foreach (var canhBao in row.CanhBao)
+                                {
+                                    <div class="small text-muted">@canhBao</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">Không có hợp đồng đang hiệu lực.</td>
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Rows.Any())
+                {
+                    <tfoot class="table-light fw-semibold">
+                        <tr>
+                            <td colspan="3">Tổng các dòng sẵn sàng</td>
+                            <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TienPhong).ToString("N0")</td>
+                            <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TongTienDichVu).ToString("N0")</td>
+                            <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TienNoKyTruoc).ToString("N0")</td>
+                            <td class="text-end">@Model.TongDuKien.ToString("N0")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2">
+            <div class="small text-muted">@Model.SoDongCanKiemTra dòng cần kiểm tra sẽ không được chốt.</div>
+            <button type="submit" class="btn btn-primary" disabled="@(Model.SoDongSanSang == 0)">
+                Chốt các dòng đã chọn
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        const checkAllReady = document.getElementById('checkAllReady');
+        checkAllReady?.addEventListener('change', () => {
+            document.querySelectorAll('.ready-check:not(:disabled)').forEach((checkbox) => {
+                checkbox.checked = checkAllReady.checked;
+            });
+        });
+    </script>
+}

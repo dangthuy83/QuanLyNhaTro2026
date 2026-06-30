@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh và nhập chỉ số hàng loạt đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt và preview chốt hóa đơn hàng loạt đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -21,13 +21,13 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
-| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*` | Thấp |
+| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
 | 6 | In phiếu thu HTML | `window.print()` và CSS print | Trung bình |
-| 7 | Preview chốt hóa đơn hàng loạt | Làm sau khi màn nhập chỉ số hàng loạt đã có bản Bootstrap tối thiểu | Trung bình |
+| 7 | Nâng cấp flow preview chốt hóa đơn hàng loạt | Bản Bootstrap tối thiểu đã có; cân nhắc thêm filter theo Nhà/chọn bỏ qua dòng lỗi nếu vận hành cần | Thấp |
 | 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 
 ### Quy ước GitHub
@@ -1056,6 +1056,55 @@ Ghi chú:
 
 ---
 
+### Phiên 30 - Preview Chốt Hóa Đơn Hàng Loạt
+
+Ngày: 30/06/2026
+
+Đã làm:
+
+- Thêm màn `HoaDon/ChotHangLoat` để preview hóa đơn theo kỳ trước khi ghi DB thật.
+- Màn preview hiển thị các hợp đồng `DangHieuLuc`, tiền phòng, dịch vụ, nợ kỳ trước, tổng dự kiến và trạng thái dữ liệu.
+- Trạng thái dữ liệu gồm:
+  - Đã có hóa đơn.
+  - Thiếu chỉ số cho dịch vụ `TheoChiSo`.
+  - Thiếu dịch vụ.
+  - Có nợ kỳ trước.
+  - Sẵn sàng chốt.
+- Thêm POST chốt hàng loạt: chỉ tạo hóa đơn cho các hợp đồng được chọn và vẫn sẵn sàng sau khi recompute server-side.
+- Tách `HoaDonService.TinhHoaDonDuKienAsync` để preview và `LapHoaDonAsync` dùng chung logic tính tiền phòng, dịch vụ, chỉ số, giá áp dụng và nợ kỳ trước.
+- `LapHoaDonAsync` giờ chặn thiếu chỉ số của dịch vụ `TheoChiSo`, tránh lập hóa đơn bị thiếu dòng dịch vụ.
+- Thêm nút `Preview chốt hàng loạt` từ danh sách hóa đơn.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5105`:
+
+- Seed dữ liệu smoke test tiền tố `TEST_BULK_INVOICE_PREVIEW_20260630212750`.
+- GET `/HoaDon/ChotHangLoat?thang=8&nam=2026` trả `200`, render đúng dòng test và trạng thái `Sẵn sàng chốt`.
+- POST form thật có anti-forgery token tới `/HoaDon/ChotHangLoat`, chọn hợp đồng test `#15`, server log trả `302` về preview.
+- Verify DB thật:
+  - Hóa đơn mới `#19`, kỳ `8/2026`.
+  - `TienPhong = 1,200,000`.
+  - `TongTienDichVu = 150,000`.
+  - `TienNoKyTruoc = 80,000`.
+  - `TongCong = 1,430,000`.
+  - Có 2 dòng `ChiTietHoaDon`.
+  - Hóa đơn cũ `#18` đã được tất toán bằng `KetChuyenNo = 80,000`.
+
+Ghi chú:
+
+- Dữ liệu smoke test `TEST_BULK_INVOICE_PREVIEW_20260630212750` còn trong DB thật để đối chiếu; có thể dọn sau.
+- Console seed/verify nằm trong `.agents/` và không commit.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1081,6 +1130,7 @@ Ghi chú:
 | 27 | `Views/BaoCao/CongNo.cshtml`, `site.css` | Báo cáo công nợ thiếu filter vận hành và bảng rộng kéo ngang toàn trang | Thêm filter, cột Nhà/trạng thái, đồng bộ Excel và giới hạn scroll ngang trong bảng |
 | 28 | `Views/HoaDon/Index.cshtml`, `HoaDonService` | Danh sách hóa đơn chưa có thao tác thu nhanh; input số tiền dùng `step=1000` có thể khiến browser chặn số hợp lệ | Thêm modal thu nhanh, redirect về đúng kỳ, guard không thu vượt số còn lại và đổi input sang `step=1` |
 | 29 | `Views/ChiSo/NhapHangLoat.cshtml`, `ChiSoController` | Nhập chỉ số từng phòng còn chậm khi vận hành thay Excel | Thêm màn nhập hàng loạt theo kỳ, tính sản lượng tại chỗ và dùng lại validate reset/server-side hiện có |
+| 30 | `HoaDon/ChotHangLoat`, `HoaDonService` | Chốt hóa đơn hàng loạt chưa có bước preview và có nguy cơ bỏ sót dịch vụ theo chỉ số nếu chưa nhập chỉ số | Thêm preview theo kỳ, badge trạng thái dữ liệu, bulk POST chỉ chốt dòng sẵn sàng và tách logic tính dự kiến dùng chung với lập hóa đơn |
 
 ---
 

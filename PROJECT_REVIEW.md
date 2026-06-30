@@ -91,6 +91,13 @@ Da xu ly trong phien 29:
 - `ChiSo/NhapHangLoat` da co bang nhap chi so hang loat theo ky cho phong dang thue co dich vu `TheoChiSo`.
 - UI tinh san luong tai cho, canh bao dong sai chi so/reset, va POST dung lai validate server-side hien co.
 
+Da xu ly trong phien 30:
+
+- `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.
+- Preview hien tien phong, dich vu, no ky truoc, tong du kien va badge trang thai du lieu: da co hoa don, thieu chi so, thieu dich vu, co no ky truoc, san sang chot.
+- POST chot hang loat recompute server-side va chi tao hoa don cho cac dong duoc chon va san sang.
+- `HoaDonService.TinhHoaDonDuKienAsync` duoc tach de preview va lap hoa don dung chung logic tinh tien; thieu chi so `TheoChiSo` la loi chan chot hoa don.
+
 ---
 
 ## 2. Cac lo hong can sua ngay
@@ -407,9 +414,9 @@ Ket qua phien 29:
 - Co checkbox chon dong luu, chi so dau/cuoi, loai ghi nhan, thong tin reset va san luong tinh tai cho.
 - Server-side van dung chung `ChiSoConsumptionCalculator` va validate reset hien co.
 
-### 5.2. Preview chot hoa don hang loat
+### 5.2. Preview chot hoa don hang loat - DA XU LY PHIEN 30
 
-Truoc khi chot:
+Ban Bootstrap toi thieu da co tai `HoaDon/ChotHangLoat`. Truoc khi chot, man hinh hien:
 
 ```text
 Phong | Tien phong | Dien | Nuoc | Dich vu | No cu | Tong | Trang thai du lieu
@@ -427,10 +434,16 @@ San sang chot
 Nut hanh dong:
 
 ```text
-Chot tat ca hop le
-Bo qua dong loi
+Chot cac dong da chon
 Xem chi tiet
 ```
+
+Ket qua phien 30:
+
+- Dung `HoaDonService.TinhHoaDonDuKienAsync` de tinh tien du kien, khong nhan doi cong thuc tinh tien.
+- Dong co hoa don ton tai hoac thieu chi so se bi khoa checkbox va khong duoc bulk create.
+- Dong thieu dich vu hien canh bao de chu nha kiem tra, nhung van co the chot tien phong neu can.
+- Khi POST, server recompute tung hop dong truoc khi goi `LapHoaDonAsync`.
 
 ### 5.3. Thu tien nhanh tren danh sach hoa don - DA XU LY PHIEN 28
 
@@ -497,8 +510,8 @@ Neu lam app cho khach thue xem hoa don:
 
 ## 7. Thu tu uu tien de thao luan/lam tiep
 
-1. Lam preview chot hoa don hang loat.
-2. In phieu thu HTML neu can in nhanh tu trinh duyet.
+1. In phieu thu HTML neu can in nhanh tu trinh duyet.
+2. Nang cap filter/flow preview chot hoa don hang loat neu van hanh thuc te can loc theo Nha hoac thao tac bo qua dong loi nhanh hon.
 
 ---
 
@@ -524,7 +537,7 @@ Nguyen tac tich hop:
 
 Thu tu UI de lam sau khi nghiep vu loi on dinh:
 
-1. Preview chot hoa don hang loat: grid tong hop tien phong, dich vu, no cu, tong cong, trang thai du lieu.
+1. Preview chot hoa don hang loat: da co Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can sort/filter/inline thao tac nang cao hon.
 2. `ChiSo/Index` va man nhap chi so hang loat: da co Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can inline edit/sort/filter nang cao hon.
 3. `HoaDon/Index`: da co thu nhanh Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can sort/filter/export nang cao hon.
 4. `BaoCao/CongNo`: da co filter Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can sort/filter/export nang cao hon.

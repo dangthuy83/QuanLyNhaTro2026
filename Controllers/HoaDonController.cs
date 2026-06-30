@@ -41,6 +41,67 @@ public class HoaDonController(
         return View(danhSach);
     }
 
+    // GET /HoaDon/ChotHangLoat?thang=6&nam=2026
+    public async Task<IActionResult> ChotHangLoat(int? thang, int? nam)
+    {
+        ViewData["ActiveMenu"] = "hoadon";
+        thang ??= DateTime.Today.Month;
+        nam ??= DateTime.Today.Year;
+
+        var model = await BuildChotHangLoatPreviewAsync(thang.Value, nam.Value);
+        return View(model);
+    }
+
+    // POST /HoaDon/ChotHangLoat
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChotHangLoat(int thang, int nam, int[] hopDongIds)
+    {
+        if (hopDongIds.Length == 0)
+        {
+            TempData["Error"] = "Chưa chọn hợp đồng nào để chốt.";
+            return RedirectToAction(nameof(ChotHangLoat), new { thang, nam });
+        }
+
+        var daTao = 0;
+        var boQua = 0;
+        var loi = new List<string>();
+
+        foreach (var hopDongId in hopDongIds.Distinct())
+        {
+            var duKien = await hoaDonService.TinhHoaDonDuKienAsync(hopDongId, thang, nam);
+            if (!duKien.SanSangChot)
+            {
+                boQua++;
+                continue;
+            }
+
+            try
+            {
+                await hoaDonService.LapHoaDonAsync(hopDongId, thang, nam);
+                daTao++;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+            {
+                boQua++;
+                var tenPhong = duKien.HopDong?.Phong?.TenPhong ?? $"HĐ #{hopDongId}";
+                loi.Add($"{tenPhong}: {ex.Message}");
+            }
+        }
+
+        if (daTao > 0)
+            TempData["Success"] = $"Đã chốt {daTao} hóa đơn kỳ {thang}/{nam}.";
+
+        if (boQua > 0)
+        {
+            var thongBao = $"Bỏ qua {boQua} dòng chưa sẵn sàng hoặc đã có hóa đơn.";
+            if (loi.Count > 0)
+                thongBao += " " + string.Join(" ", loi.Take(3));
+            TempData["Error"] = thongBao;
+        }
+
+        return RedirectToAction(nameof(ChotHangLoat), new { thang, nam });
+    }
+
     // GET /HoaDon/Details/5
     public async Task<IActionResult> Details(int id)
     {
@@ -169,5 +230,27 @@ public class HoaDonController(
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"PhieuThu_T{hd.Thang}_{hd.Nam}_{phong?.TenPhong}.xlsx");
+    }
+
+    private async Task<HoaDonHangLoatPreviewViewModel> BuildChotHangLoatPreviewAsync(int thang, int nam)
+    {
+        var hopDongs = (await hopDongRepo.GetAllAsync())
+            .Where(hd => hd.TrangThai == "DangHieuLuc")
+            .OrderBy(hd => hd.Phong?.TenPhong)
+            .ThenBy(hd => hd.Id)
+            .ToList();
+
+        var rows = new List<HoaDonDuKien>();
+        foreach (var hopDong in hopDongs)
+        {
+            rows.Add(await hoaDonService.TinhHoaDonDuKienAsync(hopDong.Id, thang, nam));
+        }
+
+        return new HoaDonHangLoatPreviewViewModel
+        {
+            Thang = thang,
+            Nam = nam,
+            Rows = rows
+        };
     }
 }

@@ -37,74 +37,12 @@ public class HoaDonService(
         int? hoaDonGhepId = null,
         string? ghiChu = null)
     {
-        var existing = await hoaDonRepo.GetByHopDongKyAsync(hopDongId, thang, nam);
-        if (existing != null)
+        var duKien = await TinhHoaDonDuKienAsync(hopDongId, thang, nam, soNgayO, soNgayTrongThang, hoaDonGhepId, ghiChu);
+        if (duKien.HoaDonDaCo != null)
             throw new InvalidOperationException($"Hoa don ky {thang}/{nam} cua hop dong #{hopDongId} da ton tai.");
 
-        var hopDong = await hopDongRepo.GetByIdAsync(hopDongId)
-            ?? throw new InvalidOperationException($"Khong tim thay hop dong #{hopDongId}.");
-
-        var (soNgayTinhTien, soNgayTrongThangTinhTien) = ResolveSoNgayTinhTien(
-            hopDong,
-            thang,
-            nam,
-            soNgayO,
-            soNgayTrongThang);
-
-        var giaPhong = await LayGiaApDungAsync("Phong", hopDong.PhongId, thang, nam, hopDong.TienThueThoaThuan);
-        var tienPhong = soNgayTinhTien.HasValue && soNgayTrongThangTinhTien.HasValue
-            ? BillingPeriodCalculator.CalculateRoomCharge(giaPhong, soNgayTinhTien.Value, soNgayTrongThangTinhTien.Value)
-            : giaPhong;
-
-        var chiTietList = new List<ChiTietHoaDon>();
-        decimal tongTienDV = 0;
-        var danhSachDV = await phongDichVuRepo.GetByPhongAsync(hopDong.PhongId);
-
-        foreach (var pdv in danhSachDV)
-        {
-            if (pdv.DichVu == null) continue;
-
-            if (pdv.DichVu.LoaiTinhPhi == "TheoChiSo")
-            {
-                var chiSo = (await chiSoRepo.GetByHopDongKyAsync(hopDongId, thang, nam))
-                    .FirstOrDefault(cs => cs.DichVuId == pdv.DichVuId);
-
-                if (chiSo == null) continue;
-
-                var donGia = await LayGiaApDungAsync("DichVu", pdv.Id, thang, nam, pdv.DonGia);
-                var soLuong = ChiSoConsumptionCalculator.Calculate(chiSo);
-                var thanhTien = Math.Round(soLuong * donGia, 0);
-
-                chiTietList.Add(new ChiTietHoaDon
-                {
-                    DichVuId = pdv.DichVuId,
-                    SoLuong = soLuong,
-                    DonGia = donGia,
-                    ThanhTien = thanhTien,
-                    ChiSoDienNuocId = chiSo.Id
-                });
-                tongTienDV += thanhTien;
-            }
-            else
-            {
-                if (hoaDonGhepId.HasValue && ghiChu == "PHONG_CU") continue;
-
-                var donGia = await LayGiaApDungAsync("DichVu", pdv.Id, thang, nam, pdv.DonGia);
-                var thanhTien = Math.Round(donGia, 0);
-
-                chiTietList.Add(new ChiTietHoaDon
-                {
-                    DichVuId = pdv.DichVuId,
-                    SoLuong = 1,
-                    DonGia = donGia,
-                    ThanhTien = thanhTien
-                });
-                tongTienDV += thanhTien;
-            }
-        }
-
-        var tienNoKyTruoc = await TinhNoKyTruocAsync(hopDong, thang, nam);
-        var tongCong = tienPhong + tongTienDV + tienNoKyTruoc;
+        if (duKien.Loi.Count > 0)
+            throw new InvalidOperationException(string.Join(" ", duKien.Loi));
 
         var hoaDon = new HoaDon
         {
@@ -112,14 +50,14 @@ public class HoaDonService(
             Thang = thang,
             Nam = nam,
             NgayLap = DateTime.Now,
-            TienPhong = tienPhong,
-            TongTienDichVu = tongTienDV,
-            TienNoKyTruoc = tienNoKyTruoc,
-            TongCong = tongCong,
+            TienPhong = duKien.TienPhong,
+            TongTienDichVu = duKien.TongTienDichVu,
+            TienNoKyTruoc = duKien.TienNoKyTruoc,
+            TongCong = duKien.TongCong,
             SoTienDaThu = 0,
             TrangThaiThanhToan = "ChuaThu",
-            SoNgayO = soNgayTinhTien,
-            SoNgayTrongThang = soNgayTrongThangTinhTien,
+            SoNgayO = duKien.SoNgayO,
+            SoNgayTrongThang = duKien.SoNgayTrongThang,
             HoaDonGhepId = hoaDonGhepId,
             GhiChu = ghiChu == "PHONG_CU" ? null : ghiChu
         };
@@ -137,25 +75,32 @@ public class HoaDonService(
 
             var hoaDonId = await hoaDonRepo.InsertAsync(conn, tx, hoaDon);
 
-            foreach (var ct in chiTietList)
+            foreach (var ct in duKien.ChiTiet)
             {
-                ct.HoaDonId = hoaDonId;
-                await chiTietRepo.InsertAsync(conn, tx, ct);
+                await chiTietRepo.InsertAsync(conn, tx, new ChiTietHoaDon
+                {
+                    HoaDonId = hoaDonId,
+                    DichVuId = ct.DichVuId,
+                    ChiSoDienNuocId = ct.ChiSoDienNuocId,
+                    SoLuong = ct.SoLuong,
+                    DonGia = ct.DonGia,
+                    ThanhTien = ct.ThanhTien
+                });
             }
 
-            if (tienNoKyTruoc > 0)
+            if (duKien.TienNoKyTruoc > 0)
             {
                 var daKetChuyen = await congNoSettlementService.ThanhToanNoAsync(
                     conn,
                     tx,
                     hopDongId,
-                    tienNoKyTruoc,
+                    duKien.TienNoKyTruoc,
                     hoaDon.NgayLap,
                     "KetChuyenNo",
                     $"Ket chuyen no sang hoa don #{hoaDonId}",
                     [hoaDonId]);
 
-                if (daKetChuyen != tienNoKyTruoc)
+                if (daKetChuyen != duKien.TienNoKyTruoc)
                     throw new InvalidOperationException("So tien no ky truoc khong khop voi cong no can ket chuyen.");
             }
 
@@ -167,6 +112,125 @@ public class HoaDonService(
             await tx.RollbackAsync();
             throw;
         }
+    }
+
+    public async Task<HoaDonDuKien> TinhHoaDonDuKienAsync(
+        int hopDongId,
+        int thang,
+        int nam,
+        int? soNgayO = null,
+        int? soNgayTrongThang = null,
+        int? hoaDonGhepId = null,
+        string? ghiChu = null)
+    {
+        var result = new HoaDonDuKien
+        {
+            HopDongId = hopDongId,
+            Thang = thang,
+            Nam = nam,
+            HoaDonDaCo = await hoaDonRepo.GetByHopDongKyAsync(hopDongId, thang, nam)
+        };
+
+        var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
+        if (hopDong == null)
+        {
+            result.Loi.Add($"Khong tim thay hop dong #{hopDongId}.");
+            return result;
+        }
+
+        result.HopDong = hopDong;
+
+        try
+        {
+            var (soNgayTinhTien, soNgayTrongThangTinhTien) = ResolveSoNgayTinhTien(
+                hopDong,
+                thang,
+                nam,
+                soNgayO,
+                soNgayTrongThang);
+
+            result.SoNgayO = soNgayTinhTien;
+            result.SoNgayTrongThang = soNgayTrongThangTinhTien;
+
+            var giaPhong = await LayGiaApDungAsync("Phong", hopDong.PhongId, thang, nam, hopDong.TienThueThoaThuan);
+            result.TienPhong = soNgayTinhTien.HasValue && soNgayTrongThangTinhTien.HasValue
+                ? BillingPeriodCalculator.CalculateRoomCharge(giaPhong, soNgayTinhTien.Value, soNgayTrongThangTinhTien.Value)
+                : giaPhong;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            result.Loi.Add(ex.Message);
+            return result;
+        }
+
+        var danhSachDV = (await phongDichVuRepo.GetByPhongAsync(hopDong.PhongId)).ToList();
+        if (danhSachDV.Count == 0)
+            result.CanhBao.Add("Phong chua gan dich vu nao.");
+
+        var chiSoTheoKy = (await chiSoRepo.GetByHopDongKyAsync(hopDongId, thang, nam)).ToList();
+
+        foreach (var pdv in danhSachDV)
+        {
+            if (pdv.DichVu == null) continue;
+
+            var donGia = await LayGiaApDungAsync("DichVu", pdv.Id, thang, nam, pdv.DonGia);
+
+            if (pdv.DichVu.LoaiTinhPhi == "TheoChiSo")
+            {
+                var chiSo = chiSoTheoKy.FirstOrDefault(cs => cs.DichVuId == pdv.DichVuId);
+                if (chiSo == null)
+                {
+                    result.Loi.Add($"Thieu chi so {pdv.DichVu.TenDichVu}.");
+                    continue;
+                }
+
+                try
+                {
+                    var soLuong = ChiSoConsumptionCalculator.Calculate(chiSo);
+                    var thanhTien = Math.Round(soLuong * donGia, 0);
+                    result.ChiTiet.Add(new HoaDonDuKienChiTiet
+                    {
+                        DichVuId = pdv.DichVuId,
+                        PhongDichVuId = pdv.Id,
+                        ChiSoDienNuocId = chiSo.Id,
+                        TenDichVu = pdv.DichVu.TenDichVu,
+                        LoaiTinhPhi = pdv.DichVu.LoaiTinhPhi,
+                        SoLuong = soLuong,
+                        DonGia = donGia,
+                        ThanhTien = thanhTien
+                    });
+                    result.TongTienDichVu += thanhTien;
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+                {
+                    result.Loi.Add($"{pdv.DichVu.TenDichVu}: {ex.Message}");
+                }
+            }
+            else
+            {
+                if (hoaDonGhepId.HasValue && ghiChu == "PHONG_CU") continue;
+
+                var thanhTien = Math.Round(donGia, 0);
+                result.ChiTiet.Add(new HoaDonDuKienChiTiet
+                {
+                    DichVuId = pdv.DichVuId,
+                    PhongDichVuId = pdv.Id,
+                    TenDichVu = pdv.DichVu.TenDichVu,
+                    LoaiTinhPhi = pdv.DichVu.LoaiTinhPhi,
+                    SoLuong = 1,
+                    DonGia = donGia,
+                    ThanhTien = thanhTien
+                });
+                result.TongTienDichVu += thanhTien;
+            }
+        }
+
+        result.TienNoKyTruoc = await TinhNoKyTruocAsync(hopDong, thang, nam);
+        if (result.TienNoKyTruoc > 0)
+            result.CanhBao.Add($"Co no ky truoc {result.TienNoKyTruoc:N0} d.");
+
+        result.TongCong = result.TienPhong + result.TongTienDichVu + result.TienNoKyTruoc;
+        return result;
     }
 
     public async Task ThuTienAsync(int hoaDonId, decimal soTien, string hinhThuc, string? ghiChu = null)
