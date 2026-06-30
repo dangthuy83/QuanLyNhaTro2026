@@ -63,6 +63,7 @@ public class ChiSoController(
         ViewBag.DichVuTheoChiSo = formData.DichVuTheoChiSo;
         ViewBag.ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId);
         ViewBag.ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu;
+        ViewBag.ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu;
         return View();
     }
 
@@ -84,6 +85,7 @@ public class ChiSoController(
         ViewBag.DichVuTheoChiSo = formData.DichVuTheoChiSo;
         ViewBag.ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId);
         ViewBag.ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu;
+        ViewBag.ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu;
         return View();
     }
 
@@ -93,6 +95,7 @@ public class ChiSoController(
         int thang,
         int nam,
         int[] dichVuIds,
+        decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
         string[] loaiGhiNhans,
@@ -108,6 +111,7 @@ public class ChiSoController(
             thang,
             nam,
             dichVuIds,
+            chiSoDaus,
             chiSoCuois,
             chiSoIds,
             loaiGhiNhans,
@@ -132,6 +136,7 @@ public class ChiSoController(
         int nam,
         int? returnHopDongId,
         int[] dichVuIds,
+        decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
         string[] loaiGhiNhans,
@@ -147,6 +152,7 @@ public class ChiSoController(
             thang,
             nam,
             dichVuIds,
+            chiSoDaus,
             chiSoCuois,
             chiSoIds,
             loaiGhiNhans,
@@ -198,6 +204,7 @@ public class ChiSoController(
                 model.Thang,
                 model.Nam,
                 rows.Select(r => r.DichVuId).ToArray(),
+                rows.Select(r => r.ChiSoDau).ToArray(),
                 rows.Select(r => r.ChiSoCuoi).ToArray(),
                 rows.Select(r => r.ChiSoId).ToArray(),
                 rows.Select(r => r.LoaiGhiNhan).ToArray(),
@@ -235,6 +242,7 @@ public class ChiSoController(
 
         var chiSoHienTai = (await chiSoRepo.GetByPhongKyAsync(phongId, thang, nam)).ToList();
         var chiSoDauTheoDichVu = new Dictionary<int, decimal>();
+        var choNhapChiSoDauTheoDichVu = new Dictionary<int, bool>();
 
         foreach (var dv in dichVuTheoChiSo)
         {
@@ -242,14 +250,16 @@ public class ChiSoController(
             if (current != null)
             {
                 chiSoDauTheoDichVu[dv.Id] = current.ChiSoDau;
+                choNhapChiSoDauTheoDichVu[dv.Id] = false;
                 continue;
             }
 
             var kyTruoc = await chiSoRepo.GetChiSoCuoiKyTruocAsync(phongId, dv.Id, thang, nam);
             chiSoDauTheoDichVu[dv.Id] = kyTruoc?.ChiSoCuoi ?? 0;
+            choNhapChiSoDauTheoDichVu[dv.Id] = kyTruoc == null;
         }
 
-        return new ChiSoFormData(dichVuTheoChiSo, chiSoHienTai, chiSoDauTheoDichVu);
+        return new ChiSoFormData(dichVuTheoChiSo, chiSoHienTai, chiSoDauTheoDichVu, choNhapChiSoDauTheoDichVu);
     }
 
     private async Task<ChiSoHangLoatViewModel> BuildNhapHangLoatViewModelAsync(int thang, int nam)
@@ -267,6 +277,7 @@ public class ChiSoController(
             {
                 var current = formData.ChiSoHienTai.FirstOrDefault(cs => cs.DichVuId == dichVu.Id);
                 var chiSoDau = formData.ChiSoDauTheoDichVu.TryGetValue(dichVu.Id, out var dau) ? dau : 0;
+                var choNhapChiSoDau = formData.ChoNhapChiSoDauTheoDichVu.TryGetValue(dichVu.Id, out var choNhapDau) && choNhapDau;
                 var loaiGhiNhan = current?.LoaiGhiNhan ?? ChiSoDienNuoc.LoaiBinhThuong;
 
                 rows.Add(new ChiSoHangLoatRowViewModel
@@ -281,6 +292,7 @@ public class ChiSoController(
                     ChiSoId = current?.Id ?? 0,
                     ChiSoDau = chiSoDau,
                     ChiSoCuoi = current?.ChiSoCuoi ?? chiSoDau,
+                    ChoNhapChiSoDau = choNhapChiSoDau,
                     LoaiGhiNhan = loaiGhiNhan,
                     ChiSoTruocReset = current?.ChiSoTruocReset,
                     ChiSoSauReset = current?.ChiSoSauReset,
@@ -304,6 +316,7 @@ public class ChiSoController(
         int thang,
         int nam,
         int[] dichVuIds,
+        decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
         string[] loaiGhiNhans,
@@ -316,6 +329,7 @@ public class ChiSoController(
             thang,
             nam,
             dichVuIds,
+            chiSoDaus,
             chiSoCuois,
             chiSoIds,
             loaiGhiNhans,
@@ -337,6 +351,7 @@ public class ChiSoController(
         int thang,
         int nam,
         int[] dichVuIds,
+        decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
         string[] loaiGhiNhans,
@@ -363,6 +378,7 @@ public class ChiSoController(
                 continue;
             }
 
+            var chiSoDauNhap = i < chiSoDaus.Length ? chiSoDaus[i] : 0;
             var chiSoCuoi = i < chiSoCuois.Length ? chiSoCuois[i] : 0;
             var existId = i < chiSoIds.Length ? chiSoIds[i] : 0;
             var loaiGhiNhan = i < loaiGhiNhans.Length && !string.IsNullOrWhiteSpace(loaiGhiNhans[i])
@@ -381,7 +397,7 @@ public class ChiSoController(
             var kyTruoc = current == null
                 ? await chiSoRepo.GetChiSoCuoiKyTruocAsync(phongId, dichVuId, thang, nam)
                 : null;
-            var chiSoDau = current?.ChiSoDau ?? kyTruoc?.ChiSoCuoi ?? 0;
+            var chiSoDau = current?.ChiSoDau ?? kyTruoc?.ChiSoCuoi ?? chiSoDauNhap;
             var chiSo = new ChiSoDienNuoc
             {
                 Id = existId,
@@ -399,6 +415,13 @@ public class ChiSoController(
             };
 
             items.Add(new ChiSoNhapItem(chiSo));
+
+            if (chiSoDau < 0)
+            {
+                var dichVu = await dichVuRepo.GetByIdAsync(dichVuId);
+                errors.Add($"{dichVu?.TenDichVu ?? $"Dich vu #{dichVuId}"}: chi so dau khong duoc am.");
+                continue;
+            }
 
             if (loaiGhiNhan != ChiSoDienNuoc.LoaiBinhThuong && loaiGhiNhan != ChiSoDienNuoc.LoaiReset)
             {
@@ -447,5 +470,6 @@ public class ChiSoController(
     private sealed record ChiSoFormData(
         List<DichVu> DichVuTheoChiSo,
         List<ChiSoDienNuoc> ChiSoHienTai,
-        Dictionary<int, decimal> ChiSoDauTheoDichVu);
+        Dictionary<int, decimal> ChiSoDauTheoDichVu,
+        Dictionary<int, bool> ChoNhapChiSoDauTheoDichVu);
 }

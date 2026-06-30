@@ -91,6 +91,11 @@ Da xu ly trong phien 29:
 - `ChiSo/NhapHangLoat` da co bang nhap chi so hang loat theo ky cho phong dang thue co dich vu `TheoChiSo`.
 - UI tinh san luong tai cho, canh bao dong sai chi so/reset, va POST dung lai validate server-side hien co.
 
+Da nang tiep trong phien 34:
+
+- Ky dau chua co du lieu chi so cu cho phep nhap `ChiSoDau` theo so hien co tren dong ho, khong ep ve 0.
+- Khi da co ky truoc hoac dang sua dong da nhap, `ChiSoDau` van duoc khoa de giu chuoi audit.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.
@@ -431,6 +436,11 @@ Ket qua phien 29:
 - Bang hien moi dong theo phong + dich vu `TheoChiSo`.
 - Co checkbox chon dong luu, chi so dau/cuoi, loai ghi nhan, thong tin reset va san luong tinh tai cho.
 - Server-side van dung chung `ChiSoConsumptionCalculator` va validate reset hien co.
+
+Ket qua phien 34:
+
+- Neu chua co chi so ky truoc, man nhap don/theo phong/hang loat cho nhap `ChiSoDau`.
+- Neu da co ky truoc, `ChiSoDau` tu noi tu chi so cuoi gan nhat va khong nhap tay.
 
 ### 5.2. Preview chot hoa don hang loat - DA XU LY PHIEN 30
 

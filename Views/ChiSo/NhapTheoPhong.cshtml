@@ -8,6 +8,7 @@
     var dichVuList = ViewBag.DichVuTheoChiSo as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? [];
     var chiSoHienTai = ViewBag.ChiSoHienTai as Dictionary<int, QuanLyNhaTro.Models.ChiSoDienNuoc> ?? [];
     var chiSoDauTheoDichVu = ViewBag.ChiSoDauTheoDichVu as Dictionary<int, decimal> ?? [];
+    var choNhapChiSoDauTheoDichVu = ViewBag.ChoNhapChiSoDauTheoDichVu as Dictionary<int, bool> ?? [];
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     var cancelUrl = returnHopDongId.HasValue
         ? Url.Action("Create", "ChuyenPhong", new { hopDongId = returnHopDongId.Value })
@@ -57,6 +58,7 @@ else
                 {
                     chiSoHienTai.TryGetValue(dv.Id, out var cs);
                     var chiSoDau = chiSoDauTheoDichVu.TryGetValue(dv.Id, out var dau) ? dau : 0;
+                    var choNhapChiSoDau = choNhapChiSoDauTheoDichVu.TryGetValue(dv.Id, out var choNhapDau) && choNhapDau;
                     var loaiGhiNhan = cs?.LoaiGhiNhan ?? QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong;
                     var isReset = loaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiReset;
                     <input type="hidden" name="dichVuIds" value="@dv.Id" />
@@ -67,8 +69,20 @@ else
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label small text-muted">Chi so dau</label>
-                                <input type="text" class="form-control form-control-sm"
-                                       value="@chiSoDau.ToString("N2")" disabled />
+                                @if (choNhapChiSoDau)
+                                {
+                                    <input type="number" name="chiSoDaus" step="0.01" min="0"
+                                           class="form-control form-control-sm"
+                                           value="@chiSoDau.ToString(inv)"
+                                           data-start-input required />
+                                    <div class="form-text">Ky dau chua co du lieu cu, nhap so hien co tren dong ho.</div>
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="chiSoDaus" value="@chiSoDau.ToString(inv)" />
+                                    <input type="text" class="form-control form-control-sm"
+                                           value="@chiSoDau.ToString("N2")" disabled />
+                                }
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small text-muted">Chi so cuoi <span class="text-danger">*</span></label>
@@ -132,14 +146,25 @@ else
             const select = row.querySelector("[data-loai]");
             const resetFields = row.querySelector("[data-reset-fields]");
             const chiSoCuoi = row.querySelector("input[name='chiSoCuois']");
+            const chiSoDau = row.querySelector("[data-start-input]");
+            const chiSoTruocReset = row.querySelector("input[name='chiSoTruocResets']");
+
+            const syncStartValue = () => {
+                if (chiSoDau) {
+                    row.dataset.chiSoDau = chiSoDau.value || "0";
+                }
+                chiSoTruocReset.min = row.dataset.chiSoDau;
+            };
 
             const syncResetFields = () => {
+                syncStartValue();
                 const isReset = select.value === "Reset";
                 resetFields.classList.toggle("d-none", !isReset);
                 chiSoCuoi.min = isReset ? "0" : row.dataset.chiSoDau;
             };
 
             select.addEventListener("change", syncResetFields);
+            chiSoDau?.addEventListener("input", syncResetFields);
             syncResetFields();
         });
     </script>

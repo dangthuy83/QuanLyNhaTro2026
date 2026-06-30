@@ -88,7 +88,7 @@ else
                                     <input type="hidden" name="Rows[@i].TenDichVu" value="@row.TenDichVu" />
                                     <input type="hidden" name="Rows[@i].DonViTinh" value="@row.DonViTinh" />
                                     <input type="hidden" name="Rows[@i].ChiSoId" value="@row.ChiSoId" />
-                                    <input type="hidden" name="Rows[@i].ChiSoDau" value="@row.ChiSoDau.ToString(inv)" />
+                                    <input type="hidden" name="Rows[@i].ChoNhapChiSoDau" value="@row.ChoNhapChiSoDau.ToString()" />
                                     <input type="hidden" name="Rows[@i].DaNhap" value="@row.DaNhap.ToString()" />
                                     <input type="hidden" name="Rows[@i].SanLuongHienTai" value="@(row.SanLuongHienTai?.ToString(inv) ?? "")" />
                                 </td>
@@ -100,7 +100,21 @@ else
                                         <small class="text-muted">@row.DonViTinh</small>
                                     }
                                 </td>
-                                <td class="text-end">@row.ChiSoDau.ToString("N2")</td>
+                                <td class="text-end">
+                                    @if (row.ChoNhapChiSoDau)
+                                    {
+                                        <input type="number" name="Rows[@i].ChiSoDau" step="0.01" min="0"
+                                               class="form-control form-control-sm text-end"
+                                               value="@row.ChiSoDau.ToString(inv)"
+                                               title="Ky dau chua co du lieu cu, nhap so hien co tren dong ho."
+                                               data-start-input required />
+                                    }
+                                    else
+                                    {
+                                        <input type="hidden" name="Rows[@i].ChiSoDau" value="@row.ChiSoDau.ToString(inv)" />
+                                        <span>@row.ChiSoDau.ToString("N2")</span>
+                                    }
+                                </td>
                                 <td>
                                     <input type="number" name="Rows[@i].ChiSoCuoi" step="0.01"
                                            min="@row.ChiSoDau.ToString(inv)"
@@ -176,7 +190,7 @@ else
             : "";
 
         document.querySelectorAll("[data-meter-row]").forEach((row) => {
-            const start = Number.parseFloat(row.dataset.start || "0");
+            const startInput = row.querySelector("[data-start-input]");
             const finalInput = row.querySelector("[data-final]");
             const typeSelect = row.querySelector("[data-type]");
             const resetFields = row.querySelector("[data-reset-fields]");
@@ -192,6 +206,7 @@ else
             };
 
             const updateRow = () => {
+                const start = Number.parseFloat(startInput?.value || row.dataset.start || "0");
                 const isReset = typeSelect.value === "Reset";
                 const finalValue = Number.parseFloat(finalInput.value || "0");
                 const beforeReset = Number.parseFloat(beforeResetInput.value || "");
@@ -199,7 +214,8 @@ else
 
                 resetFields.classList.toggle("d-none", !isReset);
                 reasonInput.classList.toggle("d-none", !isReset);
-                finalInput.min = isReset ? "0" : row.dataset.start;
+                finalInput.min = isReset ? "0" : String(start);
+                beforeResetInput.min = String(start);
 
                 if (!isReset) {
                     const consumption = finalValue - start;
@@ -221,7 +237,8 @@ else
                 }
             };
 
-            [finalInput, typeSelect, beforeResetInput, afterResetInput, reasonInput]
+            [startInput, finalInput, typeSelect, beforeResetInput, afterResetInput, reasonInput]
+                .filter(Boolean)
                 .forEach((el) => el.addEventListener("input", updateRow));
             typeSelect.addEventListener("change", updateRow);
             updateRow();

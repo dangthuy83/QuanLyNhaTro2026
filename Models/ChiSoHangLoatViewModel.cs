@@ -19,6 +19,7 @@ public class ChiSoHangLoatRowViewModel
     public int ChiSoId { get; set; }
     public decimal ChiSoDau { get; set; }
     public decimal ChiSoCuoi { get; set; }
+    public bool ChoNhapChiSoDau { get; set; }
     public string LoaiGhiNhan { get; set; } = ChiSoDienNuoc.LoaiBinhThuong;
     public decimal? ChiSoTruocReset { get; set; }
     public decimal? ChiSoSauReset { get; set; }

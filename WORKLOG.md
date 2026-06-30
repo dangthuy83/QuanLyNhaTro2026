@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -1234,6 +1234,51 @@ Ghi chú:
 
 ---
 
+### Phiên 34 - Cho Nhập Chỉ Số Đầu Ở Kỳ Đầu
+
+Ngày: 30/06/2026
+
+Vấn đề:
+
+- Màn nhập chỉ số đang lấy `ChiSoDau = kyTruoc.ChiSoCuoi ?? 0` và khóa chỉ số đầu.
+- Khi bắt đầu dùng app từ dữ liệu thực tế, đồng hồ điện/nước thường không bắt đầu từ 0 nên không thể nhập đúng kỳ đầu.
+
+Quy tắc đã chốt:
+
+- Nếu phòng/dịch vụ chưa có chỉ số hiện tại và chưa có chỉ số kỳ trước, cho nhập `ChiSoDau` theo số hiện có trên đồng hồ.
+- Nếu đã có kỳ trước, `ChiSoDau` tự nối từ `ChiSoCuoi` gần nhất trước đó và không nhập tay.
+- Nếu đang sửa dòng đã nhập, giữ `ChiSoDau` đã lưu để tránh lệch chuỗi audit.
+
+Đã làm:
+
+- Sửa `ChiSoController` để nhận `chiSoDaus` từ form nhưng chỉ dùng khi không có dòng hiện tại và không có kỳ trước.
+- Màn `ChiSo/Nhap` và `ChiSo/NhapTheoPhong` hiển thị ô nhập `ChiSoDau` cho kỳ đầu; các trường hợp còn lại vẫn khóa như cũ.
+- Màn `ChiSo/NhapHangLoat` thêm ô nhập `ChiSoDau` cho từng dòng kỳ đầu và cập nhật tính sản lượng client-side theo số đầu vừa nhập.
+- Validate server-side chặn `ChiSoDau < 0`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5114`:
+
+- GET `/ChiSo/NhapHangLoat?thang=1&nam=2020` trả `200`, HTML có `data-start-input`.
+- GET `/ChiSo/Nhap?hopDongId=15&thang=1&nam=2020` trả `200`, HTML có `data-start-input`.
+- GET `/ChiSo/NhapTheoPhong?phongId=15&thang=1&nam=2020` trả `200`, HTML có `data-start-input`.
+
+Ghi chú:
+
+- Không POST lưu dữ liệu smoke test cho kỳ cũ để tránh tạo chỉ số 1/2020 làm thay đổi chuỗi kỳ trước của dữ liệu thật.
+- Smoke test runtime dùng override `SslMode=None` trong biến môi trường giống phiên 33.
+- App test cổng `5114` đã dừng sau khi kiểm tra.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1263,6 +1308,7 @@ Ghi chú:
 | 31 | `HoaDon/InPhieuThu` | Chỉ có xuất phiếu thu Excel, chưa in nhanh trực tiếp từ trình duyệt | Thêm phiếu thu HTML với CSS print A4, nút `window.print()` và cảnh báo bút toán phi tiền mặt |
 | 32 | `NhacNo/Index` | Chủ nhà vẫn phải tự lọc công nợ để biết hóa đơn nào cần nhắc | Thêm màn nhắc nợ giai đoạn 1 cho chủ nhà/quản lý, dùng dữ liệu công nợ hiện có và chưa gửi/copy tin nhắn tự động |
 | 33 | `HoaDon/ChotHangLoat` | Preview chốt hàng loạt khó vận hành khi nhiều nhà/phòng và khó xem nhanh dòng lỗi | Thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc |
+| 34 | `ChiSo/Nhap`, `ChiSo/NhapTheoPhong`, `ChiSo/NhapHangLoat` | Kỳ đầu chưa có dữ liệu cũ bị khóa `ChiSoDau = 0`, sai khi đồng hồ thực tế không bắt đầu từ 0 | Cho nhập `ChiSoDau` khi chưa có kỳ trước; các kỳ sau vẫn tự nối từ chỉ số cuối kỳ trước |
 
 ---
 

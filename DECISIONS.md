@@ -177,6 +177,8 @@ Ví dụ:
 Quy tắc đã chốt:
 
 - `LoaiGhiNhan = BinhThuong`: dùng khi đồng hồ chạy liên tục, không đổi/reset trong kỳ. Bắt buộc `ChiSoCuoi >= ChiSoDau`.
+- Khi bắt đầu đưa dữ liệu vào hệ thống và phòng/dịch vụ chưa có chỉ số kỳ trước, `ChiSoDau` được nhập thủ công theo số hiện có trên đồng hồ; không mặc định nghiệp vụ là 0.
+- Khi đã có chỉ số kỳ trước, `ChiSoDau` của kỳ mới tự lấy từ `ChiSoCuoi` gần nhất trước đó và không nhập tay để giữ chuỗi audit.
 - `LoaiGhiNhan = Reset`: dùng chung cho đồng hồ reset về 0, hỏng phải thay, thay đồng hồ, hoặc quay vòng số. Chưa tách riêng `HongDongHo`/`ThayDongHo`/`QuayVong` vì công thức tính tiền giống nhau; phân biệt bằng `LyDoDieuChinh`.
 - `ChiSoTruocReset`: chỉ số cuối cùng của đồng hồ cũ/trước khi quay về số thấp hơn.
 - `ChiSoSauReset`: chỉ số bắt đầu sau reset/thay đồng hồ; mặc định nghiệp vụ là 0 nếu bỏ trống.
@@ -285,6 +287,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - Da test voi MySQL that flow chuyen phong va tra phong giua thang co ca dich vu theo chi so va dich vu co dinh.
 - UI nhap chi so ho tro nhap truc tiep theo `PhongId` + ky, de phong moi co the nhap chi so truoc khi thuc hien chuyen phong.
 - UI nhap chi so hang loat theo ky cho cac phong dang thue co dich vu `TheoChiSo`.
+- UI nhập chỉ số cho phép nhập `ChiSoDau` ở kỳ đầu chưa có dữ liệu cũ; các kỳ sau tự nối từ chỉ số cuối kỳ trước.
 - Preview chốt hóa đơn hàng loạt theo kỳ: hiển thị hợp đồng đang hiệu lực, trạng thái dữ liệu, nợ kỳ trước, tổng dự kiến, hỗ trợ filter theo Nhà/từ khóa/trạng thái dòng và chỉ cho chốt các dòng sẵn sàng theo bộ lọc.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
@@ -329,4 +332,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 33 - 30/06/2026
+Cập nhật lần cuối: Phiên 34 - 30/06/2026
