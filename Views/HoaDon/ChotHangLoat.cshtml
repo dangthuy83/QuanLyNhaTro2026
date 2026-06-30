@@ -4,24 +4,13 @@
     ViewData["ActiveMenu"] = "hoadon";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
         <h5 class="mb-1">Preview chốt hóa đơn - @Model.Thang/@Model.Nam</h5>
         <div class="text-muted small">Kiểm tra dữ liệu trước khi tạo hóa đơn thật cho các hợp đồng đang hiệu lực.</div>
     </div>
-    <form method="get" class="d-flex gap-2 align-items-center">
-        <select name="thang" class="form-select form-select-sm" style="width:100px">
-            @for (int m = 1; m <= 12; m++)
-            {
-                <option value="@m" selected="@(m == Model.Thang)">Tháng @m</option>
-            }
-        </select>
-        <input name="nam" type="number" class="form-control form-control-sm" style="width:100px"
-               value="@Model.Nam" min="2020" max="2099" />
-        <button class="btn btn-sm btn-outline-primary">Xem</button>
-        <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
-           class="btn btn-sm btn-outline-secondary">Danh sách</a>
-    </form>
+    <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
+       class="btn btn-sm btn-outline-secondary">Danh sách hóa đơn</a>
 </div>
 
 @if (TempData["Success"] != null)
@@ -35,20 +24,76 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 }
 
+<form method="get" class="border rounded p-3 mb-3 bg-light">
+    <div class="row g-2 align-items-end">
+        <div class="col-6 col-md-2 col-lg-1">
+            <label class="form-label small text-muted mb-1">Tháng</label>
+            <select name="thang" class="form-select form-select-sm">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    <option value="@m" selected="@(m == Model.Thang)">Tháng @m</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-2 col-lg-1">
+            <label class="form-label small text-muted mb-1">Năm</label>
+            <input name="nam" type="number" class="form-control form-control-sm"
+                   value="@Model.Nam" min="2020" max="2099" />
+        </div>
+        <div class="col-md-3 col-lg-2">
+            <label class="form-label small text-muted mb-1">Nhà</label>
+            <select name="nhaId" class="form-select form-select-sm">
+                <option value="">Tất cả nhà</option>
+                @foreach (var nha in Model.DanhSachNha)
+                {
+                    <option value="@nha.Id" selected="@(Model.NhaId == nha.Id)">@nha.TenNha</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 col-lg-2">
+            <label class="form-label small text-muted mb-1">Trạng thái dòng</label>
+            <select name="trangThaiDong" class="form-select form-select-sm">
+                <option value="TatCa" selected="@(Model.TrangThaiDong == "TatCa")">Tất cả</option>
+                <option value="SanSang" selected="@(Model.TrangThaiDong == "SanSang")">Sẵn sàng chốt</option>
+                <option value="CanKiemTra" selected="@(Model.TrangThaiDong == "CanKiemTra")">Cần kiểm tra</option>
+                <option value="ThieuChiSo" selected="@(Model.TrangThaiDong == "ThieuChiSo")">Thiếu chỉ số</option>
+                <option value="DaCoHoaDon" selected="@(Model.TrangThaiDong == "DaCoHoaDon")">Đã có hóa đơn</option>
+                <option value="ThieuDichVu" selected="@(Model.TrangThaiDong == "ThieuDichVu")">Thiếu dịch vụ</option>
+            </select>
+        </div>
+        <div class="col-md-4 col-lg-4">
+            <label class="form-label small text-muted mb-1">Tìm phòng/khách</label>
+            <input name="tuKhoa" class="form-control form-control-sm"
+                   value="@Model.TuKhoa" placeholder="Tên phòng, mã HĐ, khách thuê, SĐT" />
+        </div>
+        <div class="col-md-12 col-lg-2 d-flex gap-2">
+            <button class="btn btn-sm btn-primary flex-fill">Lọc</button>
+            <a asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
+               class="btn btn-sm btn-outline-secondary flex-fill">Xóa lọc</a>
+        </div>
+    </div>
+</form>
+
 <div class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Hợp đồng đang hiệu lực</div>
+            <div class="text-muted small">Dòng theo bộ lọc</div>
             <div class="fs-5 fw-semibold">@Model.Rows.Count</div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="border rounded p-3 h-100">
             <div class="text-muted small">Sẵn sàng chốt</div>
             <div class="fs-5 fw-semibold text-success">@Model.SoDongSanSang</div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Cần kiểm tra</div>
+            <div class="fs-5 fw-semibold text-warning">@Model.SoDongCanKiemTra</div>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="border rounded p-3 h-100">
             <div class="text-muted small">Tổng dự kiến hợp lệ</div>
             <div class="fs-5 fw-semibold">@Model.TongDuKien.ToString("N0") đ</div>
@@ -60,6 +105,9 @@
     @Html.AntiForgeryToken()
     <input type="hidden" name="thang" value="@Model.Thang" />
     <input type="hidden" name="nam" value="@Model.Nam" />
+    <input type="hidden" name="nhaId" value="@Model.NhaId" />
+    <input type="hidden" name="tuKhoa" value="@Model.TuKhoa" />
+    <input type="hidden" name="trangThaiDong" value="@Model.TrangThaiDong" />
 
     <div class="card shadow-sm">
         <div class="table-responsive">
@@ -67,9 +115,10 @@
                 <thead class="table-light">
                     <tr>
                         <th style="width:48px">
-                            <input class="form-check-input" type="checkbox" id="checkAllReady" title="Chọn tất cả dòng sẵn sàng" />
+                            <input class="form-check-input" type="checkbox" id="checkAllReady"
+                                   title="Chọn tất cả dòng sẵn sàng theo bộ lọc" />
                         </th>
-                        <th>Phòng / hợp đồng</th>
+                        <th>Nhà / phòng / hợp đồng</th>
                         <th>Dịch vụ và chỉ số</th>
                         <th class="text-end">Tiền phòng</th>
                         <th class="text-end">Dịch vụ</th>
@@ -81,6 +130,7 @@
                 <tbody>
                     @foreach (var row in Model.Rows)
                     {
+                        var tenNha = Model.DanhSachNha.FirstOrDefault(n => n.Id == row.HopDong?.Phong?.NhaId)?.TenNha;
                         <tr class="@(!row.SanSangChot ? "table-warning" : "")">
                             <td>
                                 <input class="form-check-input ready-check"
@@ -90,6 +140,7 @@
                                        disabled="@(!row.SanSangChot)" />
                             </td>
                             <td>
+                                <div class="text-muted small">@(tenNha ?? $"Nhà #{row.HopDong?.Phong?.NhaId}")</div>
                                 <div class="fw-semibold">@row.HopDong?.Phong?.TenPhong</div>
                                 <div class="text-muted small">
                                     HĐ #@row.HopDongId
@@ -98,6 +149,10 @@
                                         <span> · @row.SoNgayO/@row.SoNgayTrongThang ngày</span>
                                     }
                                 </div>
+                                @if (row.HopDong?.DanhSachKhach.Any() == true)
+                                {
+                                    <div class="small">@string.Join(", ", row.HopDong.DanhSachKhach.Select(k => k.HoTen))</div>
+                                }
                                 <div class="text-muted small">
                                     Từ @row.HopDong?.NgayBatDau.ToString("dd/MM/yyyy")
                                 </div>
@@ -169,7 +224,7 @@
                     @if (!Model.Rows.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Không có hợp đồng đang hiệu lực.</td>
+                            <td colspan="8" class="text-center text-muted py-4">Không có dòng nào khớp bộ lọc.</td>
                         </tr>
                     }
                 </tbody>
@@ -177,7 +232,7 @@
                 {
                     <tfoot class="table-light fw-semibold">
                         <tr>
-                            <td colspan="3">Tổng các dòng sẵn sàng</td>
+                            <td colspan="3">Tổng các dòng sẵn sàng theo bộ lọc</td>
                             <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TienPhong).ToString("N0")</td>
                             <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TongTienDichVu).ToString("N0")</td>
                             <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TienNoKyTruoc).ToString("N0")</td>

@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt, preview chốt hóa đơn hàng loạt, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -27,7 +27,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
 | 6 | Rà UI in phiếu thu sau vận hành | Bản HTML print tối thiểu đã có; theo dõi nhu cầu thêm logo/thông tin chủ nhà/mẫu phiếu riêng | Thấp |
-| 7 | Nâng cấp flow preview chốt hóa đơn hàng loạt | Bản Bootstrap tối thiểu đã có; cân nhắc thêm filter theo Nhà/chọn bỏ qua dòng lỗi nếu vận hành cần | Thấp |
+| 7 | Rà tiếp flow preview chốt hóa đơn hàng loạt sau vận hành | Đã thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc | Thấp |
 | 8 | Nhắc nợ giai đoạn 2/3 | Sau này mới cân nhắc copy mẫu tin, log đã nhắc, Telegram/ZNS/SMS; chưa làm bây giờ | Thấp |
 | 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 
@@ -1194,6 +1194,46 @@ Ghi chú:
 
 ---
 
+### Phiên 33 - Nâng Filter Preview Chốt Hóa Đơn Hàng Loạt
+
+Ngày: 30/06/2026
+
+Đã làm:
+
+- Nâng màn `HoaDon/ChotHangLoat` để vận hành dễ rà trước khi chốt:
+  - Filter theo `Nhà`.
+  - Tìm theo tên phòng, mã hợp đồng, tên khách thuê hoặc số điện thoại.
+  - Lọc trạng thái dòng: tất cả, sẵn sàng chốt, cần kiểm tra, thiếu chỉ số, đã có hóa đơn, thiếu dịch vụ.
+  - Summary card và footer tính theo bộ lọc hiện tại.
+  - Checkbox chọn tất cả chỉ chọn các dòng sẵn sàng đang hiển thị theo bộ lọc.
+- POST chốt hàng loạt giữ lại bộ lọc khi redirect về preview.
+- Controller preview nạp thêm danh sách khách thuê cho từng hợp đồng để tìm/hiển thị khách ngay trên dòng.
+- `HopDongRepository.GetAllAsync/GetByIdAsync` trả thêm `Phong.NhaId` để lọc theo Nhà.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5113`:
+
+- GET `/HoaDon/ChotHangLoat?thang=8&nam=2026` trả `200`.
+- GET `/HoaDon/ChotHangLoat?thang=8&nam=2026&trangThaiDong=SanSang` trả `200`.
+- GET `/HoaDon/ChotHangLoat?thang=8&nam=2026&trangThaiDong=CanKiemTra&tuKhoa=TEST_BULK_INVOICE_PREVIEW_20260630212750` trả `200`.
+- HTML có filter `Trạng thái dòng`, ô `Tìm phòng/khách` và checkbox `checkAllReady`.
+
+Ghi chú:
+
+- Smoke test runtime cần override connection string bằng `SslMode=None` trong biến môi trường của lệnh test vì process nền PowerShell bị lỗi MySQL SSL credential nếu dùng default SSL.
+- Không seed thêm dữ liệu mới; dùng dữ liệu smoke test `TEST_BULK_INVOICE_PREVIEW_20260630212750` còn sẵn.
+- App test cổng `5113` đã dừng sau khi kiểm tra.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1222,6 +1262,7 @@ Ghi chú:
 | 30 | `HoaDon/ChotHangLoat`, `HoaDonService` | Chốt hóa đơn hàng loạt chưa có bước preview và có nguy cơ bỏ sót dịch vụ theo chỉ số nếu chưa nhập chỉ số | Thêm preview theo kỳ, badge trạng thái dữ liệu, bulk POST chỉ chốt dòng sẵn sàng và tách logic tính dự kiến dùng chung với lập hóa đơn |
 | 31 | `HoaDon/InPhieuThu` | Chỉ có xuất phiếu thu Excel, chưa in nhanh trực tiếp từ trình duyệt | Thêm phiếu thu HTML với CSS print A4, nút `window.print()` và cảnh báo bút toán phi tiền mặt |
 | 32 | `NhacNo/Index` | Chủ nhà vẫn phải tự lọc công nợ để biết hóa đơn nào cần nhắc | Thêm màn nhắc nợ giai đoạn 1 cho chủ nhà/quản lý, dùng dữ liệu công nợ hiện có và chưa gửi/copy tin nhắn tự động |
+| 33 | `HoaDon/ChotHangLoat` | Preview chốt hàng loạt khó vận hành khi nhiều nhà/phòng và khó xem nhanh dòng lỗi | Thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc |
 
 ---
 

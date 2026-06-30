@@ -9,7 +9,7 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<HopDong>> GetAllAsync()
     {
         const string sql = """
-            SELECT hd.*, p.Id, p.TenPhong, p.TrangThai
+            SELECT hd.*, p.Id, p.NhaId, p.TenPhong, p.TrangThai
             FROM HopDong hd
             INNER JOIN Phong p ON p.Id = hd.PhongId
             ORDER BY hd.NgayBatDau DESC
@@ -23,7 +23,7 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
     public async Task<HopDong?> GetByIdAsync(int id)
     {
         const string sql = """
-            SELECT hd.*, p.Id, p.TenPhong, p.GiaThueMacDinh, p.TrangThai
+            SELECT hd.*, p.Id, p.NhaId, p.TenPhong, p.GiaThueMacDinh, p.TrangThai
             FROM HopDong hd
             INNER JOIN Phong p ON p.Id = hd.PhongId
             WHERE hd.Id = @Id

@@ -12,6 +12,7 @@ public class HoaDonController(
     HopDongRepository hopDongRepo,
     KhachThueRepository khachRepo,
     PhongRepository phongRepo,
+    NhaRepository nhaRepo,
     HoaDonService hoaDonService,
     ExcelService excelService) : Controller
 {
@@ -42,24 +43,35 @@ public class HoaDonController(
     }
 
     // GET /HoaDon/ChotHangLoat?thang=6&nam=2026
-    public async Task<IActionResult> ChotHangLoat(int? thang, int? nam)
+    public async Task<IActionResult> ChotHangLoat(
+        int? thang,
+        int? nam,
+        int? nhaId,
+        string? tuKhoa,
+        string trangThaiDong = "TatCa")
     {
         ViewData["ActiveMenu"] = "hoadon";
         thang ??= DateTime.Today.Month;
         nam ??= DateTime.Today.Year;
 
-        var model = await BuildChotHangLoatPreviewAsync(thang.Value, nam.Value);
+        var model = await BuildChotHangLoatPreviewAsync(thang.Value, nam.Value, nhaId, tuKhoa, trangThaiDong);
         return View(model);
     }
 
     // POST /HoaDon/ChotHangLoat
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ChotHangLoat(int thang, int nam, int[] hopDongIds)
+    public async Task<IActionResult> ChotHangLoat(
+        int thang,
+        int nam,
+        int? nhaId,
+        string? tuKhoa,
+        string trangThaiDong,
+        int[] hopDongIds)
     {
         if (hopDongIds.Length == 0)
         {
             TempData["Error"] = "Chưa chọn hợp đồng nào để chốt.";
-            return RedirectToAction(nameof(ChotHangLoat), new { thang, nam });
+            return RedirectToAction(nameof(ChotHangLoat), new { thang, nam, nhaId, tuKhoa, trangThaiDong });
         }
 
         var daTao = 0;
@@ -99,7 +111,7 @@ public class HoaDonController(
             TempData["Error"] = thongBao;
         }
 
-        return RedirectToAction(nameof(ChotHangLoat), new { thang, nam });
+        return RedirectToAction(nameof(ChotHangLoat), new { thang, nam, nhaId, tuKhoa, trangThaiDong });
     }
 
     // GET /HoaDon/Details/5
@@ -258,10 +270,19 @@ public class HoaDonController(
         return View(model);
     }
 
-    private async Task<HoaDonHangLoatPreviewViewModel> BuildChotHangLoatPreviewAsync(int thang, int nam)
+    private async Task<HoaDonHangLoatPreviewViewModel> BuildChotHangLoatPreviewAsync(
+        int thang,
+        int nam,
+        int? nhaId,
+        string? tuKhoa,
+        string trangThaiDong)
     {
+        tuKhoa = tuKhoa?.Trim();
+        trangThaiDong = NormalizeTrangThaiDong(trangThaiDong);
+
         var hopDongs = (await hopDongRepo.GetAllAsync())
             .Where(hd => hd.TrangThai == "DangHieuLuc")
+            .Where(hd => !nhaId.HasValue || hd.Phong?.NhaId == nhaId.Value)
             .OrderBy(hd => hd.Phong?.TenPhong)
             .ThenBy(hd => hd.Id)
             .ToList();
@@ -269,14 +290,65 @@ public class HoaDonController(
         var rows = new List<HoaDonDuKien>();
         foreach (var hopDong in hopDongs)
         {
-            rows.Add(await hoaDonService.TinhHoaDonDuKienAsync(hopDong.Id, thang, nam));
+            var row = await hoaDonService.TinhHoaDonDuKienAsync(hopDong.Id, thang, nam);
+            if (row.HopDong != null)
+                row.HopDong.DanhSachKhach = (await khachRepo.GetByHopDongAsync(hopDong.Id)).ToList();
+
+            rows.Add(row);
         }
+
+        rows = rows
+            .Where(row => MatchesTuKhoa(row, tuKhoa))
+            .Where(row => MatchesTrangThaiDong(row, trangThaiDong))
+            .ToList();
 
         return new HoaDonHangLoatPreviewViewModel
         {
             Thang = thang,
             Nam = nam,
+            NhaId = nhaId,
+            TuKhoa = tuKhoa,
+            TrangThaiDong = trangThaiDong,
+            DanhSachNha = (await nhaRepo.GetAllAsync()).ToList(),
             Rows = rows
         };
+    }
+
+    private static string NormalizeTrangThaiDong(string? trangThaiDong)
+        => trangThaiDong is "SanSang" or "CanKiemTra" or "ThieuChiSo" or "DaCoHoaDon" or "ThieuDichVu"
+            ? trangThaiDong
+            : "TatCa";
+
+    private static bool MatchesTrangThaiDong(HoaDonDuKien row, string trangThaiDong)
+        => trangThaiDong switch
+        {
+            "SanSang" => row.SanSangChot,
+            "CanKiemTra" => !row.SanSangChot,
+            "ThieuChiSo" => row.ThieuChiSo,
+            "DaCoHoaDon" => row.CoHoaDonDaCo,
+            "ThieuDichVu" => row.ThieuDichVu,
+            _ => true
+        };
+
+    private static bool MatchesTuKhoa(HoaDonDuKien row, string? tuKhoa)
+    {
+        if (string.IsNullOrWhiteSpace(tuKhoa))
+            return true;
+
+        var keyword = tuKhoa.Trim();
+        var hopDong = row.HopDong;
+        if (hopDong == null)
+            return row.HopDongId.ToString().Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+        if (row.HopDongId.ToString().Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (hopDong.Phong?.TenPhong?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        return hopDong.DanhSachKhach.Any(khach =>
+            khach.HoTen.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(khach.SoDienThoai)
+                && khach.SoDienThoai.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
     }
 }

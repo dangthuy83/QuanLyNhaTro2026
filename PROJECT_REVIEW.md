@@ -98,6 +98,12 @@ Da xu ly trong phien 30:
 - POST chot hang loat recompute server-side va chi tao hoa don cho cac dong duoc chon va san sang.
 - `HoaDonService.TinhHoaDonDuKienAsync` duoc tach de preview va lap hoa don dung chung logic tinh tien; thieu chi so `TheoChiSo` la loi chan chot hoa don.
 
+Da nang tiep trong phien 33:
+
+- Preview chot hoa don hang loat co filter theo Nha, tu khoa phong/khach/SĐT/ma hop dong va trang thai dong.
+- Co the xem nhanh dong san sang chot, dong can kiem tra, thieu chi so, da co hoa don hoac thieu dich vu.
+- Checkbox chon tat ca chi chon cac dong san sang dang hien thi theo bo loc.
+
 Da xu ly trong phien 31:
 
 - `HoaDon/InPhieuThu` da co phieu thu HTML toi thieu de in bang `window.print()`.
@@ -457,6 +463,12 @@ Ket qua phien 30:
 - Dong thieu dich vu hien canh bao de chu nha kiem tra, nhung van co the chot tien phong neu can.
 - Khi POST, server recompute tung hop dong truoc khi goi `LapHoaDonAsync`.
 
+Ket qua phien 33:
+
+- Da them filter theo Nha, tim phong/khach/SĐT/ma hop dong va loc trang thai dong.
+- Summary/footer tinh theo bo loc hien tai.
+- Chon tat ca chi tick cac dong san sang dang hien thi theo bo loc.
+
 ### 5.3. Thu tien nhanh tren danh sach hoa don - DA XU LY PHIEN 28
 
 Them thao tac ngay tai danh sach:
@@ -522,8 +534,8 @@ Neu lam app cho khach thue xem hoa don:
 
 ## 7. Thu tu uu tien de thao luan/lam tiep
 
-1. Nang cap filter/flow preview chot hoa don hang loat neu van hanh thuc te can loc theo Nha hoac thao tac bo qua dong loi nhanh hon.
-2. Ra UI in phieu thu sau van hanh neu can them logo/thong tin chu nha/mau phieu rieng.
+1. Ra UI in phieu thu sau van hanh neu can them logo/thong tin chu nha/mau phieu rieng.
+2. Nang UI ledger coc neu chu nha can doi soat coc thuong xuyen: filter theo hop dong/phong/loai giao dich, in/xuat so coc.
 3. Nhac no giai doan 2/3: copy mau tin, log da nhac, Telegram/ZNS/SMS neu that su can.
 
 ---
