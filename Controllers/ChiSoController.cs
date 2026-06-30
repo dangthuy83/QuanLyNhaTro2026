@@ -36,6 +36,16 @@ public class ChiSoController(
         return View();
     }
 
+    public async Task<IActionResult> NhapHangLoat(int? thang, int? nam)
+    {
+        ViewData["ActiveMenu"] = "chiso";
+        thang ??= DateTime.Today.Month;
+        nam ??= DateTime.Today.Year;
+
+        var model = await BuildNhapHangLoatViewModelAsync(thang.Value, nam.Value);
+        return View(model);
+    }
+
     public async Task<IActionResult> Nhap(int hopDongId, int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "chiso";
@@ -159,6 +169,61 @@ public class ChiSoController(
         return RedirectToAction(nameof(Index), new { thang, nam });
     }
 
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> NhapHangLoat(ChiSoHangLoatViewModel model)
+    {
+        ViewData["ActiveMenu"] = "chiso";
+
+        if (model.Thang < 1 || model.Thang > 12 || model.Nam < 2000 || model.Nam > 2099)
+        {
+            TempData["Error"] = "Ky nhap chi so khong hop le.";
+            return RedirectToAction(nameof(NhapHangLoat), new { thang = DateTime.Today.Month, nam = DateTime.Today.Year });
+        }
+
+        var selectedRows = model.Rows.Where(r => r.Luu).ToList();
+        if (selectedRows.Count == 0)
+        {
+            TempData["Error"] = "Chua chon dong nao de luu.";
+            return View(model);
+        }
+
+        var allItems = new List<ChiSoNhapItem>();
+        var allErrors = new List<string>();
+
+        foreach (var group in selectedRows.GroupBy(r => r.PhongId))
+        {
+            var rows = group.ToList();
+            var result = await ValidateChiSoAsync(
+                group.Key,
+                model.Thang,
+                model.Nam,
+                rows.Select(r => r.DichVuId).ToArray(),
+                rows.Select(r => r.ChiSoCuoi).ToArray(),
+                rows.Select(r => r.ChiSoId).ToArray(),
+                rows.Select(r => r.LoaiGhiNhan).ToArray(),
+                rows.Select(r => r.ChiSoTruocReset).ToArray(),
+                rows.Select(r => r.ChiSoSauReset).ToArray(),
+                rows.Select(r => r.LyDoDieuChinh).ToArray());
+
+            allItems.AddRange(result.Items);
+            allErrors.AddRange(result.Errors.Select(error =>
+            {
+                var tenPhong = rows.FirstOrDefault()?.TenPhong;
+                return string.IsNullOrWhiteSpace(tenPhong) ? error : $"{tenPhong}: {error}";
+            }));
+        }
+
+        if (allErrors.Count > 0)
+        {
+            TempData["Error"] = "Khong the luu chi so. " + string.Join(" ", allErrors);
+            return View(model);
+        }
+
+        await SaveChiSoItemsAsync(allItems);
+        TempData["Success"] = $"Da luu {allItems.Count} dong chi so ky {model.Thang}/{model.Nam}.";
+        return RedirectToAction(nameof(Index), new { thang = model.Thang, nam = model.Nam });
+    }
+
     private async Task<ChiSoFormData> LoadChiSoFormAsync(int phongId, int thang, int nam)
     {
         var dichVuTheoChiSo = (await phongDichVuRepo.GetByPhongAsync(phongId))
@@ -187,7 +252,87 @@ public class ChiSoController(
         return new ChiSoFormData(dichVuTheoChiSo, chiSoHienTai, chiSoDauTheoDichVu);
     }
 
+    private async Task<ChiSoHangLoatViewModel> BuildNhapHangLoatViewModelAsync(int thang, int nam)
+    {
+        var hopDongs = (await hopDongRepo.GetAllAsync())
+            .Where(hd => hd.TrangThai == "DangHieuLuc")
+            .OrderBy(hd => hd.Phong?.TenPhong)
+            .ToList();
+
+        var rows = new List<ChiSoHangLoatRowViewModel>();
+        foreach (var hopDong in hopDongs)
+        {
+            var formData = await LoadChiSoFormAsync(hopDong.PhongId, thang, nam);
+            foreach (var dichVu in formData.DichVuTheoChiSo)
+            {
+                var current = formData.ChiSoHienTai.FirstOrDefault(cs => cs.DichVuId == dichVu.Id);
+                var chiSoDau = formData.ChiSoDauTheoDichVu.TryGetValue(dichVu.Id, out var dau) ? dau : 0;
+                var loaiGhiNhan = current?.LoaiGhiNhan ?? ChiSoDienNuoc.LoaiBinhThuong;
+
+                rows.Add(new ChiSoHangLoatRowViewModel
+                {
+                    Luu = true,
+                    PhongId = hopDong.PhongId,
+                    HopDongId = hopDong.Id,
+                    TenPhong = hopDong.Phong?.TenPhong ?? $"Phong #{hopDong.PhongId}",
+                    DichVuId = dichVu.Id,
+                    TenDichVu = dichVu.TenDichVu,
+                    DonViTinh = dichVu.DonViTinh,
+                    ChiSoId = current?.Id ?? 0,
+                    ChiSoDau = chiSoDau,
+                    ChiSoCuoi = current?.ChiSoCuoi ?? chiSoDau,
+                    LoaiGhiNhan = loaiGhiNhan,
+                    ChiSoTruocReset = current?.ChiSoTruocReset,
+                    ChiSoSauReset = current?.ChiSoSauReset,
+                    LyDoDieuChinh = current?.LyDoDieuChinh,
+                    DaNhap = current != null,
+                    SanLuongHienTai = current?.SoLuongTieuThu
+                });
+            }
+        }
+
+        return new ChiSoHangLoatViewModel
+        {
+            Thang = thang,
+            Nam = nam,
+            Rows = rows
+        };
+    }
+
     private async Task<List<string>> SaveChiSoAsync(
+        int phongId,
+        int thang,
+        int nam,
+        int[] dichVuIds,
+        decimal[] chiSoCuois,
+        int[] chiSoIds,
+        string[] loaiGhiNhans,
+        decimal?[] chiSoTruocResets,
+        decimal?[] chiSoSauResets,
+        string?[] lyDoDieuChinhs)
+    {
+        var result = await ValidateChiSoAsync(
+            phongId,
+            thang,
+            nam,
+            dichVuIds,
+            chiSoCuois,
+            chiSoIds,
+            loaiGhiNhans,
+            chiSoTruocResets,
+            chiSoSauResets,
+            lyDoDieuChinhs);
+
+        if (result.Errors.Count > 0)
+        {
+            return result.Errors;
+        }
+
+        await SaveChiSoItemsAsync(result.Items);
+        return result.Errors;
+    }
+
+    private async Task<ChiSoValidationResult> ValidateChiSoAsync(
         int phongId,
         int thang,
         int nam,
@@ -279,11 +424,11 @@ public class ChiSoController(
             }
         }
 
-        if (errors.Count > 0)
-        {
-            return errors;
-        }
+        return new ChiSoValidationResult(items, errors);
+    }
 
+    private async Task SaveChiSoItemsAsync(IEnumerable<ChiSoNhapItem> items)
+    {
         foreach (var item in items)
         {
             if (item.ChiSo.Id > 0)
@@ -295,11 +440,10 @@ public class ChiSoController(
                 await chiSoRepo.InsertAsync(item.ChiSo);
             }
         }
-
-        return errors;
     }
 
     private sealed record ChiSoNhapItem(ChiSoDienNuoc ChiSo);
+    private sealed record ChiSoValidationResult(List<ChiSoNhapItem> Items, List<string> Errors);
     private sealed record ChiSoFormData(
         List<DichVu> DichVuTheoChiSo,
         List<ChiSoDienNuoc> ChiSoHienTai,

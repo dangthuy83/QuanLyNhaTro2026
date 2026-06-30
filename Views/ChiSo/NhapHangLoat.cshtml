@@ -1,0 +1,230 @@
+@model QuanLyNhaTro.Models.ChiSoHangLoatViewModel
+@{
+    ViewData["Title"] = "Nhập chỉ số hàng loạt";
+    ViewData["ActiveMenu"] = "chiso";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
+           class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+        <h5 class="mb-0">Nhập chỉ số hàng loạt - @Model.Thang/@Model.Nam</h5>
+    </div>
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <select name="thang" class="form-select form-select-sm" style="width:90px">
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(m == Model.Thang)">Tháng @m</option>
+            }
+        </select>
+        <input name="nam" type="number" class="form-control form-control-sm" style="width:90px"
+               value="@Model.Nam" min="2020" max="2099" />
+        <button class="btn btn-sm btn-outline-primary">Xem</button>
+    </form>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Rows.Any())
+{
+    <div class="alert alert-warning">
+        Không có phòng đang thuê nào được gán dịch vụ theo chỉ số trong kỳ này.
+    </div>
+}
+else
+{
+    <form asp-action="NhapHangLoat" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Thang" />
+        <input type="hidden" asp-for="Nam" />
+
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div class="d-flex gap-2 flex-wrap">
+                <span class="badge bg-light text-dark border">Tổng: @Model.Rows.Count dòng</span>
+                <span class="badge bg-success">Đã nhập: @Model.Rows.Count(r => r.DaNhap)</span>
+                <span class="badge bg-secondary">Chưa nhập: @Model.Rows.Count(r => !r.DaNhap)</span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-save me-1"></i>Lưu các dòng đã chọn
+            </button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:54px">Lưu</th>
+                            <th style="min-width:150px">Phòng</th>
+                            <th style="min-width:150px">Dịch vụ</th>
+                            <th class="text-end" style="width:120px">Đầu</th>
+                            <th style="width:140px">Cuối</th>
+                            <th style="min-width:260px">Ghi nhận</th>
+                            <th class="text-end" style="width:120px">Sản lượng</th>
+                            <th style="width:120px">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Rows.Count; i++)
+                        {
+                            var row = Model.Rows[i];
+                            var isReset = row.LoaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiReset;
+                            <tr data-meter-row data-start="@row.ChiSoDau.ToString(inv)">
+                                <td>
+                                    <input type="hidden" name="Rows[@i].Luu" value="false" />
+                                    <input type="checkbox" name="Rows[@i].Luu" value="true"
+                                           class="form-check-input" @(row.Luu ? "checked" : "") />
+                                    <input type="hidden" name="Rows[@i].PhongId" value="@row.PhongId" />
+                                    <input type="hidden" name="Rows[@i].HopDongId" value="@row.HopDongId" />
+                                    <input type="hidden" name="Rows[@i].TenPhong" value="@row.TenPhong" />
+                                    <input type="hidden" name="Rows[@i].DichVuId" value="@row.DichVuId" />
+                                    <input type="hidden" name="Rows[@i].TenDichVu" value="@row.TenDichVu" />
+                                    <input type="hidden" name="Rows[@i].DonViTinh" value="@row.DonViTinh" />
+                                    <input type="hidden" name="Rows[@i].ChiSoId" value="@row.ChiSoId" />
+                                    <input type="hidden" name="Rows[@i].ChiSoDau" value="@row.ChiSoDau.ToString(inv)" />
+                                    <input type="hidden" name="Rows[@i].DaNhap" value="@row.DaNhap.ToString()" />
+                                    <input type="hidden" name="Rows[@i].SanLuongHienTai" value="@(row.SanLuongHienTai?.ToString(inv) ?? "")" />
+                                </td>
+                                <td class="fw-semibold">@row.TenPhong</td>
+                                <td>
+                                    <div>@row.TenDichVu</div>
+                                    @if (!string.IsNullOrWhiteSpace(row.DonViTinh))
+                                    {
+                                        <small class="text-muted">@row.DonViTinh</small>
+                                    }
+                                </td>
+                                <td class="text-end">@row.ChiSoDau.ToString("N2")</td>
+                                <td>
+                                    <input type="number" name="Rows[@i].ChiSoCuoi" step="0.01"
+                                           min="@row.ChiSoDau.ToString(inv)"
+                                           class="form-control form-control-sm"
+                                           value="@row.ChiSoCuoi.ToString(inv)"
+                                           data-final required />
+                                </td>
+                                <td>
+                                    <div class="row g-2">
+                                        <div class="col-md-5">
+                                            <select name="Rows[@i].LoaiGhiNhan" class="form-select form-select-sm" data-type>
+                                                <option value="BinhThuong" selected="@(row.LoaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong)">Bình thường</option>
+                                                <option value="Reset" selected="@isReset">Reset</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-7">
+                                            <input type="text" name="Rows[@i].LyDoDieuChinh" maxlength="255"
+                                                   class="form-control form-control-sm @(isReset ? "" : "d-none")"
+                                                   value="@(row.LyDoDieuChinh ?? "")"
+                                                   placeholder="Lý do reset" data-reset-reason />
+                                        </div>
+                                    </div>
+                                    <div class="row g-2 mt-1 @(isReset ? "" : "d-none")" data-reset-fields>
+                                        <div class="col-md-6">
+                                            <input type="number" name="Rows[@i].ChiSoTruocReset" step="0.01"
+                                                   min="@row.ChiSoDau.ToString(inv)"
+                                                   class="form-control form-control-sm"
+                                                   value="@(row.ChiSoTruocReset?.ToString(inv) ?? "")"
+                                                   placeholder="Trước reset" data-before-reset />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="number" name="Rows[@i].ChiSoSauReset" step="0.01" min="0"
+                                                   class="form-control form-control-sm"
+                                                   value="@(row.ChiSoSauReset?.ToString(inv) ?? "")"
+                                                   placeholder="Sau reset" data-after-reset />
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-semibold" data-consumption>
+                                    @(row.SanLuongHienTai?.ToString("N2") ?? "0.00")
+                                </td>
+                                <td data-status>
+                                    @if (row.DaNhap)
+                                    {
+                                        <span class="badge bg-success">Đã nhập</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-muted border">Chưa nhập</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
+               class="btn btn-outline-secondary">Hủy</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Lưu các dòng đã chọn
+            </button>
+        </div>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        const formatNumber = (value) => Number.isFinite(value)
+            ? value.toLocaleString("vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : "";
+
+        document.querySelectorAll("[data-meter-row]").forEach((row) => {
+            const start = Number.parseFloat(row.dataset.start || "0");
+            const finalInput = row.querySelector("[data-final]");
+            const typeSelect = row.querySelector("[data-type]");
+            const resetFields = row.querySelector("[data-reset-fields]");
+            const beforeResetInput = row.querySelector("[data-before-reset]");
+            const afterResetInput = row.querySelector("[data-after-reset]");
+            const reasonInput = row.querySelector("[data-reset-reason]");
+            const consumptionCell = row.querySelector("[data-consumption]");
+            const statusCell = row.querySelector("[data-status]");
+
+            const setStatus = (html, isError) => {
+                statusCell.innerHTML = html;
+                row.classList.toggle("table-danger", isError);
+            };
+
+            const updateRow = () => {
+                const isReset = typeSelect.value === "Reset";
+                const finalValue = Number.parseFloat(finalInput.value || "0");
+                const beforeReset = Number.parseFloat(beforeResetInput.value || "");
+                const afterReset = Number.parseFloat(afterResetInput.value || "0");
+
+                resetFields.classList.toggle("d-none", !isReset);
+                reasonInput.classList.toggle("d-none", !isReset);
+                finalInput.min = isReset ? "0" : row.dataset.start;
+
+                if (!isReset) {
+                    const consumption = finalValue - start;
+                    consumptionCell.textContent = formatNumber(consumption);
+                    if (consumption < 0) {
+                        setStatus("<span class='badge bg-danger'>Sai chỉ số</span>", true);
+                    } else {
+                        setStatus("<span class='badge bg-primary'>Sẵn sàng</span>", false);
+                    }
+                    return;
+                }
+
+                const consumption = (beforeReset - start) + (finalValue - afterReset);
+                consumptionCell.textContent = formatNumber(consumption);
+                if (!Number.isFinite(beforeReset) || beforeReset < start || finalValue < afterReset || !reasonInput.value.trim()) {
+                    setStatus("<span class='badge bg-warning text-dark'>Cần kiểm tra</span>", true);
+                } else {
+                    setStatus("<span class='badge bg-primary'>Sẵn sàng</span>", false);
+                }
+            };
+
+            [finalInput, typeSelect, beforeResetInput, afterResetInput, reasonInput]
+                .forEach((el) => el.addEventListener("input", updateRow));
+            typeSelect.addEventListener("change", updateRow);
+            updateRow();
+        });
+    </script>
+}

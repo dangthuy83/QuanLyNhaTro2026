@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ và thu tiền nhanh đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh và nhập chỉ số hàng loạt đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -21,13 +21,13 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
-| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*` | Thấp |
+| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
 | 6 | In phiếu thu HTML | `window.print()` và CSS print | Trung bình |
-| 7 | UI nhập chỉ số hàng loạt/preview chốt hóa đơn | Làm sau khi các màn nghiệp vụ tiền đã đủ dùng | Trung bình |
+| 7 | Preview chốt hóa đơn hàng loạt | Làm sau khi màn nhập chỉ số hàng loạt đã có bản Bootstrap tối thiểu | Trung bình |
 | 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 
 ### Quy ước GitHub
@@ -1000,6 +1000,62 @@ Ghi chú:
 
 ---
 
+### Phiên 29 - UI Nhập Chỉ Số Hàng Loạt
+
+Ngày: 30/06/2026
+
+Đã làm:
+
+- Thêm `ChiSoHangLoatViewModel` để render bảng nhập chỉ số theo kỳ.
+- Thêm action `ChiSoController.NhapHangLoat` GET/POST.
+- Màn `Views/ChiSo/NhapHangLoat.cshtml` hiển thị một dòng cho mỗi phòng đang thuê + dịch vụ `TheoChiSo`.
+- Mỗi dòng có:
+  - Checkbox chọn lưu.
+  - Chỉ số đầu lấy từ kỳ trước hoặc chỉ số hiện tại nếu đã nhập.
+  - Chỉ số cuối.
+  - Loại ghi nhận `BinhThuong`/`Reset`.
+  - Trường reset: chỉ số trước reset, sau reset, lý do.
+  - Sản lượng tính ngay trên UI.
+  - Badge trạng thái.
+- Client-side JS tự tính sản lượng và tô lỗi nhanh khi:
+  - `BinhThuong` có chỉ số cuối nhỏ hơn chỉ số đầu.
+  - `Reset` thiếu chỉ số trước reset, chỉ số trước reset nhỏ hơn đầu, cuối nhỏ hơn sau reset, hoặc thiếu lý do.
+- POST bulk dùng lại cùng validate hiện có của `ChiSoController` và `ChiSoConsumptionCalculator`.
+- Refactor nhẹ private method trong `ChiSoController`:
+  - Tách validate chỉ số ra `ValidateChiSoAsync`.
+  - Tách thao tác lưu ra `SaveChiSoItemsAsync`.
+  - Nhập đơn lẻ và nhập theo phòng vẫn dùng luồng cũ.
+- Thêm nút `Nhap hang loat` vào `Views/ChiSo/Index.cshtml`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5104`:
+
+- Browser plugin bị lỗi bootstrap `failed to write kernel assets`, nên fallback sang HTTP + DB verify.
+- Seed dữ liệu smoke test tiền tố `TEST_BULK_METER_20260630205847`.
+- GET `/ChiSo/NhapHangLoat?thang=7&nam=2026` trả `200`, render đúng title và dòng test.
+- POST `/ChiSo/NhapHangLoat` một dòng test qua form thật với anti-forgery token thành công; server log ghi `302` về `/ChiSo?thang=7&nam=2026`.
+- Verify DB thật:
+  - Phòng `#14`, dịch vụ `#6`, kỳ `7/2026`.
+  - `ChiSoDau = 100.00`.
+  - `ChiSoCuoi = 125.50`.
+  - `LoaiGhiNhan = BinhThuong`.
+  - `SanLuong = 25.50`.
+
+Ghi chú:
+
+- Dữ liệu smoke test `TEST_BULK_METER_20260630205847` còn trong DB thật để đối chiếu; có thể dọn sau.
+- Console seed/verify nằm trong `.agents/` và không commit.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1024,6 +1080,7 @@ Ghi chú:
 | 25 | `HoaDonService`, `TraPhongService` | Hóa đơn mới/trả phòng mang `TienNoKyTruoc` có thể double-count nếu hóa đơn cũ vẫn nằm trong báo cáo công nợ | Kết chuyển nợ cũ bằng `KetChuyenNo`, dùng tổng nợ trước kỳ, chặn xóa hóa đơn đang mang nợ đã kết chuyển |
 | 27 | `Views/BaoCao/CongNo.cshtml`, `site.css` | Báo cáo công nợ thiếu filter vận hành và bảng rộng kéo ngang toàn trang | Thêm filter, cột Nhà/trạng thái, đồng bộ Excel và giới hạn scroll ngang trong bảng |
 | 28 | `Views/HoaDon/Index.cshtml`, `HoaDonService` | Danh sách hóa đơn chưa có thao tác thu nhanh; input số tiền dùng `step=1000` có thể khiến browser chặn số hợp lệ | Thêm modal thu nhanh, redirect về đúng kỳ, guard không thu vượt số còn lại và đổi input sang `step=1` |
+| 29 | `Views/ChiSo/NhapHangLoat.cshtml`, `ChiSoController` | Nhập chỉ số từng phòng còn chậm khi vận hành thay Excel | Thêm màn nhập hàng loạt theo kỳ, tính sản lượng tại chỗ và dùng lại validate reset/server-side hiện có |
 
 ---
 

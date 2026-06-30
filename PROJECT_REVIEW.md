@@ -86,6 +86,11 @@ Da xu ly trong phien 28:
 - Thu nhanh dung lai `HoaDonService.ThuTienAsync`, co guard khong thu vuot so con lai va redirect ve dung ky dang xem.
 - Danh sach hoa don hien ro `TienNoKyTruoc` va badge `KetChuyenNo`/`TruCoc` neu co but toan phi tien mat.
 
+Da xu ly trong phien 29:
+
+- `ChiSo/NhapHangLoat` da co bang nhap chi so hang loat theo ky cho phong dang thue co dich vu `TheoChiSo`.
+- UI tinh san luong tai cho, canh bao dong sai chi so/reset, va POST dung lai validate server-side hien co.
+
 ---
 
 ## 2. Cac lo hong can sua ngay
@@ -385,7 +390,7 @@ Khi import:
 
 ## 5. Goi y UI/UX Bootstrap 5 cho van hanh
 
-### 5.1. Nhap chi so hang loat
+### 5.1. Nhap chi so hang loat - DA XU LY PHIEN 29
 
 Mot bang theo ky:
 
@@ -394,6 +399,13 @@ Phong | Dien cu | Dien moi | Tieu thu | Nuoc cu | Nuoc moi | Tieu thu | Ghi chu
 ```
 
 Tinh tieu thu ngay khi nhap. Dong nao chi so moi nho hon chi so cu thi to do va hien lua chon "Dong ho reset".
+
+Ket qua phien 29:
+
+- Da them man `ChiSo/NhapHangLoat` theo ky.
+- Bang hien moi dong theo phong + dich vu `TheoChiSo`.
+- Co checkbox chon dong luu, chi so dau/cuoi, loai ghi nhan, thong tin reset va san luong tinh tai cho.
+- Server-side van dung chung `ChiSoConsumptionCalculator` va validate reset hien co.
 
 ### 5.2. Preview chot hoa don hang loat
 
@@ -485,7 +497,7 @@ Neu lam app cho khach thue xem hoa don:
 
 ## 7. Thu tu uu tien de thao luan/lam tiep
 
-1. Lam UI nhap chi so hang loat va preview chot hoa don.
+1. Lam preview chot hoa don hang loat.
 2. In phieu thu HTML neu can in nhanh tu trinh duyet.
 
 ---
@@ -512,8 +524,8 @@ Nguyen tac tich hop:
 
 Thu tu UI de lam sau khi nghiep vu loi on dinh:
 
-1. `ChiSo/Index` va man nhap chi so hang loat: inline edit, validate dong loi, to mau canh bao.
-2. Preview chot hoa don hang loat: grid tong hop tien phong, dich vu, no cu, tong cong, trang thai du lieu.
+1. Preview chot hoa don hang loat: grid tong hop tien phong, dich vu, no cu, tong cong, trang thai du lieu.
+2. `ChiSo/Index` va man nhap chi so hang loat: da co Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can inline edit/sort/filter nang cao hon.
 3. `HoaDon/Index`: da co thu nhanh Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can sort/filter/export nang cao hon.
 4. `BaoCao/CongNo`: da co filter Bootstrap toi thieu; chi doi sang Syncfusion Grid khi can sort/filter/export nang cao hon.
 5. Dashboard: them Chart/KPI nhe neu can, sau khi cac man thao tac chinh da tot.
