@@ -50,6 +50,11 @@
             <tbody>
                 @foreach (var hd in Model)
                 {
+                    var conLai = Math.Max(0, hd.TongCong - hd.SoTienDaThu);
+                    var chuaThuDu = conLai > 0 && hd.TrangThaiThanhToan != "DaThu";
+                    var coKetChuyenNo = hd.DanhSachThanhToan.Any(tt => tt.HinhThuc == "KetChuyenNo");
+                    var coTruCoc = hd.DanhSachThanhToan.Any(tt => tt.HinhThuc == "TruCoc");
+                    var modalId = $"thuNhanhModal{hd.Id}";
                     <tr>
                         <td><a asp-action="Details" asp-route-id="@hd.Id" class="fw-semibold text-decoration-none">
                             @hd.HopDong?.Phong?.TenPhong
@@ -57,16 +62,132 @@
                         <td class="text-end">@hd.TienPhong.ToString("N0")</td>
                         <td class="text-end">@hd.TongTienDichVu.ToString("N0")</td>
                         <td class="text-end @(hd.TienNoKyTruoc > 0 ? "text-danger" : "")">
-                            @hd.TienNoKyTruoc.ToString("N0")
+                            <div>@hd.TienNoKyTruoc.ToString("N0")</div>
+                            @if (hd.TienNoKyTruoc > 0)
+                            {
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Nợ kỳ trước</span>
+                            }
                         </td>
                         <td class="text-end fw-semibold">@hd.TongCong.ToString("N0")</td>
-                        <td class="text-end">@hd.SoTienDaThu.ToString("N0")</td>
-                        <td>@Html.Raw(TrangThaiBadge(hd.TrangThaiThanhToan))</td>
                         <td class="text-end">
-                            <a asp-action="Details" asp-route-id="@hd.Id"
-                               class="btn btn-sm btn-outline-secondary">
+                            <div>@hd.SoTienDaThu.ToString("N0")</div>
+                            @if (coKetChuyenNo || coTruCoc)
+                            {
+                                <div class="d-flex gap-1 justify-content-end flex-wrap mt-1">
+                                    @if (coKetChuyenNo)
+                                    {
+                                        <span class="badge bg-info text-dark">Kết chuyển nợ</span>
+                                    }
+                                    @if (coTruCoc)
+                                    {
+                                        <span class="badge bg-warning text-dark">Trừ cọc</span>
+                                    }
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            @Html.Raw(TrangThaiBadge(hd.TrangThaiThanhToan))
+                            @if (chuaThuDu)
+                            {
+                                <div class="small text-muted mt-1">Còn @conLai.ToString("N0") đ</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                @if (chuaThuDu)
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-success"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#@modalId"
+                                            title="Thu tiền nhanh">
+                                        <i class="bi bi-cash-coin"></i>
+                                    </button>
+                                }
+                                <a asp-action="Details" asp-route-id="@hd.Id"
+                                   class="btn btn-outline-secondary"
+                                   title="Xem chi tiết">
                                 <i class="bi bi-eye"></i>
-                            </a>
+                                </a>
+                            </div>
+
+                            @if (chuaThuDu)
+                            {
+                                <div class="modal fade text-start" id="@modalId" tabindex="-1" aria-labelledby="@($"{modalId}Label")" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <form asp-action="ThuTien" method="post" class="modal-content">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="hoaDonId" value="@hd.Id" />
+                                            <input type="hidden" name="returnTo" value="Index" />
+                                            <input type="hidden" name="thang" value="@thang" />
+                                            <input type="hidden" name="nam" value="@nam" />
+
+                                            <div class="modal-header">
+                                                <h6 class="modal-title" id="@($"{modalId}Label")">
+                                                    Thu tiền @hd.HopDong?.Phong?.TenPhong - @hd.Thang/@hd.Nam
+                                                </h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="d-flex justify-content-between border-bottom pb-2 mb-3">
+                                                    <span class="text-muted">Còn phải thu</span>
+                                                    <strong class="text-danger">@conLai.ToString("N0") đ</strong>
+                                                </div>
+
+                                                @if (hd.TienNoKyTruoc > 0 || coKetChuyenNo || coTruCoc)
+                                                {
+                                                    <div class="alert alert-info py-2 small">
+                                                        @if (hd.TienNoKyTruoc > 0)
+                                                        {
+                                                            <div>Hóa đơn này có nợ kỳ trước: <strong>@hd.TienNoKyTruoc.ToString("N0") đ</strong>.</div>
+                                                        }
+                                                        @if (coKetChuyenNo || coTruCoc)
+                                                        {
+                                                            <div>Các badge Kết chuyển nợ/Trừ cọc là bút toán xử lý công nợ, không phải tiền mới thu.</div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Số tiền (đ)</label>
+                                                    <div class="input-group">
+                                                        <input name="soTien"
+                                                               type="number"
+                                                               min="1"
+                                                               max="@FormatInputAmount(conLai)"
+                                                               step="1"
+                                                               class="form-control"
+                                                               value="@FormatInputAmount(conLai)"
+                                                               required />
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary quick-fill-full"
+                                                                data-amount="@FormatInputAmount(conLai)">
+                                                            Thu đủ
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Hình thức</label>
+                                                    <select name="hinhThuc" class="form-select">
+                                                        <option value="TienMat">Tiền mặt</option>
+                                                        <option value="ChuyenKhoan">Chuyển khoản</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label fw-semibold">Ghi chú</label>
+                                                    <input name="ghiChu" class="form-control" />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="bi bi-cash me-1"></i>Xác nhận thu
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
                         </td>
                     </tr>
                 }
@@ -93,6 +214,20 @@
     </div>
 </div>
 
+@section Scripts {
+    <script>
+        document.querySelectorAll('.quick-fill-full').forEach((button) => {
+            button.addEventListener('click', () => {
+                const input = button.closest('.input-group')?.querySelector('input[name="soTien"]');
+                if (input) {
+                    input.value = button.dataset.amount || '';
+                    input.focus();
+                }
+            });
+        });
+    </script>
+}
+
 @functions {
     static string TrangThaiBadge(string tt) => tt switch
     {
@@ -100,4 +235,7 @@
         "ThuMotPhan" => "<span class='badge bg-warning text-dark'>Thu một phần</span>",
         _            => "<span class='badge bg-danger'>Chưa thu</span>"
     };
+
+    static string FormatInputAmount(decimal amount)
+        => decimal.Round(amount, 0).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
 }

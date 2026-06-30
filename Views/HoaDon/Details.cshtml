@@ -143,8 +143,8 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Số tiền (đ)</label>
-                            <input name="soTien" type="number" min="1" class="form-control"
-                                   value="@conLai" />
+                            <input name="soTien" type="number" min="1" max="@FormatInputAmount(conLai)" step="1" class="form-control"
+                                   value="@FormatInputAmount(conLai)" />
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Hình thức</label>
@@ -191,4 +191,7 @@
         null or "" => "<span class='badge bg-light text-dark border'>Không rõ</span>",
         _ => $"<span class='badge bg-light text-dark border'>{hinhThuc}</span>"
     };
+
+    static string FormatInputAmount(decimal amount)
+        => decimal.Round(amount, 0).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
 }

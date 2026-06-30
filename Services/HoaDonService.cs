@@ -174,8 +174,18 @@ public class HoaDonService(
         if (soTien <= 0)
             throw new ArgumentException("So tien thu phai lon hon 0.");
 
+        if (hinhThuc is not ("TienMat" or "ChuyenKhoan"))
+            throw new ArgumentException("Hinh thuc thu tien khong hop le.");
+
         var hoaDon = await hoaDonRepo.GetByIdAsync(hoaDonId)
             ?? throw new InvalidOperationException($"Khong tim thay hoa don #{hoaDonId}.");
+
+        var conLai = hoaDon.TongCong - hoaDon.SoTienDaThu;
+        if (conLai <= 0)
+            throw new InvalidOperationException("Hoa don da thu du.");
+
+        if (soTien > conLai)
+            throw new InvalidOperationException($"So tien thu khong duoc vuot qua so con lai {conLai:N0} d.");
 
         var conn = (MySqlConnection)db;
         if (conn.State != ConnectionState.Open)

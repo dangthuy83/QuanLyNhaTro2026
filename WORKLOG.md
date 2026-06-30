@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ và edge cases kết chuyển nợ đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ và thu tiền nhanh đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -21,7 +21,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
-| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*` | Thấp |
+| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
@@ -946,6 +946,60 @@ QA với app chạy MySQL thật tại `http://127.0.0.1:5102`:
 
 ---
 
+### Phiên 28 - Thu Tiền Nhanh Trên Danh Sách Hóa Đơn
+
+Ngày: 30/06/2026
+
+Đã làm:
+
+- Thêm thao tác thu tiền nhanh ngay trên `Views/HoaDon/Index.cshtml` cho hóa đơn `ChuaThu`/`ThuMotPhan`.
+- Mỗi hóa đơn còn nợ có nút mở modal nhỏ để nhập số tiền, hình thức và ghi chú.
+- Modal tự điền số còn lại, có nút `Thu đủ`, truyền `thang/nam` để sau khi thu quay lại đúng kỳ đang xem.
+- Danh sách hóa đơn hiển thị rõ:
+  - Badge `Nợ kỳ trước` khi `TienNoKyTruoc > 0`.
+  - Badge `Kết chuyển nợ`/`Trừ cọc` nếu lịch sử thanh toán có bút toán phi tiền mặt.
+  - Số còn lại ngay dưới trạng thái.
+- `HoaDonController.Index` nạp thêm `DanhSachThanhToan` cho từng hóa đơn trong kỳ để hiển thị badge công nợ.
+- `HoaDonController.ThuTien` nhận thêm `returnTo`, `thang`, `nam` để hỗ trợ redirect về danh sách.
+- `HoaDonService.ThuTienAsync` chặn:
+  - Số tiền <= 0.
+  - Hình thức ngoài `TienMat`/`ChuyenKhoan`.
+  - Hóa đơn đã thu đủ.
+  - Thu vượt số còn lại.
+- Sửa input số tiền ở danh sách và chi tiết dùng `step="1"` thay vì `step="1000"` để browser không chặn các số hợp lệ như `10,000`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5103`:
+
+- Seed dữ liệu smoke test tiền tố `TEST_QUICKPAY_20260629211502`.
+- Mở `/HoaDon?thang=6&nam=2026`: danh sách render hóa đơn test, badge `Nợ kỳ trước`, `Trừ cọc` và nút thu nhanh.
+- Mở modal thu nhanh hóa đơn `#17`: tự điền còn phải thu `97,000`, input có `max=97000`, hiển thị cảnh báo nợ kỳ trước/bút toán phi tiền mặt.
+- Phát hiện lỗi HTML validation do `min=1` + `step=1000`; đã sửa thành `step=1` và build lại.
+- Submit thu nhanh `10,000` thành công theo server log: POST `/HoaDon/ThuTien` trả `302` về `/HoaDon?thang=6&nam=2026`.
+- Verify DB thật sau submit:
+  - Hóa đơn `#17`, phòng `TEST_QUICKPAY_20260629211502 P`.
+  - `TongCong = 120,000`.
+  - `SoTienDaThu = 33,000`.
+  - `ConLai = 87,000`.
+  - Dòng smoke `TienMat = 10,000`.
+  - Dòng `TruCoc = 23,000` vẫn hiển thị riêng.
+- Browser plugin ban đầu mở trang/modal và chụp screenshot được, console không có warning/error. Sau cú submit cuối, Browser runtime bị lỗi reconnect `failed to write kernel assets`; phần xác nhận sau submit được kiểm chứng bằng server log và DB query trực tiếp.
+
+Ghi chú:
+
+- Dữ liệu smoke test `TEST_QUICKPAY_20260629211502` còn trong DB thật để đối chiếu; có thể dọn sau.
+- Console verify/seed nằm trong `.agents/` và không commit.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -969,6 +1023,7 @@ QA với app chạy MySQL thật tại `http://127.0.0.1:5102`:
 | 24 | `Views/HoaDon/Details.cshtml` | Dòng `KetChuyenNo`/`TruCoc` in như mã thanh toán thường, dễ hiểu nhầm là tiền mới thu | Hiển thị badge/cảnh báo riêng cho bút toán phi tiền mặt |
 | 25 | `HoaDonService`, `TraPhongService` | Hóa đơn mới/trả phòng mang `TienNoKyTruoc` có thể double-count nếu hóa đơn cũ vẫn nằm trong báo cáo công nợ | Kết chuyển nợ cũ bằng `KetChuyenNo`, dùng tổng nợ trước kỳ, chặn xóa hóa đơn đang mang nợ đã kết chuyển |
 | 27 | `Views/BaoCao/CongNo.cshtml`, `site.css` | Báo cáo công nợ thiếu filter vận hành và bảng rộng kéo ngang toàn trang | Thêm filter, cột Nhà/trạng thái, đồng bộ Excel và giới hạn scroll ngang trong bảng |
+| 28 | `Views/HoaDon/Index.cshtml`, `HoaDonService` | Danh sách hóa đơn chưa có thao tác thu nhanh; input số tiền dùng `step=1000` có thể khiến browser chặn số hợp lệ | Thêm modal thu nhanh, redirect về đúng kỳ, guard không thu vượt số còn lại và đổi input sang `step=1` |
 
 ---
 

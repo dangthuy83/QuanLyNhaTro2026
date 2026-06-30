@@ -31,6 +31,7 @@ public class HoaDonController(
             if (hdKy != null)
             {
                 hdKy.HopDong = hd;
+                hdKy.DanhSachThanhToan = (await thanhToanRepo.GetByHoaDonAsync(hdKy.Id)).ToList();
                 danhSach.Add(hdKy);
             }
         }
@@ -98,7 +99,14 @@ public class HoaDonController(
 
     // POST /HoaDon/ThuTien
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ThuTien(int hoaDonId, decimal soTien, string hinhThuc, string? ghiChu)
+    public async Task<IActionResult> ThuTien(
+        int hoaDonId,
+        decimal soTien,
+        string hinhThuc,
+        string? ghiChu,
+        string? returnTo,
+        int? thang,
+        int? nam)
     {
         try
         {
@@ -109,6 +117,12 @@ public class HoaDonController(
         {
             TempData["Error"] = ex.Message;
         }
+
+        if (returnTo == "Index")
+        {
+            return RedirectToAction(nameof(Index), new { thang, nam });
+        }
+
         return RedirectToAction(nameof(Details), new { id = hoaDonId });
     }
 
