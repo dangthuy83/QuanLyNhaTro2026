@@ -104,6 +104,12 @@ Da xu ly trong phien 31:
 - Phieu thu dung snapshot hoa don, chi tiet dich vu, lich su thanh toan va hien canh bao rieng cho `KetChuyenNo`/`TruCoc`.
 - Man chi tiet hoa don da co nut `In phieu thu` ben canh xuat Excel.
 
+Da xu ly trong phien 32:
+
+- `NhacNo/Index` da co man nhac no toi thieu cho chu nha/quan ly.
+- Man nhac no dung du lieu cong no hien co, mac dinh tap trung khach dang o va hoa don da qua han.
+- Chua sinh tin nhan mau, chua log da nhac, chua gui tu dong; cac buoc nay de giai doan sau.
+
 ---
 
 ## 2. Cac lo hong can sua ngay
@@ -516,9 +522,9 @@ Neu lam app cho khach thue xem hoa don:
 
 ## 7. Thu tu uu tien de thao luan/lam tiep
 
-1. Thong bao nhac no neu can nhac chu nha/khach thue tu dong.
-2. Nang cap filter/flow preview chot hoa don hang loat neu van hanh thuc te can loc theo Nha hoac thao tac bo qua dong loi nhanh hon.
-3. Ra UI in phieu thu sau van hanh neu can them logo/thong tin chu nha/mau phieu rieng.
+1. Nang cap filter/flow preview chot hoa don hang loat neu van hanh thuc te can loc theo Nha hoac thao tac bo qua dong loi nhanh hon.
+2. Ra UI in phieu thu sau van hanh neu can them logo/thong tin chu nha/mau phieu rieng.
+3. Nhac no giai doan 2/3: copy mau tin, log da nhac, Telegram/ZNS/SMS neu that su can.
 
 ---
 

@@ -1,0 +1,203 @@
+@model IEnumerable<QuanLyNhaTro.Models.BaoCaoCongNoViewModel>
+@{
+    ViewData["Title"] = "Nhắc nợ";
+    ViewData["ActiveMenu"] = "nhacno";
+
+    var danhSachNha = ViewBag.DanhSachNha as IEnumerable<QuanLyNhaTro.Models.Nha> ?? [];
+    int? nhaId = ViewBag.NhaId as int?;
+    string trangThaiHopDong = ViewBag.TrangThaiHopDong as string ?? "DangHieuLuc";
+    string nhomNo = ViewBag.NhomNo as string ?? "QuaHan";
+    string tuKhoa = ViewBag.TuKhoa as string ?? "";
+    int soHoaDonTheoBoLoc = ViewBag.SoHoaDonTheoBoLoc as int? ?? Model.Count();
+    int soHoaDonQuaHan = ViewBag.SoHoaDonQuaHan as int? ?? 0;
+    int soHoaDonQuaHan30 = ViewBag.SoHoaDonQuaHan30 as int? ?? 0;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-0">Nhắc nợ</h4>
+        <div class="text-muted small">Danh sách hóa đơn cần chủ nhà kiểm tra và nhắc thủ công.</div>
+    </div>
+    <a asp-controller="BaoCao" asp-action="CongNo"
+       asp-route-nhaId="@nhaId"
+       asp-route-trangThaiHopDong="@trangThaiHopDong"
+       asp-route-quaHan="@(nhomNo == "TatCaNo" ? "" : nhomNo == "QuaHan30" ? "QuaHan30" : nhomNo == "ChuaQuaHan" ? "ChuaQuaHan" : "QuaHan")"
+       asp-route-tuKhoa="@tuKhoa"
+       class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-graph-up-arrow"></i> Báo cáo công nợ
+    </a>
+</div>
+
+<form method="get" class="card shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Nhà</label>
+                <select name="nhaId" class="form-select form-select-sm">
+                    <option value="">Tất cả nhà</option>
+                    @foreach (var nha in danhSachNha)
+                    {
+                        <option value="@nha.Id" selected="@(nhaId == nha.Id)">@nha.TenNha</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Khách</label>
+                <select name="trangThaiHopDong" class="form-select form-select-sm">
+                    <option value="" selected="@(trangThaiHopDong == "")">Tất cả</option>
+                    <option value="DangHieuLuc" selected="@(trangThaiHopDong == "DangHieuLuc")">Đang ở</option>
+                    <option value="DaKetThuc" selected="@(trangThaiHopDong == "DaKetThuc")">Đã rời</option>
+                    <option value="DaChuyenPhong" selected="@(trangThaiHopDong == "DaChuyenPhong")">Đã chuyển phòng</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Nhóm nợ</label>
+                <select name="nhomNo" class="form-select form-select-sm">
+                    <option value="QuaHan" selected="@(nhomNo == "QuaHan")">Đã quá hạn</option>
+                    <option value="QuaHan30" selected="@(nhomNo == "QuaHan30")">Quá hạn trên 30 ngày</option>
+                    <option value="ChuaQuaHan" selected="@(nhomNo == "ChuaQuaHan")">Chưa quá hạn</option>
+                    <option value="TatCaNo" selected="@(nhomNo == "TatCaNo")">Tất cả còn nợ</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Tìm nhanh</label>
+                <input name="tuKhoa" value="@tuKhoa" class="form-control form-control-sm"
+                       placeholder="Nhà, phòng, khách, SĐT" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="bi bi-funnel"></i> Lọc
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Xóa lọc">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card border-0 bg-danger bg-opacity-10 h-100">
+            <div class="card-body py-2">
+                <div class="text-muted small">Nợ theo bộ lọc</div>
+                <div class="fw-bold text-danger fs-5">@((ViewBag.TongNoTheoBoLoc as decimal? ?? 0m).ToString("N0")) đ</div>
+                <div class="small text-muted">@soHoaDonTheoBoLoc hóa đơn</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 bg-warning bg-opacity-10 h-100">
+            <div class="card-body py-2">
+                <div class="text-muted small">Tổng nợ quá hạn</div>
+                <div class="fw-bold text-warning fs-5">@((ViewBag.TongNoQuaHan as decimal? ?? 0m).ToString("N0")) đ</div>
+                <div class="small text-muted">@soHoaDonQuaHan hóa đơn</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 bg-info bg-opacity-10 h-100">
+            <div class="card-body py-2">
+                <div class="text-muted small">Đang ở quá hạn</div>
+                <div class="fw-bold text-info fs-5">@((ViewBag.TongNoDangOQuaHan as decimal? ?? 0m).ToString("N0")) đ</div>
+                <div class="small text-muted">ưu tiên nhắc trước</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 bg-secondary bg-opacity-10 h-100">
+            <div class="card-body py-2">
+                <div class="text-muted small">Quá hạn trên 30 ngày</div>
+                <div class="fw-bold text-secondary fs-5">@soHoaDonQuaHan30</div>
+                <div class="small text-muted">hóa đơn cần rà kỹ</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Ưu tiên</th>
+                    <th>Nhà</th>
+                    <th>Phòng</th>
+                    <th>Khách thuê</th>
+                    <th>SĐT</th>
+                    <th>Kỳ</th>
+                    <th class="text-end">Còn nợ</th>
+                    <th>Quá hạn</th>
+                    <th>Trạng thái</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">Không có hóa đơn cần nhắc theo bộ lọc hiện tại.</td>
+                    </tr>
+                }
+                @foreach (var x in Model)
+                {
+                    <tr class="@(!x.DangOHienTai ? "text-muted" : "")">
+                        <td>@Html.Raw(UuTienBadge(x.SoNgayQuaHan))</td>
+                        <td class="small">@x.TenNha</td>
+                        <td class="fw-semibold">@x.TenPhong</td>
+                        <td>@x.TenKhachChinh</td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(x.SoDienThoai))
+                            {
+                                <a href="tel:@x.SoDienThoai" class="text-decoration-none">@x.SoDienThoai</a>
+                            }
+                        </td>
+                        <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
+                        <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
+                        <td>
+                            @if (x.SoNgayQuaHan > 0)
+                            {
+                                <span class="badge @(x.SoNgayQuaHan > 30 ? "bg-danger" : "bg-warning text-dark")">
+                                    @x.SoNgayQuaHan ngày
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark border">Chưa quá hạn</span>
+                            }
+                        </td>
+                        <td>@Html.Raw(TrangThaiBadge(x.TrangThaiHopDong))</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@x.HoaDonId"
+                                   class="btn btn-outline-primary">Hóa đơn</a>
+                                <a asp-controller="HoaDon" asp-action="InPhieuThu" asp-route-id="@x.HoaDonId"
+                                   class="btn btn-outline-secondary" title="In phiếu thu">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@functions {
+    static string UuTienBadge(int soNgayQuaHan) => soNgayQuaHan switch
+    {
+        > 30 => "<span class='badge bg-danger'>Cao</span>",
+        > 0 => "<span class='badge bg-warning text-dark'>Nhắc</span>",
+        _ => "<span class='badge bg-light text-dark border'>Theo dõi</span>"
+    };
+
+    static string TrangThaiBadge(string trangThai) => trangThai switch
+    {
+        "DangHieuLuc" => "<span class='badge bg-success'>Đang ở</span>",
+        "DaKetThuc" => "<span class='badge bg-secondary'>Đã rời</span>",
+        "DaChuyenPhong" => "<span class='badge bg-info text-dark'>Đã chuyển</span>",
+        "DaHuy" => "<span class='badge bg-dark'>Đã hủy</span>",
+        _ => $"<span class='badge bg-light text-dark border'>{trangThai}</span>"
+    };
+}

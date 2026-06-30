@@ -62,6 +62,11 @@
                 </a>
             </li>
             <li class="nav-item mt-1">
+                <a asp-controller="NhacNo" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "nhacno" ? "active" : "")">
+                    <i class="bi bi-bell me-2"></i>Nhắc nợ
+                </a>
+            </li>
+            <li class="nav-item mt-1">
                 <a asp-controller="DichVu" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "dichvu" ? "active" : "")">
                     <i class="bi bi-gear me-2"></i>Dịch vụ
                 </a>

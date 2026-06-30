@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt, preview chốt hóa đơn hàng loạt và in phiếu thu HTML đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt, preview chốt hóa đơn hàng loạt, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -28,7 +28,8 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
 | 6 | Rà UI in phiếu thu sau vận hành | Bản HTML print tối thiểu đã có; theo dõi nhu cầu thêm logo/thông tin chủ nhà/mẫu phiếu riêng | Thấp |
 | 7 | Nâng cấp flow preview chốt hóa đơn hàng loạt | Bản Bootstrap tối thiểu đã có; cân nhắc thêm filter theo Nhà/chọn bỏ qua dòng lỗi nếu vận hành cần | Thấp |
-| 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
+| 8 | Nhắc nợ giai đoạn 2/3 | Sau này mới cân nhắc copy mẫu tin, log đã nhắc, Telegram/ZNS/SMS; chưa làm bây giờ | Thấp |
+| 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 
 ### Quy ước GitHub
 
@@ -1145,6 +1146,54 @@ Ghi chú:
 
 ---
 
+### Phiên 32 - Nhắc Nợ Tối Thiểu Giai Đoạn 1
+
+Ngày: 30/06/2026
+
+Phạm vi đã chốt:
+
+- Chỉ làm màn nhắc nợ cho chủ nhà/quản lý.
+- Không sinh nội dung tin nhắn mẫu.
+- Không ghi log đã nhắc.
+- Không gửi tự động qua Telegram/ZNS/SMS.
+- Giai đoạn 2/3 treo lại cho sau.
+
+Đã làm:
+
+- Thêm `NhacNoController.Index`.
+- Tái dùng `HoaDonRepository.GetCongNoAsync()` và `BaoCaoCongNoViewModel`, không tạo bảng/schema mới.
+- Thêm màn `Views/NhacNo/Index.cshtml`:
+  - Mặc định lọc khách đang ở + hóa đơn đã quá hạn.
+  - Filter theo Nhà, trạng thái khách/hợp đồng, nhóm nợ và từ khóa.
+  - Nhóm nợ gồm `Đã quá hạn`, `Quá hạn trên 30 ngày`, `Chưa quá hạn`, `Tất cả còn nợ`.
+  - Summary card: nợ theo bộ lọc, tổng nợ quá hạn, nợ quá hạn của khách đang ở, số hóa đơn quá hạn trên 30 ngày.
+  - Bảng ưu tiên nhắc, phòng, khách, SĐT, kỳ, còn nợ, số ngày quá hạn, trạng thái.
+  - Link nhanh tới chi tiết hóa đơn và in phiếu thu.
+- Thêm menu `Nhắc nợ` vào sidebar.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5107`:
+
+- GET `/NhacNo` trả `200`.
+- HTML có tiêu đề `Nhắc nợ`.
+- HTML có filter `Nhóm nợ`.
+- HTML có link `Báo cáo công nợ`.
+
+Ghi chú:
+
+- Không seed thêm dữ liệu mới; dùng dữ liệu công nợ hiện có.
+- App test cổng `5107` đã dừng sau khi kiểm tra.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1172,6 +1221,7 @@ Ghi chú:
 | 29 | `Views/ChiSo/NhapHangLoat.cshtml`, `ChiSoController` | Nhập chỉ số từng phòng còn chậm khi vận hành thay Excel | Thêm màn nhập hàng loạt theo kỳ, tính sản lượng tại chỗ và dùng lại validate reset/server-side hiện có |
 | 30 | `HoaDon/ChotHangLoat`, `HoaDonService` | Chốt hóa đơn hàng loạt chưa có bước preview và có nguy cơ bỏ sót dịch vụ theo chỉ số nếu chưa nhập chỉ số | Thêm preview theo kỳ, badge trạng thái dữ liệu, bulk POST chỉ chốt dòng sẵn sàng và tách logic tính dự kiến dùng chung với lập hóa đơn |
 | 31 | `HoaDon/InPhieuThu` | Chỉ có xuất phiếu thu Excel, chưa in nhanh trực tiếp từ trình duyệt | Thêm phiếu thu HTML với CSS print A4, nút `window.print()` và cảnh báo bút toán phi tiền mặt |
+| 32 | `NhacNo/Index` | Chủ nhà vẫn phải tự lọc công nợ để biết hóa đơn nào cần nhắc | Thêm màn nhắc nợ giai đoạn 1 cho chủ nhà/quản lý, dùng dữ liệu công nợ hiện có và chưa gửi/copy tin nhắn tự động |
 
 ---
 

@@ -12,7 +12,7 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 |---|---|---|---|
 | 1 | Khi trả phòng còn nợ, có cần cờ riêng đánh dấu "đã trừ nợ vào cọc" trong `HopDong` không, hay lưu vào `GhiChu` là đủ? | Trả phòng, hoàn cọc, công nợ | Trung bình |
 | 2 | Có thêm index cho các cột hay dùng trong `WHERE`/`JOIN` không? Ví dụ `HopDong.PhongId`, `HoaDon.HopDongId`, `ThanhToan.HoaDonId`, `ChiSoDienNuoc.PhongId`. | Tối ưu khi dữ liệu lớn | Thấp |
-| 3 | Thông báo nhắc nợ chỉ gửi cho chủ nhà bằng Telegram Bot, hay gửi thêm khách thuê qua ZNS/SMS? | Module thông báo | Thấp |
+| 3 | Có gửi nhắc nợ tự động không, gửi cho chủ nhà bằng Telegram Bot hay gửi khách thuê qua ZNS/SMS? | Module thông báo giai đoạn sau; giai đoạn 1 chỉ có màn nhắc nợ cho chủ nhà tự xử lý | Thấp |
 | 5 | Có cần in phiếu thu HTML bằng `window.print()` không, bên cạnh xuất Excel? | Thu tiền, hóa đơn | Trung bình |
 | 6 | Cần thống nhất nhãn `LoaiDoiTuong` trong `LichSuThayDoiGia`: code hiện dùng `Phong` và `DichVu`, còn comment trong schema cũ từng mô tả theo `HopDong`/`PhongDichVu`. | Lịch sử giá | Trung bình |
 
@@ -198,6 +198,12 @@ Ví dụ:
 - Quay vòng công tơ 9999 về 0: đầu 9980, trước reset 9999, sau reset 0, cuối 12 -> sản lượng 31.
 - Hỏng đồng hồ không đọc được số thật: hiện chưa cho nhập sản lượng ước tính tự do; cần chốt một chỉ số trước reset được chủ nhà chấp nhận hoặc sẽ thiết kế loại `UocTinh/DieuChinh` riêng sau.
 
+### 4.9 Nhắc nợ
+
+- Giai đoạn 1 chỉ nhắc chủ nhà/quản lý bằng màn danh sách hóa đơn còn nợ/quá hạn trong app.
+- Chưa sinh nội dung tin nhắn mẫu, chưa ghi log đã nhắc, chưa gửi tự động cho khách thuê.
+- Giai đoạn 2/3 như copy nội dung, ghi nhận đã nhắc, Telegram/ZNS/SMS sẽ cân nhắc sau.
+
 ---
 
 ## 5. Công Thức Module Chính
@@ -285,6 +291,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI xử lý chênh lệch cọc khi chuyển phòng ngay trên màn ledger cọc.
 - Thu tiền nhanh ngay trên danh sách hóa đơn, dùng lại `HoaDonService.ThuTienAsync`, chặn thu vượt số còn lại và quay về đúng kỳ đang xem.
 - In phiếu thu HTML bằng `window.print()`, dùng dữ liệu snapshot hóa đơn và hiển thị riêng bút toán phi tiền mặt.
+- Màn nhắc nợ tối thiểu cho chủ nhà/quản lý: lọc hóa đơn còn nợ/quá hạn, ưu tiên nợ quá hạn và đi nhanh tới hóa đơn/phiếu thu.
 - Đồng bộ code theo `Database/schema.sql`.
 - `dotnet build --no-restore` thành công với 0 warning, 0 error.
 
@@ -295,7 +302,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ### Tính năng còn thiếu
 
-- Thông báo nhắc nợ.
+- Gửi/copy nhắc nợ nâng cao: mẫu tin nhắn, log đã nhắc, Telegram/ZNS/SMS.
 
 ---
 
@@ -322,4 +329,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 31 - 30/06/2026
+Cập nhật lần cuối: Phiên 32 - 30/06/2026
