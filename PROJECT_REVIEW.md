@@ -98,6 +98,12 @@ Da xu ly trong phien 30:
 - POST chot hang loat recompute server-side va chi tao hoa don cho cac dong duoc chon va san sang.
 - `HoaDonService.TinhHoaDonDuKienAsync` duoc tach de preview va lap hoa don dung chung logic tinh tien; thieu chi so `TheoChiSo` la loi chan chot hoa don.
 
+Da xu ly trong phien 31:
+
+- `HoaDon/InPhieuThu` da co phieu thu HTML toi thieu de in bang `window.print()`.
+- Phieu thu dung snapshot hoa don, chi tiet dich vu, lich su thanh toan va hien canh bao rieng cho `KetChuyenNo`/`TruCoc`.
+- Man chi tiet hoa don da co nut `In phieu thu` ben canh xuat Excel.
+
 ---
 
 ## 2. Cac lo hong can sua ngay
@@ -510,8 +516,9 @@ Neu lam app cho khach thue xem hoa don:
 
 ## 7. Thu tu uu tien de thao luan/lam tiep
 
-1. In phieu thu HTML neu can in nhanh tu trinh duyet.
+1. Thong bao nhac no neu can nhac chu nha/khach thue tu dong.
 2. Nang cap filter/flow preview chot hoa don hang loat neu van hanh thuc te can loc theo Nha hoac thao tac bo qua dong loi nhanh hon.
+3. Ra UI in phieu thu sau van hanh neu can them logo/thong tin chu nha/mau phieu rieng.
 
 ---
 

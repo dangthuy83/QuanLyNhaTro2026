@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt và preview chốt hóa đơn hàng loạt đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số hàng loạt, preview chốt hóa đơn hàng loạt và in phiếu thu HTML đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -26,7 +26,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
-| 6 | In phiếu thu HTML | `window.print()` và CSS print | Trung bình |
+| 6 | Rà UI in phiếu thu sau vận hành | Bản HTML print tối thiểu đã có; theo dõi nhu cầu thêm logo/thông tin chủ nhà/mẫu phiếu riêng | Thấp |
 | 7 | Nâng cấp flow preview chốt hóa đơn hàng loạt | Bản Bootstrap tối thiểu đã có; cân nhắc thêm filter theo Nhà/chọn bỏ qua dòng lỗi nếu vận hành cần | Thấp |
 | 8 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 
@@ -1105,6 +1105,46 @@ Ghi chú:
 
 ---
 
+### Phiên 31 - In Phiếu Thu HTML
+
+Ngày: 30/06/2026
+
+Đã làm:
+
+- Thêm action `HoaDonController.InPhieuThu`.
+- Thêm `PhieuThuHtmlViewModel` để gom hóa đơn, hợp đồng, phòng, khách thuê, chi tiết hóa đơn và lịch sử thanh toán.
+- Thêm view `Views/HoaDon/InPhieuThu.cshtml`:
+  - Bố cục phiếu thu HTML gọn để in A4.
+  - Nút `In phiếu thu` gọi `window.print()`.
+  - Nút quay lại chi tiết hóa đơn và nút xuất Excel.
+  - Bảng chi tiết tiền phòng, dịch vụ, nợ/dư kỳ trước, tổng cộng, đã thu, còn lại.
+  - Lịch sử thanh toán và cảnh báo riêng cho `KetChuyenNo`/`TruCoc`.
+  - CSS print ẩn sidebar/toolbar và canh giấy A4.
+- Thêm nút `In phiếu thu` vào màn chi tiết hóa đơn.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5106`:
+
+- GET `/HoaDon/InPhieuThu/19` trả `200`.
+- HTML có tiêu đề `PHIẾU THU TIỀN PHÒNG`.
+- HTML có nút in dùng `window.print()`.
+- HTML hiển thị đúng `Phiếu #19`.
+
+Ghi chú:
+
+- Không seed thêm dữ liệu mới; dùng hóa đơn smoke test `#19` từ phiên preview chốt hóa đơn hàng loạt.
+- App test cổng `5106` đã dừng sau khi kiểm tra.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1131,6 +1171,7 @@ Ghi chú:
 | 28 | `Views/HoaDon/Index.cshtml`, `HoaDonService` | Danh sách hóa đơn chưa có thao tác thu nhanh; input số tiền dùng `step=1000` có thể khiến browser chặn số hợp lệ | Thêm modal thu nhanh, redirect về đúng kỳ, guard không thu vượt số còn lại và đổi input sang `step=1` |
 | 29 | `Views/ChiSo/NhapHangLoat.cshtml`, `ChiSoController` | Nhập chỉ số từng phòng còn chậm khi vận hành thay Excel | Thêm màn nhập hàng loạt theo kỳ, tính sản lượng tại chỗ và dùng lại validate reset/server-side hiện có |
 | 30 | `HoaDon/ChotHangLoat`, `HoaDonService` | Chốt hóa đơn hàng loạt chưa có bước preview và có nguy cơ bỏ sót dịch vụ theo chỉ số nếu chưa nhập chỉ số | Thêm preview theo kỳ, badge trạng thái dữ liệu, bulk POST chỉ chốt dòng sẵn sàng và tách logic tính dự kiến dùng chung với lập hóa đơn |
+| 31 | `HoaDon/InPhieuThu` | Chỉ có xuất phiếu thu Excel, chưa in nhanh trực tiếp từ trình duyệt | Thêm phiếu thu HTML với CSS print A4, nút `window.print()` và cảnh báo bút toán phi tiền mặt |
 
 ---
 

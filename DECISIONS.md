@@ -284,6 +284,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
 - UI xử lý chênh lệch cọc khi chuyển phòng ngay trên màn ledger cọc.
 - Thu tiền nhanh ngay trên danh sách hóa đơn, dùng lại `HoaDonService.ThuTienAsync`, chặn thu vượt số còn lại và quay về đúng kỳ đang xem.
+- In phiếu thu HTML bằng `window.print()`, dùng dữ liệu snapshot hóa đơn và hiển thị riêng bút toán phi tiền mặt.
 - Đồng bộ code theo `Database/schema.sql`.
 - `dotnet build --no-restore` thành công với 0 warning, 0 error.
 
@@ -294,7 +295,6 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ### Tính năng còn thiếu
 
-- In phiếu thu HTML.
 - Thông báo nhắc nợ.
 
 ---
@@ -322,4 +322,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 30 - 30/06/2026
+Cập nhật lần cuối: Phiên 31 - 30/06/2026

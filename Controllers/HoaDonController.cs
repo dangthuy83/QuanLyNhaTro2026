@@ -232,6 +232,32 @@ public class HoaDonController(
             $"PhieuThu_T{hd.Thang}_{hd.Nam}_{phong?.TenPhong}.xlsx");
     }
 
+    // GET /HoaDon/InPhieuThu/5
+    public async Task<IActionResult> InPhieuThu(int id)
+    {
+        ViewData["ActiveMenu"] = "hoadon";
+        var hd = await hoaDonRepo.GetByIdAsync(id);
+        if (hd == null) return NotFound();
+
+        var hopDong = await hopDongRepo.GetByIdAsync(hd.HopDongId);
+        if (hopDong == null) return NotFound();
+
+        var phong = await phongRepo.GetByIdAsync(hopDong.PhongId);
+        if (phong == null) return NotFound();
+
+        var model = new PhieuThuHtmlViewModel
+        {
+            HoaDon = hd,
+            HopDong = hopDong,
+            Phong = phong,
+            DanhSachKhach = (await khachRepo.GetByHopDongAsync(hd.HopDongId)).ToList(),
+            ChiTiet = (await chiTietRepo.GetByHoaDonAsync(id)).ToList(),
+            LichSuThanhToan = (await thanhToanRepo.GetByHoaDonAsync(id)).ToList()
+        };
+
+        return View(model);
+    }
+
     private async Task<HoaDonHangLoatPreviewViewModel> BuildChotHangLoatPreviewAsync(int thang, int nam)
     {
         var hopDongs = (await hopDongRepo.GetAllAsync())

@@ -1,0 +1,272 @@
+@model QuanLyNhaTro.Models.PhieuThuHtmlViewModel
+@{
+    ViewData["Title"] = $"Phiếu thu #{Model.HoaDon.Id}";
+    ViewData["ActiveMenu"] = "hoadon";
+    var conLai = Model.ConLai;
+}
+
+<style>
+    .receipt-page {
+        max-width: 860px;
+        margin: 0 auto;
+        background: #fff;
+        color: #111827;
+    }
+
+    .receipt-sheet {
+        border: 1px solid #dee2e6;
+        padding: 28px;
+    }
+
+    .receipt-title {
+        letter-spacing: .03em;
+    }
+
+    .receipt-meta td {
+        padding: 2px 0;
+    }
+
+    .signature-box {
+        min-height: 86px;
+    }
+
+    @@media print {
+        body {
+            background: #fff !important;
+            font-size: 12px;
+        }
+
+        #sidebar,
+        .receipt-toolbar {
+            display: none !important;
+        }
+
+        #wrapper {
+            display: block !important;
+        }
+
+        #page-content {
+            padding: 0 !important;
+        }
+
+        .receipt-page {
+            max-width: none;
+            margin: 0;
+        }
+
+        .receipt-sheet {
+            border: 0;
+            padding: 0;
+        }
+
+        .table th,
+        .table td {
+            padding: .35rem .45rem;
+        }
+
+        a {
+            color: inherit !important;
+            text-decoration: none !important;
+        }
+
+        @@page {
+            size: A4;
+            margin: 14mm;
+        }
+    }
+</style>
+
+<div class="receipt-page">
+    <div class="receipt-toolbar d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex gap-2">
+            <a asp-action="Details" asp-route-id="@Model.HoaDon.Id" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <a asp-action="XuatPhieuThu" asp-route-id="@Model.HoaDon.Id" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </a>
+        </div>
+        <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
+            <i class="bi bi-printer"></i> In phiếu thu
+        </button>
+    </div>
+
+    <div class="receipt-sheet shadow-sm">
+        <div class="text-center mb-4">
+            <div class="text-uppercase fw-semibold">Quản lý nhà trọ</div>
+            <h4 class="receipt-title fw-bold mt-2 mb-1">PHIẾU THU TIỀN PHÒNG</h4>
+            <div class="text-muted">Kỳ tháng @Model.HoaDon.Thang/@Model.HoaDon.Nam · Phiếu #@Model.HoaDon.Id</div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-7">
+                <table class="receipt-meta w-100">
+                    <tr>
+                        <td class="text-muted" style="width:120px">Phòng</td>
+                        <td class="fw-semibold">@Model.Phong.TenPhong</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Khách thuê</td>
+                        <td>@Model.TenKhach</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Hợp đồng</td>
+                        <td>#@Model.HopDong.Id, từ @Model.HopDong.NgayBatDau.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-5">
+                <table class="receipt-meta w-100">
+                    <tr>
+                        <td class="text-muted" style="width:110px">Ngày lập</td>
+                        <td>@Model.HoaDon.NgayLap.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Ngày in</td>
+                        <td>@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Trạng thái</td>
+                        <td>@Html.Raw(TrangThaiBadge(Model.HoaDon.TrangThaiThanhToan))</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        @if (Model.CoButToanPhiTienMat)
+        {
+            <div class="alert alert-info py-2 small">
+                Các dòng <strong>Kết chuyển nợ</strong> và <strong>Trừ cọc</strong> là bút toán xử lý công nợ,
+                không phải tiền mặt/chuyển khoản mới thu.
+            </div>
+        }
+
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:54px">STT</th>
+                    <th>Nội dung</th>
+                    <th style="width:96px">ĐVT</th>
+                    <th class="text-end" style="width:110px">Số lượng</th>
+                    <th class="text-end" style="width:130px">Đơn giá</th>
+                    <th class="text-end" style="width:140px">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var stt = 1;
+                }
+                <tr>
+                    <td>@stt</td>
+                    <td>
+                        Tiền phòng
+                        @if (Model.HoaDon.SoNgayO.HasValue)
+                        {
+                            <span class="text-muted">(@Model.HoaDon.SoNgayO/@Model.HoaDon.SoNgayTrongThang ngày)</span>
+                        }
+                    </td>
+                    <td>Tháng</td>
+                    <td class="text-end">1</td>
+                    <td class="text-end">@Model.HoaDon.TienPhong.ToString("N0")</td>
+                    <td class="text-end fw-semibold">@Model.HoaDon.TienPhong.ToString("N0")</td>
+                </tr>
+                @foreach (var ct in Model.ChiTiet)
+                {
+                    stt++;
+                    <tr>
+                        <td>@stt</td>
+                        <td>@(ct.DichVu?.TenDichVu ?? $"Dịch vụ #{ct.DichVuId}")</td>
+                        <td>@ct.DichVu?.DonViTinh</td>
+                        <td class="text-end">@ct.SoLuong.ToString("N2")</td>
+                        <td class="text-end">@ct.DonGia.ToString("N0")</td>
+                        <td class="text-end fw-semibold">@ct.ThanhTien.ToString("N0")</td>
+                    </tr>
+                }
+                @if (Model.HoaDon.TienNoKyTruoc != 0)
+                {
+                    stt++;
+                    <tr class="@(Model.HoaDon.TienNoKyTruoc > 0 ? "text-danger" : "text-success")">
+                        <td>@stt</td>
+                        <td>@(Model.HoaDon.TienNoKyTruoc > 0 ? "Nợ kỳ trước" : "Dư kỳ trước")</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-end fw-semibold">@Model.HoaDon.TienNoKyTruoc.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-end fw-semibold">Tổng cộng</td>
+                    <td class="text-end fw-bold">@Model.HoaDon.TongCong.ToString("N0")</td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-end">Đã thu</td>
+                    <td class="text-end text-success fw-semibold">@Model.HoaDon.SoTienDaThu.ToString("N0")</td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-end fw-semibold">@(conLai > 0 ? "Còn lại" : "Dư")</td>
+                    <td class="text-end fw-bold @(conLai > 0 ? "text-danger" : "text-success")">@Math.Abs(conLai).ToString("N0")</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        @if (Model.LichSuThanhToan.Any())
+        {
+            <h6 class="mt-4 mb-2">Lịch sử thanh toán</h6>
+            <table class="table table-sm table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Hình thức</th>
+                        <th class="text-end">Số tiền</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var tt in Model.LichSuThanhToan)
+                    {
+                        <tr>
+                            <td>@tt.NgayThu.ToString("dd/MM/yyyy")</td>
+                            <td>@HinhThucText(tt.HinhThuc)</td>
+                            <td class="text-end">@tt.SoTien.ToString("N0")</td>
+                            <td>@tt.GhiChu</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <div class="row text-center mt-5">
+            <div class="col-6">
+                <div class="fw-semibold">Người nộp tiền</div>
+                <div class="text-muted small">(Ký, ghi rõ họ tên)</div>
+                <div class="signature-box"></div>
+            </div>
+            <div class="col-6">
+                <div class="fw-semibold">Người thu tiền</div>
+                <div class="text-muted small">(Ký, ghi rõ họ tên)</div>
+                <div class="signature-box"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    static string HinhThucText(string? hinhThuc) => hinhThuc switch
+    {
+        "TienMat" => "Tiền mặt",
+        "ChuyenKhoan" => "Chuyển khoản",
+        "KetChuyenNo" => "Kết chuyển nợ",
+        "TruCoc" => "Trừ cọc",
+        null or "" => "Không rõ",
+        _ => hinhThuc
+    };
+
+    static string TrangThaiBadge(string? trangThai) => trangThai switch
+    {
+        "DaThu" => "<span class='badge bg-success'>Đã thu đủ</span>",
+        "ThuMotPhan" => "<span class='badge bg-warning text-dark'>Thu một phần</span>",
+        _ => "<span class='badge bg-danger'>Chưa thu</span>"
+    };
+}
