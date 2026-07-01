@@ -28,6 +28,7 @@ builder.Services.AddScoped<GiaoDichCocRepository>();
 builder.Services.AddScoped<DichVuRepository>();
 builder.Services.AddScoped<PhongDichVuRepository>();
 builder.Services.AddScoped<ChiSoDienNuocRepository>();
+builder.Services.AddScoped<ChiSoNgoaiHopDongRepository>();
 builder.Services.AddScoped<LichSuThayDoiGiaRepository>();
 builder.Services.AddScoped<ThuChiRepository>();
 

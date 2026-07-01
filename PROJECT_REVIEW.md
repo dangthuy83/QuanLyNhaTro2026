@@ -96,6 +96,12 @@ Da nang tiep trong phien 34:
 - Ky dau chua co du lieu chi so cu cho phep nhap `ChiSoDau` theo so hien co tren dong ho, khong ep ve 0.
 - Khi da co ky truoc hoac dang sua dong da nhap, `ChiSoDau` van duoc khoa de giu chuoi audit.
 
+Da xu ly trong phien 35:
+
+- Them bang `ChiSoNgoaiHopDong` de audit dien/nuoc phat sinh khi phong trong, sua phong hoac chu nha su dung.
+- Cac dong nay khong lien ket hoa don va khong tinh cho khach thue.
+- `DenChiSo` moi nhat cua `ChiSoNgoaiHopDong` duoc dung lam moc `ChiSoDau` cho ky/hop dong sau neu moi hon chi so ky truoc.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.
@@ -441,6 +447,11 @@ Ket qua phien 34:
 
 - Neu chua co chi so ky truoc, man nhap don/theo phong/hang loat cho nhap `ChiSoDau`.
 - Neu da co ky truoc, `ChiSoDau` tu noi tu chi so cuoi gan nhat va khong nhap tay.
+
+Ket qua phien 35:
+
+- Da co man `ChiSoNgoaiHopDong/Index` de nhap/xoa/filter cac moc chi so ngoai hop dong.
+- `ChiSoController` uu tien moc ngoai hop dong moi hon ky truoc khi goi y `ChiSoDau`.
 
 ### 5.2. Preview chot hoa don hang loat - DA XU LY PHIEN 30
 

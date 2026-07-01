@@ -65,7 +65,7 @@ Nguyên tắc phân tầng:
 
 ## 3. Schema Hiện Hành
 
-Schema có 14 bảng:
+Schema có 15 bảng:
 
 | Bảng | Vai trò |
 |---|---|
@@ -77,6 +77,7 @@ Schema có 14 bảng:
 | `HopDong` | Hợp đồng thuê |
 | `HopDongKhachThue` | Liên kết nhiều-nhiều hợp đồng và khách thuê |
 | `ChiSoDienNuoc` | Chỉ số theo phòng, dịch vụ, tháng, năm |
+| `ChiSoNgoaiHopDong` | Audit chỉ số phát sinh khi phòng trống/sửa phòng, không tính vào hóa đơn khách |
 | `HoaDon` | Hóa đơn theo hợp đồng và kỳ |
 | `ChiTietHoaDon` | Dòng dịch vụ của hóa đơn |
 | `ThanhToan` | Lịch sử thu tiền |
@@ -88,6 +89,7 @@ Các cột dễ nhầm:
 
 - `ChiSoDienNuoc` dùng `PhongId`, không dùng `HopDongId`.
 - `ChiSoDienNuoc` dùng `LoaiGhiNhan`: `BinhThuong` yêu cầu `ChiSoCuoi >= ChiSoDau`; `Reset` dùng thêm `ChiSoTruocReset` và `ChiSoSauReset` để tính sản lượng khi đồng hồ reset/hỏng/thay/quay vòng.
+- `ChiSoNgoaiHopDong` không liên kết `HoaDon`; bảng này chỉ ghi nhận sản lượng ngoài hợp đồng và mốc bàn giao công tơ.
 - `DichVu` chỉ có `TenDichVu`, `LoaiTinhPhi`, `DonViTinh`; không có `Ten`, `DonVi`, `HienThi`, `GhiChu`.
 - `KhachThue` có `AnhCCCDMatTruoc` và `AnhCCCDMatSau`; không có một cột `AnhCCCD` chung.
 - `PhongDichVu` có `DangApDung`; không có `ApDung` hoặc `NgayTao`.
@@ -179,6 +181,7 @@ Quy tắc đã chốt:
 - `LoaiGhiNhan = BinhThuong`: dùng khi đồng hồ chạy liên tục, không đổi/reset trong kỳ. Bắt buộc `ChiSoCuoi >= ChiSoDau`.
 - Khi bắt đầu đưa dữ liệu vào hệ thống và phòng/dịch vụ chưa có chỉ số kỳ trước, `ChiSoDau` được nhập thủ công theo số hiện có trên đồng hồ; không mặc định nghiệp vụ là 0.
 - Khi đã có chỉ số kỳ trước, `ChiSoDau` của kỳ mới tự lấy từ `ChiSoCuoi` gần nhất trước đó và không nhập tay để giữ chuỗi audit.
+- Nếu phòng trống/sửa phòng/chủ nhà dùng điện nước sau khi khách cũ trả phòng, ghi vào `ChiSoNgoaiHopDong`; `DenChiSo` mới nhất của bảng này được dùng làm mốc `ChiSoDau` cho kỳ/hợp đồng sau nếu mới hơn chỉ số kỳ trước.
 - `LoaiGhiNhan = Reset`: dùng chung cho đồng hồ reset về 0, hỏng phải thay, thay đồng hồ, hoặc quay vòng số. Chưa tách riêng `HongDongHo`/`ThayDongHo`/`QuayVong` vì công thức tính tiền giống nhau; phân biệt bằng `LyDoDieuChinh`.
 - `ChiSoTruocReset`: chỉ số cuối cùng của đồng hồ cũ/trước khi quay về số thấp hơn.
 - `ChiSoSauReset`: chỉ số bắt đầu sau reset/thay đồng hồ; mặc định nghiệp vụ là 0 nếu bỏ trống.
@@ -288,6 +291,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI nhap chi so ho tro nhap truc tiep theo `PhongId` + ky, de phong moi co the nhap chi so truoc khi thuc hien chuyen phong.
 - UI nhap chi so hang loat theo ky cho cac phong dang thue co dich vu `TheoChiSo`.
 - UI nhập chỉ số cho phép nhập `ChiSoDau` ở kỳ đầu chưa có dữ liệu cũ; các kỳ sau tự nối từ chỉ số cuối kỳ trước.
+- UI ghi nhận chỉ số ngoài hợp đồng cho điện/nước phát sinh khi phòng trống/sửa phòng; các dòng này chỉ dùng làm audit và mốc bàn giao, không tính vào hóa đơn khách thuê.
 - Preview chốt hóa đơn hàng loạt theo kỳ: hiển thị hợp đồng đang hiệu lực, trạng thái dữ liệu, nợ kỳ trước, tổng dự kiến, hỗ trợ filter theo Nhà/từ khóa/trạng thái dòng và chỉ cho chốt các dòng sẵn sàng theo bộ lọc.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
@@ -332,4 +336,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 34 - 30/06/2026
+Cập nhật lần cuối: Phiên 35 - 01/07/2026

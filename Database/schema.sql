@@ -176,6 +176,32 @@ CREATE TABLE ChiSoDienNuoc (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
+-- 8.1. CHISONGOAIHOPDONG - chỉ số phát sinh khi phòng không gắn hợp đồng
+-- Dùng cho các đoạn điện/nước chủ nhà dùng khi phòng trống, sửa phòng,
+-- bàn giao lại phòng... Không tính vào hóa đơn khách thuê.
+-- DenChiSo mới nhất có thể làm mốc ChiSoDau cho hợp đồng/kỳ sau.
+-- ============================================================
+CREATE TABLE ChiSoNgoaiHopDong (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    PhongId INT NOT NULL,
+    DichVuId INT NOT NULL,
+    TuChiSo DECIMAL(10,2) NOT NULL,
+    DenChiSo DECIMAL(10,2) NOT NULL,
+    SanLuong DECIMAL(10,2) GENERATED ALWAYS AS (DenChiSo - TuChiSo) STORED,
+    NgayGhiNhan DATE NOT NULL,
+    LyDo VARCHAR(255) NOT NULL,
+    GhiChu VARCHAR(255) NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_ChiSoNgoaiHopDong_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
+    CONSTRAINT FK_ChiSoNgoaiHopDong_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
+    CONSTRAINT CK_ChiSoNgoaiHopDong_KhongAm CHECK (TuChiSo >= 0 AND DenChiSo >= 0),
+    CONSTRAINT CK_ChiSoNgoaiHopDong_SanLuong CHECK (DenChiSo >= TuChiSo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_ChiSoNgoaiHopDong_Moc
+    ON ChiSoNgoaiHopDong(PhongId, DichVuId, NgayGhiNhan, Id);
+
+-- ============================================================
 -- 9. HOADON — Hóa đơn hàng tháng theo hợp đồng
 --
 -- HoaDonGhepId: dùng khi tháng đó khách CHUYỂN PHÒNG, sinh 2 hóa đơn riêng
@@ -352,6 +378,7 @@ INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, DonViTinh) VALUES
 -- HoaDon 1-n ThanhToan
 -- Phong n-n DichVu (qua PhongDichVu, giá riêng từng phòng)
 -- ChiSoDienNuoc 1-n ChiTietHoaDon (qua ChiSoDienNuocId)
+-- ChiSoNgoaiHopDong audit chỉ số phát sinh ngoài hợp đồng, không liên kết HoaDon
 -- LichSuThayDoiGia tham chiếu LOGIC tới HopDong hoặc PhongDichVu qua
 --   (LoaiDoiTuong, DoiTuongId) — không đặt FK cứng vì DoiTuongId có thể
 --   thuộc 1 trong 2 bảng khác nhau tùy LoaiDoiTuong.

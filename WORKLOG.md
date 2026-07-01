@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -1279,6 +1279,56 @@ Ghi chú:
 
 ---
 
+### Phiên 35 - Chỉ Số Ngoài Hợp Đồng Cho Phòng Trống/Sửa Phòng
+
+Ngày: 01/07/2026
+
+Quyết định đã chốt với chủ dự án:
+
+- Dùng phương án thiết kế 2: thêm bảng riêng `ChiSoNgoaiHopDong`.
+- Điện/nước phát sinh khi phòng trống, sửa phòng hoặc chủ nhà sử dụng không tính vào hóa đơn khách thuê.
+- `DenChiSo` mới nhất của dòng ngoài hợp đồng được dùng làm mốc `ChiSoDau` cho kỳ/hợp đồng sau nếu mới hơn chỉ số kỳ trước.
+
+Đã làm:
+
+- Cập nhật `Database/schema.sql` thêm bảng `ChiSoNgoaiHopDong`:
+  - `PhongId`, `DichVuId`, `TuChiSo`, `DenChiSo`, `SanLuong`, `NgayGhiNhan`, `LyDo`, `GhiChu`.
+  - CHECK chống chỉ số âm và `DenChiSo < TuChiSo`.
+  - Index `IX_ChiSoNgoaiHopDong_Moc` theo phòng/dịch vụ/ngày.
+- Thêm `ChiSoNgoaiHopDong` model và `ChiSoNgoaiHopDongRepository`.
+- Thêm `ChiSoNgoaiHopDongController` và màn `Views/ChiSoNgoaiHopDong/Index.cshtml`:
+  - Tạo dòng chỉ số ngoài hợp đồng.
+  - Filter theo phòng/dịch vụ.
+  - Xóa dòng audit nếu nhập nhầm.
+- Thêm menu `Chỉ số ngoài HĐ` và link từ màn `ChiSo/Index`.
+- Sửa `ChiSoController`:
+  - Khi nhập chỉ số, nếu có dòng ngoài hợp đồng mới hơn chỉ số kỳ trước thì dùng `DenChiSo` làm `ChiSoDau`.
+  - Nếu không có kỳ trước và không có ngoài hợp đồng thì vẫn cho nhập tay `ChiSoDau` như phiên 34.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với app chạy MySQL thật:
+
+- Đã apply `CREATE TABLE IF NOT EXISTS ChiSoNgoaiHopDong` lên DB runtime.
+- GET `/ChiSoNgoaiHopDong` trả `200`.
+- POST `/ChiSoNgoaiHopDong/Create` tạo dòng test tương lai `TEST_CHISO_NGOAI_HD_20990115` thành công.
+- GET `/ChiSo/NhapTheoPhong?phongId=15&thang=1&nam=2099` trả `200` và dùng `DenChiSo = 1245.00` làm mốc chỉ số đầu.
+- POST xóa dòng test thành công; không giữ dữ liệu smoke test mới.
+
+Ghi chú:
+
+- Smoke test runtime dùng biến môi trường connection string có `SslMode=None;AllowPublicKeyRetrieval=True` cho process test, không sửa file config repo.
+- Helper apply schema tạm đã được dọn, không commit.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1309,6 +1359,7 @@ Ghi chú:
 | 32 | `NhacNo/Index` | Chủ nhà vẫn phải tự lọc công nợ để biết hóa đơn nào cần nhắc | Thêm màn nhắc nợ giai đoạn 1 cho chủ nhà/quản lý, dùng dữ liệu công nợ hiện có và chưa gửi/copy tin nhắn tự động |
 | 33 | `HoaDon/ChotHangLoat` | Preview chốt hàng loạt khó vận hành khi nhiều nhà/phòng và khó xem nhanh dòng lỗi | Thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc |
 | 34 | `ChiSo/Nhap`, `ChiSo/NhapTheoPhong`, `ChiSo/NhapHangLoat` | Kỳ đầu chưa có dữ liệu cũ bị khóa `ChiSoDau = 0`, sai khi đồng hồ thực tế không bắt đầu từ 0 | Cho nhập `ChiSoDau` khi chưa có kỳ trước; các kỳ sau vẫn tự nối từ chỉ số cuối kỳ trước |
+| 35 | `ChiSoNgoaiHopDong`, `ChiSoController` | Khi phòng trống/sửa phòng có phát sinh điện/nước, chỉ số đầu khách mới có thể khác chỉ số cuối khách cũ | Thêm bảng audit ngoài hợp đồng và dùng `DenChiSo` mới nhất làm mốc đầu kỳ sau nếu phù hợp |
 
 ---
 
