@@ -136,6 +136,7 @@ CREATE TABLE HopDongKhachThue (
 -- ============================================================
 CREATE TABLE ChiSoDienNuoc (
     Id INT AUTO_INCREMENT PRIMARY KEY,
+    HopDongId INT NULL,
     PhongId INT NOT NULL,
     DichVuId INT NOT NULL,
     Thang TINYINT NOT NULL,
@@ -148,6 +149,8 @@ CREATE TABLE ChiSoDienNuoc (
     LyDoDieuChinh VARCHAR(255) NULL,
     NgayDoc DATE NULL,
     GhiChu VARCHAR(255) NULL,
+    ChiSoScopeKey INT GENERATED ALWAYS AS (COALESCE(HopDongId, 0)) STORED,
+    CONSTRAINT FK_ChiSo_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_ChiSo_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
     CONSTRAINT FK_ChiSo_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
     CONSTRAINT CK_ChiSo_LoaiGhiNhan CHECK (LoaiGhiNhan IN ('BinhThuong', 'Reset')),
@@ -172,8 +175,17 @@ CREATE TABLE ChiSoDienNuoc (
             AND ChiSoCuoi >= COALESCE(ChiSoSauReset, 0)
         )
     ),
-    CONSTRAINT UQ_ChiSo UNIQUE (PhongId, DichVuId, Thang, Nam)
+    CONSTRAINT UQ_ChiSo UNIQUE (PhongId, DichVuId, Thang, Nam, ChiSoScopeKey)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_ChiSo_HopDong_Ky
+    ON ChiSoDienNuoc(HopDongId, Nam, Thang);
+
+CREATE INDEX IX_ChiSo_Phong_FK
+    ON ChiSoDienNuoc(PhongId);
+
+CREATE INDEX IX_ChiSo_DichVu_FK
+    ON ChiSoDienNuoc(DichVuId);
 
 -- ============================================================
 -- 8.1. CHISONGOAIHOPDONG - chỉ số phát sinh khi phòng không gắn hợp đồng

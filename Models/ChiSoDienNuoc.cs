@@ -6,6 +6,7 @@ public class ChiSoDienNuoc
     public const string LoaiReset = "Reset";
 
     public int Id { get; set; }
+    public int? HopDongId { get; set; }
     public int PhongId { get; set; }
     public int DichVuId { get; set; }
     public int Thang { get; set; }
@@ -31,4 +32,5 @@ public class ChiSoDienNuoc
     public string? GhiChu { get; set; }
 
     public DichVu? DichVu { get; set; }
+    public HopDong? HopDong { get; set; }
 }

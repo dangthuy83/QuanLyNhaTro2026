@@ -56,7 +56,7 @@ public class ChiSoController(
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
         if (hopDong == null) return NotFound();
 
-        var formData = await LoadChiSoFormAsync(hopDong.PhongId, thang.Value, nam.Value);
+        var formData = await LoadChiSoFormAsync(hopDong.PhongId, thang.Value, nam.Value, hopDong.Id, hopDong.NgayBatDau);
 
         ViewBag.HopDong = hopDong;
         ViewBag.Thang = thang;
@@ -77,7 +77,7 @@ public class ChiSoController(
         var phong = await phongRepo.GetByIdAsync(phongId);
         if (phong == null) return NotFound();
 
-        var formData = await LoadChiSoFormAsync(phongId, thang.Value, nam.Value);
+        var formData = await LoadChiSoFormAsync(phongId, thang.Value, nam.Value, null, null);
 
         ViewBag.Phong = phong;
         ViewBag.Thang = thang;
@@ -99,6 +99,7 @@ public class ChiSoController(
         decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
+        DateTime?[] ngayDocs,
         string[] loaiGhiNhans,
         decimal?[] chiSoTruocResets,
         decimal?[] chiSoSauResets,
@@ -109,12 +110,15 @@ public class ChiSoController(
 
         var errors = await SaveChiSoAsync(
             hopDong.PhongId,
+            hopDong.Id,
+            hopDong.NgayBatDau,
             thang,
             nam,
             dichVuIds,
             chiSoDaus,
             chiSoCuois,
             chiSoIds,
+            ngayDocs,
             loaiGhiNhans,
             chiSoTruocResets,
             chiSoSauResets,
@@ -140,6 +144,7 @@ public class ChiSoController(
         decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
+        DateTime?[] ngayDocs,
         string[] loaiGhiNhans,
         decimal?[] chiSoTruocResets,
         decimal?[] chiSoSauResets,
@@ -150,12 +155,15 @@ public class ChiSoController(
 
         var errors = await SaveChiSoAsync(
             phongId,
+            null,
+            null,
             thang,
             nam,
             dichVuIds,
             chiSoDaus,
             chiSoCuois,
             chiSoIds,
+            ngayDocs,
             loaiGhiNhans,
             chiSoTruocResets,
             chiSoSauResets,
@@ -197,17 +205,20 @@ public class ChiSoController(
         var allItems = new List<ChiSoNhapItem>();
         var allErrors = new List<string>();
 
-        foreach (var group in selectedRows.GroupBy(r => r.PhongId))
+        foreach (var group in selectedRows.GroupBy(r => new { r.PhongId, r.HopDongId, r.NgayBatDauHopDong }))
         {
             var rows = group.ToList();
             var result = await ValidateChiSoAsync(
-                group.Key,
+                group.Key.PhongId,
+                group.Key.HopDongId,
+                group.Key.NgayBatDauHopDong,
                 model.Thang,
                 model.Nam,
                 rows.Select(r => r.DichVuId).ToArray(),
                 rows.Select(r => r.ChiSoDau).ToArray(),
                 rows.Select(r => r.ChiSoCuoi).ToArray(),
                 rows.Select(r => r.ChiSoId).ToArray(),
+                rows.Select(r => r.NgayDoc).ToArray(),
                 rows.Select(r => r.LoaiGhiNhan).ToArray(),
                 rows.Select(r => r.ChiSoTruocReset).ToArray(),
                 rows.Select(r => r.ChiSoSauReset).ToArray(),
@@ -232,7 +243,12 @@ public class ChiSoController(
         return RedirectToAction(nameof(Index), new { thang = model.Thang, nam = model.Nam });
     }
 
-    private async Task<ChiSoFormData> LoadChiSoFormAsync(int phongId, int thang, int nam)
+    private async Task<ChiSoFormData> LoadChiSoFormAsync(
+        int phongId,
+        int thang,
+        int nam,
+        int? hopDongId,
+        DateTime? ngayBatDauHopDong)
     {
         var dichVuTheoChiSo = (await phongDichVuRepo.GetByPhongAsync(phongId))
             .Where(pdv => pdv.DichVu?.LoaiTinhPhi == "TheoChiSo")
@@ -241,7 +257,7 @@ public class ChiSoController(
             .Select(g => g.First())
             .ToList();
 
-        var chiSoHienTai = (await chiSoRepo.GetByPhongKyAsync(phongId, thang, nam)).ToList();
+        var chiSoHienTai = (await chiSoRepo.GetByPhongKyAsync(phongId, thang, nam, hopDongId)).ToList();
         var chiSoDauTheoDichVu = new Dictionary<int, decimal>();
         var choNhapChiSoDauTheoDichVu = new Dictionary<int, bool>();
 
@@ -255,7 +271,7 @@ public class ChiSoController(
                 continue;
             }
 
-            var startInfo = await ResolveChiSoDauAsync(phongId, dv.Id, thang, nam, null, null);
+            var startInfo = await ResolveChiSoDauAsync(phongId, hopDongId, ngayBatDauHopDong, dv.Id, thang, nam, null, null);
             chiSoDauTheoDichVu[dv.Id] = startInfo.ChiSoDau;
             choNhapChiSoDauTheoDichVu[dv.Id] = startInfo.ChoNhapTay;
         }
@@ -273,7 +289,7 @@ public class ChiSoController(
         var rows = new List<ChiSoHangLoatRowViewModel>();
         foreach (var hopDong in hopDongs)
         {
-            var formData = await LoadChiSoFormAsync(hopDong.PhongId, thang, nam);
+            var formData = await LoadChiSoFormAsync(hopDong.PhongId, thang, nam, hopDong.Id, hopDong.NgayBatDau);
             foreach (var dichVu in formData.DichVuTheoChiSo)
             {
                 var current = formData.ChiSoHienTai.FirstOrDefault(cs => cs.DichVuId == dichVu.Id);
@@ -286,6 +302,7 @@ public class ChiSoController(
                     Luu = true,
                     PhongId = hopDong.PhongId,
                     HopDongId = hopDong.Id,
+                    NgayBatDauHopDong = hopDong.NgayBatDau,
                     TenPhong = hopDong.Phong?.TenPhong ?? $"Phong #{hopDong.PhongId}",
                     DichVuId = dichVu.Id,
                     TenDichVu = dichVu.TenDichVu,
@@ -293,6 +310,7 @@ public class ChiSoController(
                     ChiSoId = current?.Id ?? 0,
                     ChiSoDau = chiSoDau,
                     ChiSoCuoi = current?.ChiSoCuoi ?? chiSoDau,
+                    NgayDoc = current?.NgayDoc ?? DateTime.Today,
                     ChoNhapChiSoDau = choNhapChiSoDau,
                     LoaiGhiNhan = loaiGhiNhan,
                     ChiSoTruocReset = current?.ChiSoTruocReset,
@@ -314,12 +332,15 @@ public class ChiSoController(
 
     private async Task<List<string>> SaveChiSoAsync(
         int phongId,
+        int? hopDongId,
+        DateTime? ngayBatDauHopDong,
         int thang,
         int nam,
         int[] dichVuIds,
         decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
+        DateTime?[] ngayDocs,
         string[] loaiGhiNhans,
         decimal?[] chiSoTruocResets,
         decimal?[] chiSoSauResets,
@@ -327,12 +348,15 @@ public class ChiSoController(
     {
         var result = await ValidateChiSoAsync(
             phongId,
+            hopDongId,
+            ngayBatDauHopDong,
             thang,
             nam,
             dichVuIds,
             chiSoDaus,
             chiSoCuois,
             chiSoIds,
+            ngayDocs,
             loaiGhiNhans,
             chiSoTruocResets,
             chiSoSauResets,
@@ -349,12 +373,15 @@ public class ChiSoController(
 
     private async Task<ChiSoValidationResult> ValidateChiSoAsync(
         int phongId,
+        int? hopDongId,
+        DateTime? ngayBatDauHopDong,
         int thang,
         int nam,
         int[] dichVuIds,
         decimal[] chiSoDaus,
         decimal[] chiSoCuois,
         int[] chiSoIds,
+        DateTime?[] ngayDocs,
         string[] loaiGhiNhans,
         decimal?[] chiSoTruocResets,
         decimal?[] chiSoSauResets,
@@ -362,7 +389,7 @@ public class ChiSoController(
     {
         var items = new List<ChiSoNhapItem>();
         var errors = new List<string>();
-        var chiSoHienTai = (await chiSoRepo.GetByPhongKyAsync(phongId, thang, nam))
+        var chiSoHienTai = (await chiSoRepo.GetByPhongKyAsync(phongId, thang, nam, hopDongId))
             .ToDictionary(cs => cs.Id);
         var dichVuTheoChiSoIds = (await phongDichVuRepo.GetByPhongAsync(phongId))
             .Where(pdv => pdv.DichVu?.LoaiTinhPhi == "TheoChiSo")
@@ -382,6 +409,7 @@ public class ChiSoController(
             var chiSoDauNhap = i < chiSoDaus.Length ? chiSoDaus[i] : 0;
             var chiSoCuoi = i < chiSoCuois.Length ? chiSoCuois[i] : 0;
             var existId = i < chiSoIds.Length ? chiSoIds[i] : 0;
+            var ngayDoc = i < ngayDocs.Length ? ngayDocs[i] : null;
             var loaiGhiNhan = i < loaiGhiNhans.Length && !string.IsNullOrWhiteSpace(loaiGhiNhans[i])
                 ? loaiGhiNhans[i]
                 : ChiSoDienNuoc.LoaiBinhThuong;
@@ -395,11 +423,20 @@ public class ChiSoController(
                 continue;
             }
 
-            var startInfo = await ResolveChiSoDauAsync(phongId, dichVuId, thang, nam, current, chiSoDauNhap);
+            var startInfo = await ResolveChiSoDauAsync(
+                phongId,
+                hopDongId,
+                ngayBatDauHopDong,
+                dichVuId,
+                thang,
+                nam,
+                current,
+                chiSoDauNhap);
             var chiSoDau = startInfo.ChiSoDau;
             var chiSo = new ChiSoDienNuoc
             {
                 Id = existId,
+                HopDongId = hopDongId,
                 PhongId = phongId,
                 DichVuId = dichVuId,
                 Thang = thang,
@@ -410,7 +447,7 @@ public class ChiSoController(
                 ChiSoTruocReset = loaiGhiNhan == ChiSoDienNuoc.LoaiReset ? chiSoTruocReset : null,
                 ChiSoSauReset = loaiGhiNhan == ChiSoDienNuoc.LoaiReset ? chiSoSauReset : null,
                 LyDoDieuChinh = loaiGhiNhan == ChiSoDienNuoc.LoaiReset ? lyDoDieuChinh : null,
-                NgayDoc = DateTime.Today
+                NgayDoc = ngayDoc?.Date ?? DateTime.Today
             };
 
             items.Add(new ChiSoNhapItem(chiSo));
@@ -466,6 +503,8 @@ public class ChiSoController(
 
     private async Task<ChiSoDauInfo> ResolveChiSoDauAsync(
         int phongId,
+        int? hopDongId,
+        DateTime? ngayBatDauHopDong,
         int dichVuId,
         int thang,
         int nam,
@@ -475,31 +514,50 @@ public class ChiSoController(
         if (current != null)
             return new ChiSoDauInfo(current.ChiSoDau, false);
 
-        var kyTruoc = await chiSoRepo.GetChiSoCuoiKyTruocAsync(phongId, dichVuId, thang, nam);
-        var ngoaiHopDong = await chiSoNgoaiHopDongRepo.GetLatestBeforePeriodAsync(phongId, dichVuId, thang, nam);
+        if (hopDongId.HasValue)
+        {
+            var kyTruocCungHopDong = await chiSoRepo.GetChiSoCuoiKyTruocAsync(phongId, dichVuId, thang, nam, hopDongId);
+            if (kyTruocCungHopDong != null)
+                return new ChiSoDauInfo(kyTruocCungHopDong.ChiSoCuoi, false);
+        }
 
-        if (ngoaiHopDong != null && IsNgoaiHopDongNewerThanKyTruoc(ngoaiHopDong, kyTruoc))
+        var cutoffDate = hopDongId.HasValue && ngayBatDauHopDong.HasValue
+            ? ngayBatDauHopDong.Value.Date
+            : new DateTime(nam, thang, DateTime.DaysInMonth(nam, thang));
+
+        var mocHopDongTruoc = await chiSoRepo.GetLatestBeforeOrOnDateAsync(
+            phongId,
+            dichVuId,
+            cutoffDate,
+            hopDongId);
+        var ngoaiHopDong = await chiSoNgoaiHopDongRepo.GetLatestBeforeOrOnDateAsync(phongId, dichVuId, cutoffDate);
+
+        if (ngoaiHopDong != null && IsNgoaiHopDongNewerThanChiSo(ngoaiHopDong, mocHopDongTruoc))
             return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false);
 
-        if (kyTruoc != null)
-            return new ChiSoDauInfo(kyTruoc.ChiSoCuoi, false);
+        if (mocHopDongTruoc != null)
+            return new ChiSoDauInfo(mocHopDongTruoc.ChiSoCuoi, false);
+
+        if (ngoaiHopDong != null)
+            return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false);
 
         return new ChiSoDauInfo(chiSoDauNhap ?? 0, true);
     }
 
-    private static bool IsNgoaiHopDongNewerThanKyTruoc(
+    private static bool IsNgoaiHopDongNewerThanChiSo(
         ChiSoNgoaiHopDong ngoaiHopDong,
-        ChiSoDienNuoc? kyTruoc)
+        ChiSoDienNuoc? chiSo)
     {
-        if (kyTruoc == null)
+        if (chiSo == null)
             return true;
 
-        var ngayCuoiKyTruoc = new DateTime(
-            kyTruoc.Nam,
-            kyTruoc.Thang,
-            DateTime.DaysInMonth(kyTruoc.Nam, kyTruoc.Thang));
+        var ngayChiSo = chiSo.NgayDoc?.Date ?? new DateTime(
+            chiSo.Nam,
+            chiSo.Thang,
+            DateTime.DaysInMonth(chiSo.Nam, chiSo.Thang));
 
-        return ngoaiHopDong.NgayGhiNhan >= ngayCuoiKyTruoc;
+        return ngoaiHopDong.NgayGhiNhan.Date >= ngayChiSo.Date
+            && ngoaiHopDong.TuChiSo >= chiSo.ChiSoCuoi;
     }
 
     private sealed record ChiSoNhapItem(ChiSoDienNuoc ChiSo);

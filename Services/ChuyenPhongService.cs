@@ -95,7 +95,7 @@ public class ChuyenPhongService(
                 new { Id = vm.PhongMoiId }, tx);
 
             var chiTietDvCu = await TinhChiTietDichVuAsync(
-                conn, tx, hdCu.PhongId, dvCu.Where(d => d.DichVu?.LoaiTinhPhi == "TheoChiSo"), thang, nam);
+                conn, tx, hdCu.PhongId, vm.HopDongCuId, dvCu.Where(d => d.DichVu?.LoaiTinhPhi == "TheoChiSo"), thang, nam);
             decimal tongDvCu = chiTietDvCu.Sum(d => d.ThanhTien);
             decimal tongCongCu = tienPhongCu + tongDvCu;
 
@@ -124,7 +124,7 @@ public class ChuyenPhongService(
 
             await InsertChiTietAsync(conn, tx, hdCuId, chiTietDvCu);
 
-            var chiTietDvMoi = await TinhChiTietDichVuAsync(conn, tx, vm.PhongMoiId, dvMoi, thang, nam);
+            var chiTietDvMoi = await TinhChiTietDichVuAsync(conn, tx, vm.PhongMoiId, hdMoiId, dvMoi, thang, nam);
             decimal tongDvMoi = chiTietDvMoi.Sum(d => d.ThanhTien);
             decimal tongCongMoi = tienPhongMoi + tongDvMoi + noXuyen;
 
@@ -197,6 +197,7 @@ public class ChuyenPhongService(
         MySqlConnection conn,
         MySqlTransaction tx,
         int phongId,
+        int hopDongId,
         IEnumerable<PhongDichVu> dichVuPhong,
         int thang,
         int nam)
@@ -209,8 +210,9 @@ public class ChuyenPhongService(
 
             if (dv.DichVu?.LoaiTinhPhi == "TheoChiSo")
             {
-                var chiSo = await LayChiSoAsync(conn, tx, phongId, dv.DichVuId, thang, nam);
-                if (chiSo == null) continue;
+                var chiSo = await LayChiSoAsync(conn, tx, phongId, hopDongId, dv.DichVuId, thang, nam);
+                if (chiSo == null)
+                    throw new InvalidOperationException($"Thieu chi so {dv.DichVu.TenDichVu} ky {thang}/{nam} de chuyen phong.");
 
                 var soLuong = ChiSoConsumptionCalculator.Calculate(chiSo);
                 result.Add(new ChiTietDichVuTam(
@@ -277,6 +279,7 @@ public class ChuyenPhongService(
         MySqlConnection conn,
         MySqlTransaction tx,
         int phongId,
+        int hopDongId,
         int dichVuId,
         int thang,
         int nam)
@@ -284,15 +287,17 @@ public class ChuyenPhongService(
         const string sql = """
             SELECT * FROM ChiSoDienNuoc
             WHERE PhongId = @PhongId
+              AND (HopDongId = @HopDongId OR HopDongId IS NULL)
               AND DichVuId = @DichVuId
               AND Thang = @Thang
               AND Nam = @Nam
+            ORDER BY CASE WHEN HopDongId = @HopDongId THEN 0 ELSE 1 END, Id DESC
             LIMIT 1
             """;
 
         return await conn.QueryFirstOrDefaultAsync<ChiSoDienNuoc>(
             sql,
-            new { PhongId = phongId, DichVuId = dichVuId, Thang = thang, Nam = nam },
+            new { PhongId = phongId, HopDongId = hopDongId, DichVuId = dichVuId, Thang = thang, Nam = nam },
             tx);
     }
 

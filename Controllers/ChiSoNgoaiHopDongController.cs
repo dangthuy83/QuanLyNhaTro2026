@@ -7,7 +7,8 @@ namespace QuanLyNhaTro.Controllers;
 public class ChiSoNgoaiHopDongController(
     ChiSoNgoaiHopDongRepository chiSoNgoaiHopDongRepo,
     PhongRepository phongRepo,
-    DichVuRepository dichVuRepo) : Controller
+    DichVuRepository dichVuRepo,
+    HopDongRepository hopDongRepo) : Controller
 {
     public async Task<IActionResult> Index(int? phongId, int? dichVuId)
     {
@@ -74,6 +75,12 @@ public class ChiSoNgoaiHopDongController(
 
         if (model.NgayGhiNhan == default)
             errors.Add("Ngay ghi nhan la bat buoc.");
+        else if (phong != null)
+        {
+            var hopDongTrongNgay = await hopDongRepo.GetByPhongAndDateAsync(model.PhongId, model.NgayGhiNhan);
+            if (hopDongTrongNgay != null)
+                errors.Add("Ngay ghi nhan dang thuoc mot hop dong cua phong. Hay nhap chi so theo hop dong, hoac ghi phat sinh ngoai hop dong tu ngay sau khi khach tra phong.");
+        }
 
         if (string.IsNullOrWhiteSpace(model.LyDo))
             errors.Add("Ly do la bat buoc.");

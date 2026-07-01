@@ -51,6 +51,20 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
             new { PhongId = phongId },
             transaction: tx);
 
+    public async Task<HopDong?> GetByPhongAndDateAsync(int phongId, DateTime ngay)
+        => await _db.QueryFirstOrDefaultAsync<HopDong>(
+            """
+            SELECT *
+            FROM HopDong
+            WHERE PhongId = @PhongId
+              AND TrangThai <> 'DaHuy'
+              AND NgayBatDau <= @Ngay
+              AND (NgayKetThuc IS NULL OR NgayKetThuc >= @Ngay)
+            ORDER BY NgayBatDau DESC, Id DESC
+            LIMIT 1
+            """,
+            new { PhongId = phongId, Ngay = ngay.Date });
+
     public async Task<int> InsertAsync(HopDong hd)
     {
         const string sql = """

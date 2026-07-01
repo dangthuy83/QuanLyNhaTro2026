@@ -64,6 +64,7 @@ else
                             <th style="width:54px">Lưu</th>
                             <th style="min-width:150px">Phòng</th>
                             <th style="min-width:150px">Dịch vụ</th>
+                            <th style="width:140px">Ngày đọc</th>
                             <th class="text-end" style="width:120px">Đầu</th>
                             <th style="width:140px">Cuối</th>
                             <th style="min-width:260px">Ghi nhận</th>
@@ -83,6 +84,7 @@ else
                                            class="form-check-input" @(row.Luu ? "checked" : "") />
                                     <input type="hidden" name="Rows[@i].PhongId" value="@row.PhongId" />
                                     <input type="hidden" name="Rows[@i].HopDongId" value="@row.HopDongId" />
+                                    <input type="hidden" name="Rows[@i].NgayBatDauHopDong" value="@(row.NgayBatDauHopDong?.ToString("yyyy-MM-dd"))" />
                                     <input type="hidden" name="Rows[@i].TenPhong" value="@row.TenPhong" />
                                     <input type="hidden" name="Rows[@i].DichVuId" value="@row.DichVuId" />
                                     <input type="hidden" name="Rows[@i].TenDichVu" value="@row.TenDichVu" />
@@ -99,6 +101,11 @@ else
                                     {
                                         <small class="text-muted">@row.DonViTinh</small>
                                     }
+                                </td>
+                                <td>
+                                    <input type="date" name="Rows[@i].NgayDoc"
+                                           class="form-control form-control-sm"
+                                           value="@((row.NgayDoc ?? DateTime.Today).ToString("yyyy-MM-dd"))" />
                                 </td>
                                 <td class="text-end">
                                     @if (row.ChoNhapChiSoDau)

@@ -49,7 +49,7 @@ public class TraPhongService(
 
             await using var conn = new MySqlConnection(config.GetConnectionString("DefaultConnection"));
             await conn.OpenAsync();
-            var chiTietDv = await TinhChiTietDichVuAsync(conn, null, hd.PhongId, dvPhong, thang, nam);
+            var chiTietDv = await TinhChiTietDichVuAsync(conn, null, hd.PhongId, hopDongId, dvPhong, thang, nam);
             tongDichVuThangCuoi = chiTietDv.Sum(d => d.ThanhTien);
         }
 
@@ -118,7 +118,7 @@ public class TraPhongService(
 
                 decimal noKyTruoc = await TinhNoKyTruocAsync(conn, tx, hopDongId, thang, nam);
 
-                var chiTietDv = await TinhChiTietDichVuAsync(conn, tx, hd.PhongId, dvPhong, thang, nam);
+                var chiTietDv = await TinhChiTietDichVuAsync(conn, tx, hd.PhongId, hopDongId, dvPhong, thang, nam);
                 decimal tongDv = chiTietDv.Sum(d => d.ThanhTien);
                 decimal tongCong = tienPhong + tongDv + noKyTruoc;
 
@@ -246,6 +246,7 @@ public class TraPhongService(
         MySqlConnection conn,
         MySqlTransaction? tx,
         int phongId,
+        int hopDongId,
         IEnumerable<PhongDichVu> dichVuPhong,
         int thang,
         int nam)
@@ -258,8 +259,9 @@ public class TraPhongService(
 
             if (dv.DichVu?.LoaiTinhPhi == "TheoChiSo")
             {
-                var chiSo = await LayChiSoAsync(conn, tx, phongId, dv.DichVuId, thang, nam);
-                if (chiSo == null) continue;
+                var chiSo = await LayChiSoAsync(conn, tx, phongId, hopDongId, dv.DichVuId, thang, nam);
+                if (chiSo == null)
+                    throw new InvalidOperationException($"Thieu chi so {dv.DichVu.TenDichVu} ky {thang}/{nam} de tra phong.");
 
                 var soLuong = ChiSoConsumptionCalculator.Calculate(chiSo);
                 result.Add(new ChiTietDichVuTam(
@@ -326,6 +328,7 @@ public class TraPhongService(
         MySqlConnection conn,
         MySqlTransaction? tx,
         int phongId,
+        int hopDongId,
         int dichVuId,
         int thang,
         int nam)
@@ -334,15 +337,17 @@ public class TraPhongService(
             SELECT *
             FROM ChiSoDienNuoc
             WHERE PhongId = @PhongId
+              AND (HopDongId = @HopDongId OR HopDongId IS NULL)
               AND DichVuId = @DichVuId
               AND Thang = @Thang
               AND Nam = @Nam
+            ORDER BY CASE WHEN HopDongId = @HopDongId THEN 0 ELSE 1 END, Id DESC
             LIMIT 1
             """;
 
         return await conn.QueryFirstOrDefaultAsync<ChiSoDienNuoc>(
             sql,
-            new { PhongId = phongId, DichVuId = dichVuId, Thang = thang, Nam = nam },
+            new { PhongId = phongId, HopDongId = hopDongId, DichVuId = dichVuId, Thang = thang, Nam = nam },
             tx);
     }
 

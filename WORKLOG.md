@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -30,6 +30,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 7 | Rà tiếp flow preview chốt hóa đơn hàng loạt sau vận hành | Đã thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc | Thấp |
 | 8 | Nhắc nợ giai đoạn 2/3 | Sau này mới cân nhắc copy mẫu tin, log đã nhắc, Telegram/ZNS/SMS; chưa làm bây giờ | Thấp |
 | 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
+| 10 | Smoke test UI flow chỉ số nhiều đoạn qua browser | DB smoke đã pass; HTTP runtime trong sandbox bị lỗi process nền không giữ listener ổn định, cần test lại bằng app thật nếu cần kiểm UI | Trung bình |
 
 ### Quy ước GitHub
 
@@ -198,6 +199,8 @@ Build succeeded.
 0 Warning(s)
 0 Error(s)
 ```
+
+Sau khi restore smoke project tạm, chạy lại `dotnet build --no-restore` vẫn build thành công nhưng có 1 warning `NU1900` vì sandbox không truy cập được `https://api.nuget.org/v3/index.json` để lấy dữ liệu vulnerability.
 
 Chưa làm:
 
@@ -1329,6 +1332,73 @@ Ghi chú:
 
 ---
 
+### Phiên 36 - Chỉ Số Theo Hợp Đồng Cho Nhiều Đoạn Cùng Tháng
+
+Ngày: 01/07/2026
+
+Quyết định đã chốt với chủ dự án:
+
+- Đi thẳng phương án B vì hệ thống chưa chạy trên dữ liệu thật.
+- `ChiSoDienNuoc` có thêm `HopDongId` nullable để hỗ trợ nhiều dòng cùng phòng/dịch vụ/tháng nhưng khác hợp đồng.
+- `HopDongId IS NULL` chỉ còn là mốc theo phòng/tạm trước khi có hợp đồng hoặc fallback dữ liệu cũ.
+- `NgayDoc` là ngày đọc/bàn giao thực tế, dùng để nối chỉ số khách cũ -> ngoài hợp đồng -> khách mới trong cùng tháng.
+- Khi trả phòng/chuyển phòng, thiếu chỉ số dịch vụ `TheoChiSo` là lỗi chặn, không được bỏ qua dòng dịch vụ.
+
+Đã làm:
+
+- Cập nhật `Database/schema.sql`:
+  - Thêm `ChiSoDienNuoc.HopDongId`.
+  - Thêm FK `FK_ChiSo_HopDong`.
+  - Đổi unique scope sang `(PhongId, DichVuId, Thang, Nam, ChiSoScopeKey)` với `ChiSoScopeKey = COALESCE(HopDongId, 0)`.
+  - Thêm index `IX_ChiSo_HopDong_Ky`.
+- Cập nhật model/repository:
+  - `ChiSoDienNuoc` có `HopDongId`.
+  - `ChiSoDienNuocRepository` ưu tiên chỉ số đúng `HopDongId`, fallback dòng theo phòng khi cần.
+  - Thêm lookup mốc chỉ số gần nhất theo ngày đọc.
+  - `ChiSoNgoaiHopDongRepository` có lookup mốc ngoài hợp đồng theo ngày.
+- Cập nhật `ChiSoController`:
+  - Nhập theo hợp đồng lưu `HopDongId`.
+  - Nhập theo phòng vẫn lưu `HopDongId = NULL`.
+  - Nhập hàng loạt group theo phòng + hợp đồng.
+  - Tự nối `ChiSoDau` theo chuỗi cùng hợp đồng, sau đó theo mốc chỉ số/ngoài hợp đồng gần nhất trước ngày bắt đầu hợp đồng.
+  - Form nhập chỉ số cho phép chọn `NgayDoc`.
+- Cập nhật `TraPhongService` và `ChuyenPhongService`:
+  - Query chỉ số theo `HopDongId`, fallback mốc theo phòng.
+  - Thiếu chỉ số `TheoChiSo` thì throw lỗi nghiệp vụ thay vì `continue`.
+- Cập nhật `ChiSoNgoaiHopDongController`:
+  - Chặn ghi chỉ số ngoài hợp đồng vào ngày đang thuộc một hợp đồng của phòng.
+- Cập nhật `DECISIONS.md` và `PROJECT_REVIEW.md`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+QA với MySQL thật:
+
+- Đã apply schema runtime cho `ChiSoDienNuoc.HopDongId`, `ChiSoScopeKey`, FK/index/unique scope mới.
+- Seed dữ liệu smoke test tiền tố `TEST_METER_CONTRACT_SCOPE_20260701230229`.
+- Tạo cùng một phòng/dịch vụ/tháng 6/2026:
+  - Hợp đồng cũ có chỉ số 100 -> 150, `NgayDoc = 10/06/2026`.
+  - Chỉ số ngoài hợp đồng 150 -> 160, `NgayGhiNhan = 15/06/2026`.
+  - Hợp đồng mới có chỉ số 160 -> 180, `NgayDoc = 30/06/2026`.
+- Verify `ChiSoDienNuocRepository.GetByHopDongKyAsync` của hợp đồng mới lấy đúng dòng `HopDongId = 19`.
+- Verify `HoaDonService.TinhHoaDonDuKienAsync` cho hợp đồng mới kỳ 6/2026:
+  - `PreviewSoLuong = 20.00`.
+  - `PreviewThanhTien = 80,000`.
+  - `PreviewLoi = []`.
+
+Ghi chú:
+
+- HTTP runtime UI smoke bị blocker môi trường: process nền log có lúc báo app started nhưng không giữ listener ổn định để `Invoke-WebRequest` connect. Đã dừng process test còn treo.
+- Restore/build sau smoke project tạm có warning `NU1900` do không truy cập được vulnerability feed NuGet trong sandbox; không ảnh hưởng lỗi compile/app chính.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1360,6 +1430,7 @@ Ghi chú:
 | 33 | `HoaDon/ChotHangLoat` | Preview chốt hàng loạt khó vận hành khi nhiều nhà/phòng và khó xem nhanh dòng lỗi | Thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc |
 | 34 | `ChiSo/Nhap`, `ChiSo/NhapTheoPhong`, `ChiSo/NhapHangLoat` | Kỳ đầu chưa có dữ liệu cũ bị khóa `ChiSoDau = 0`, sai khi đồng hồ thực tế không bắt đầu từ 0 | Cho nhập `ChiSoDau` khi chưa có kỳ trước; các kỳ sau vẫn tự nối từ chỉ số cuối kỳ trước |
 | 35 | `ChiSoNgoaiHopDong`, `ChiSoController` | Khi phòng trống/sửa phòng có phát sinh điện/nước, chỉ số đầu khách mới có thể khác chỉ số cuối khách cũ | Thêm bảng audit ngoài hợp đồng và dùng `DenChiSo` mới nhất làm mốc đầu kỳ sau nếu phù hợp |
+| 36 | `ChiSoDienNuoc`, `ChiSoController`, `TraPhongService`, `ChuyenPhongService` | Một phòng/dịch vụ/tháng chỉ có một dòng chỉ số nên không tách được khách cũ, phòng trống và khách mới trong cùng tháng | Thêm `HopDongId` nullable cho chỉ số, dùng `NgayDoc` làm mốc bàn giao, cho phép nhiều đoạn theo hợp đồng và chặn thiếu chỉ số khi trả/chuyển phòng |
 
 ---
 

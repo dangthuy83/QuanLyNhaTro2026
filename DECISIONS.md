@@ -76,7 +76,7 @@ Schema có 15 bảng:
 | `PhongDichVu` | Dịch vụ và đơn giá riêng theo phòng |
 | `HopDong` | Hợp đồng thuê |
 | `HopDongKhachThue` | Liên kết nhiều-nhiều hợp đồng và khách thuê |
-| `ChiSoDienNuoc` | Chỉ số theo phòng, dịch vụ, tháng, năm |
+| `ChiSoDienNuoc` | Chỉ số theo hợp đồng/phòng, dịch vụ, tháng, năm |
 | `ChiSoNgoaiHopDong` | Audit chỉ số phát sinh khi phòng trống/sửa phòng, không tính vào hóa đơn khách |
 | `HoaDon` | Hóa đơn theo hợp đồng và kỳ |
 | `ChiTietHoaDon` | Dòng dịch vụ của hóa đơn |
@@ -87,7 +87,7 @@ Schema có 15 bảng:
 
 Các cột dễ nhầm:
 
-- `ChiSoDienNuoc` dùng `PhongId`, không dùng `HopDongId`.
+- `ChiSoDienNuoc` dùng `HopDongId` nullable để tách nhiều đoạn chỉ số cùng phòng/dịch vụ/tháng khi khách cũ trả phòng, phòng trống/sửa chữa phát sinh điện/nước, rồi khách mới vào trong cùng kỳ. `HopDongId IS NULL` chỉ dùng cho mốc theo phòng/tạm trước khi có hợp đồng hoặc fallback dữ liệu cũ.
 - `ChiSoDienNuoc` dùng `LoaiGhiNhan`: `BinhThuong` yêu cầu `ChiSoCuoi >= ChiSoDau`; `Reset` dùng thêm `ChiSoTruocReset` và `ChiSoSauReset` để tính sản lượng khi đồng hồ reset/hỏng/thay/quay vòng.
 - `ChiSoNgoaiHopDong` không liên kết `HoaDon`; bảng này chỉ ghi nhận sản lượng ngoài hợp đồng và mốc bàn giao công tơ.
 - `DichVu` chỉ có `TenDichVu`, `LoaiTinhPhi`, `DonViTinh`; không có `Ten`, `DonVi`, `HienThi`, `GhiChu`.
@@ -164,7 +164,7 @@ Quy ước đã chốt:
 - Số ngày ở trong một kỳ hóa đơn là phần giao giữa kỳ tháng `[ngày 1, ngày 1 tháng sau)` và khoảng ở thực tế `[ngày bắt đầu, ngày kết thúc + 1)`.
 - Không tính số ngày bằng cách lấy thẳng `.Day` của ngày trả/chuyển nếu hợp đồng bắt đầu giữa tháng.
 - Dịch vụ `CoDinh` thu trọn một lần trong kỳ có hóa đơn; không pro-rata theo ngày. Riêng chuyển phòng trong cùng tháng, hóa đơn phòng cũ bỏ `CoDinh`, hóa đơn phòng mới tính `CoDinh` để tránh thu hai lần.
-- Dịch vụ `TheoChiSo` luôn tính theo `ChiSoDienNuoc` của phòng/kỳ và lưu `ChiSoDienNuocId`.
+- Dịch vụ `TheoChiSo` luôn tính theo `ChiSoDienNuoc` đúng hợp đồng/phòng/kỳ và lưu `ChiSoDienNuocId`.
 
 Ví dụ:
 
@@ -181,7 +181,11 @@ Quy tắc đã chốt:
 - `LoaiGhiNhan = BinhThuong`: dùng khi đồng hồ chạy liên tục, không đổi/reset trong kỳ. Bắt buộc `ChiSoCuoi >= ChiSoDau`.
 - Khi bắt đầu đưa dữ liệu vào hệ thống và phòng/dịch vụ chưa có chỉ số kỳ trước, `ChiSoDau` được nhập thủ công theo số hiện có trên đồng hồ; không mặc định nghiệp vụ là 0.
 - Khi đã có chỉ số kỳ trước, `ChiSoDau` của kỳ mới tự lấy từ `ChiSoCuoi` gần nhất trước đó và không nhập tay để giữ chuỗi audit.
+- Khi nhập chỉ số từ màn hợp đồng, dòng `ChiSoDienNuoc` phải gắn `HopDongId`; cùng phòng/dịch vụ/tháng có thể có nhiều dòng nếu thuộc các hợp đồng khác nhau.
+- `NgayDoc` phải là ngày đọc/bàn giao thực tế, đặc biệt khi trả phòng hoặc khách mới vào cùng tháng. Đây là mốc để nối đúng chỉ số cuối khách cũ sang chỉ số đầu khách mới.
 - Nếu phòng trống/sửa phòng/chủ nhà dùng điện nước sau khi khách cũ trả phòng, ghi vào `ChiSoNgoaiHopDong`; `DenChiSo` mới nhất của bảng này được dùng làm mốc `ChiSoDau` cho kỳ/hợp đồng sau nếu mới hơn chỉ số kỳ trước.
+- Không ghi `ChiSoNgoaiHopDong` cho ngày đang thuộc một hợp đồng của phòng; phần tiêu thụ trong ngày khách còn hợp đồng phải nằm trong `ChiSoDienNuoc` của hợp đồng đó.
+- Khi lập hóa đơn/trả phòng/chuyển phòng, thiếu chỉ số của dịch vụ `TheoChiSo` là lỗi chặn, không âm thầm bỏ qua dòng dịch vụ.
 - `LoaiGhiNhan = Reset`: dùng chung cho đồng hồ reset về 0, hỏng phải thay, thay đồng hồ, hoặc quay vòng số. Chưa tách riêng `HongDongHo`/`ThayDongHo`/`QuayVong` vì công thức tính tiền giống nhau; phân biệt bằng `LyDoDieuChinh`.
 - `ChiSoTruocReset`: chỉ số cuối cùng của đồng hồ cũ/trước khi quay về số thấp hơn.
 - `ChiSoSauReset`: chỉ số bắt đầu sau reset/thay đồng hồ; mặc định nghiệp vụ là 0 nếu bỏ trống.
@@ -292,6 +296,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI nhap chi so hang loat theo ky cho cac phong dang thue co dich vu `TheoChiSo`.
 - UI nhập chỉ số cho phép nhập `ChiSoDau` ở kỳ đầu chưa có dữ liệu cũ; các kỳ sau tự nối từ chỉ số cuối kỳ trước.
 - UI ghi nhận chỉ số ngoài hợp đồng cho điện/nước phát sinh khi phòng trống/sửa phòng; các dòng này chỉ dùng làm audit và mốc bàn giao, không tính vào hóa đơn khách thuê.
+- Chỉ số điện/nước hỗ trợ nhiều đoạn trong cùng phòng/dịch vụ/tháng bằng `ChiSoDienNuoc.HopDongId`; flow trả phòng/chuyển phòng chặn thiếu chỉ số thay vì bỏ qua dịch vụ theo chỉ số.
 - Preview chốt hóa đơn hàng loạt theo kỳ: hiển thị hợp đồng đang hiệu lực, trạng thái dữ liệu, nợ kỳ trước, tổng dự kiến, hỗ trợ filter theo Nhà/từ khóa/trạng thái dòng và chỉ cho chốt các dòng sẵn sàng theo bộ lọc.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
@@ -336,4 +341,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 35 - 01/07/2026
+Cập nhật lần cuối: Phiên 36 - 01/07/2026
