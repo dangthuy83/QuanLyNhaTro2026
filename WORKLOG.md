@@ -11,7 +11,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Mục | Trạng thái |
 |---|---|
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
-| Build | `dotnet build --no-restore` thành công, 0 warning, 0 error |
+| Build | `dotnet build --no-restore` thành công; sau khi restore smoke project tạm ở phiên 36 có thể xuất hiện warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
 | Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
@@ -1396,6 +1396,30 @@ Ghi chú:
 
 - HTTP runtime UI smoke bị blocker môi trường: process nền log có lúc báo app started nhưng không giữ listener ổn định để `Invoke-WebRequest` connect. Đã dừng process test còn treo.
 - Restore/build sau smoke project tạm có warning `NU1900` do không truy cập được vulnerability feed NuGet trong sandbox; không ảnh hưởng lỗi compile/app chính.
+
+---
+
+### Phiên 37 - Migration SQL Cho Chỉ Số Theo Hợp Đồng
+
+Ngày: 01/07/2026
+
+Đã làm:
+
+- Thêm `Database/updates/20260701_contract_scoped_meter_readings.sql`.
+- Migration dùng stored procedure tạm và `INFORMATION_SCHEMA` để tự kiểm tra trước khi:
+  - Thêm `ChiSoDienNuoc.HopDongId`.
+  - Thêm generated column `ChiSoScopeKey = COALESCE(HopDongId, 0)`.
+  - Thêm index FK cho `PhongId`, `DichVuId`.
+  - Drop unique cũ `UQ_ChiSo`.
+  - Tạo unique mới `(PhongId, DichVuId, Thang, Nam, ChiSoScopeKey)`.
+  - Thêm index `IX_ChiSo_HopDong_Ky`.
+  - Thêm FK `FK_ChiSo_HopDong`.
+
+Ghi chú vận hành:
+
+- DB tạo mới dùng `Database/schema.sql`.
+- DB đang tồn tại cần chạy file update này một lần trong MySQL Workbench hoặc MySQL CLI sau khi backup.
+- DB runtime đã smoke test ở phiên 36 đã được apply schema tương đương.
 
 ---
 
