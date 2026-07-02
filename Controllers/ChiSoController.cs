@@ -65,6 +65,7 @@ public class ChiSoController(
         ViewBag.ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId);
         ViewBag.ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu;
         ViewBag.ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu;
+        ViewBag.NguonChiSoDauTheoDichVu = formData.NguonChiSoDauTheoDichVu;
         return View();
     }
 
@@ -87,6 +88,7 @@ public class ChiSoController(
         ViewBag.ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId);
         ViewBag.ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu;
         ViewBag.ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu;
+        ViewBag.NguonChiSoDauTheoDichVu = formData.NguonChiSoDauTheoDichVu;
         return View();
     }
 
@@ -260,6 +262,7 @@ public class ChiSoController(
         var chiSoHienTai = (await chiSoRepo.GetByPhongKyAsync(phongId, thang, nam, hopDongId)).ToList();
         var chiSoDauTheoDichVu = new Dictionary<int, decimal>();
         var choNhapChiSoDauTheoDichVu = new Dictionary<int, bool>();
+        var nguonChiSoDauTheoDichVu = new Dictionary<int, string>();
 
         foreach (var dv in dichVuTheoChiSo)
         {
@@ -268,15 +271,17 @@ public class ChiSoController(
             {
                 chiSoDauTheoDichVu[dv.Id] = current.ChiSoDau;
                 choNhapChiSoDauTheoDichVu[dv.Id] = false;
+                nguonChiSoDauTheoDichVu[dv.Id] = "Đã nhập trong kỳ này";
                 continue;
             }
 
             var startInfo = await ResolveChiSoDauAsync(phongId, hopDongId, ngayBatDauHopDong, dv.Id, thang, nam, null, null);
             chiSoDauTheoDichVu[dv.Id] = startInfo.ChiSoDau;
             choNhapChiSoDauTheoDichVu[dv.Id] = startInfo.ChoNhapTay;
+            nguonChiSoDauTheoDichVu[dv.Id] = startInfo.Nguon;
         }
 
-        return new ChiSoFormData(dichVuTheoChiSo, chiSoHienTai, chiSoDauTheoDichVu, choNhapChiSoDauTheoDichVu);
+        return new ChiSoFormData(dichVuTheoChiSo, chiSoHienTai, chiSoDauTheoDichVu, choNhapChiSoDauTheoDichVu, nguonChiSoDauTheoDichVu);
     }
 
     private async Task<ChiSoHangLoatViewModel> BuildNhapHangLoatViewModelAsync(int thang, int nam)
@@ -295,6 +300,7 @@ public class ChiSoController(
                 var current = formData.ChiSoHienTai.FirstOrDefault(cs => cs.DichVuId == dichVu.Id);
                 var chiSoDau = formData.ChiSoDauTheoDichVu.TryGetValue(dichVu.Id, out var dau) ? dau : 0;
                 var choNhapChiSoDau = formData.ChoNhapChiSoDauTheoDichVu.TryGetValue(dichVu.Id, out var choNhapDau) && choNhapDau;
+                var nguonChiSoDau = formData.NguonChiSoDauTheoDichVu.TryGetValue(dichVu.Id, out var nguon) ? nguon : "";
                 var loaiGhiNhan = current?.LoaiGhiNhan ?? ChiSoDienNuoc.LoaiBinhThuong;
 
                 rows.Add(new ChiSoHangLoatRowViewModel
@@ -309,6 +315,7 @@ public class ChiSoController(
                     DonViTinh = dichVu.DonViTinh,
                     ChiSoId = current?.Id ?? 0,
                     ChiSoDau = chiSoDau,
+                    NguonChiSoDau = nguonChiSoDau,
                     ChiSoCuoi = current?.ChiSoCuoi ?? chiSoDau,
                     NgayDoc = current?.NgayDoc ?? DateTime.Today,
                     ChoNhapChiSoDau = choNhapChiSoDau,
@@ -512,13 +519,13 @@ public class ChiSoController(
         decimal? chiSoDauNhap)
     {
         if (current != null)
-            return new ChiSoDauInfo(current.ChiSoDau, false);
+            return new ChiSoDauInfo(current.ChiSoDau, false, "Đã nhập trong kỳ này");
 
         if (hopDongId.HasValue)
         {
             var kyTruocCungHopDong = await chiSoRepo.GetChiSoCuoiKyTruocAsync(phongId, dichVuId, thang, nam, hopDongId);
             if (kyTruocCungHopDong != null)
-                return new ChiSoDauInfo(kyTruocCungHopDong.ChiSoCuoi, false);
+                return new ChiSoDauInfo(kyTruocCungHopDong.ChiSoCuoi, false, $"Kỳ trước cùng hợp đồng #{hopDongId}");
         }
 
         var cutoffDate = hopDongId.HasValue && ngayBatDauHopDong.HasValue
@@ -533,16 +540,22 @@ public class ChiSoController(
         var ngoaiHopDong = await chiSoNgoaiHopDongRepo.GetLatestBeforeOrOnDateAsync(phongId, dichVuId, cutoffDate);
 
         if (ngoaiHopDong != null && IsNgoaiHopDongNewerThanChiSo(ngoaiHopDong, mocHopDongTruoc))
-            return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false);
+            return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false, $"Chỉ số ngoài hợp đồng ngày {ngoaiHopDong.NgayGhiNhan:dd/MM/yyyy}");
 
         if (mocHopDongTruoc != null)
-            return new ChiSoDauInfo(mocHopDongTruoc.ChiSoCuoi, false);
+            return new ChiSoDauInfo(mocHopDongTruoc.ChiSoCuoi, false, $"Mốc bàn giao gần nhất ngày {ResolveNgayDoc(mocHopDongTruoc):dd/MM/yyyy}");
 
         if (ngoaiHopDong != null)
-            return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false);
+            return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false, $"Chỉ số ngoài hợp đồng ngày {ngoaiHopDong.NgayGhiNhan:dd/MM/yyyy}");
 
-        return new ChiSoDauInfo(chiSoDauNhap ?? 0, true);
+        return new ChiSoDauInfo(chiSoDauNhap ?? 0, true, "Kỳ đầu chưa có dữ liệu cũ");
     }
+
+    private static DateTime ResolveNgayDoc(ChiSoDienNuoc chiSo)
+        => chiSo.NgayDoc?.Date ?? new DateTime(
+            chiSo.Nam,
+            chiSo.Thang,
+            DateTime.DaysInMonth(chiSo.Nam, chiSo.Thang));
 
     private static bool IsNgoaiHopDongNewerThanChiSo(
         ChiSoNgoaiHopDong ngoaiHopDong,
@@ -562,10 +575,11 @@ public class ChiSoController(
 
     private sealed record ChiSoNhapItem(ChiSoDienNuoc ChiSo);
     private sealed record ChiSoValidationResult(List<ChiSoNhapItem> Items, List<string> Errors);
-    private sealed record ChiSoDauInfo(decimal ChiSoDau, bool ChoNhapTay);
+    private sealed record ChiSoDauInfo(decimal ChiSoDau, bool ChoNhapTay, string Nguon);
     private sealed record ChiSoFormData(
         List<DichVu> DichVuTheoChiSo,
         List<ChiSoDienNuoc> ChiSoHienTai,
         Dictionary<int, decimal> ChiSoDauTheoDichVu,
-        Dictionary<int, bool> ChoNhapChiSoDauTheoDichVu);
+        Dictionary<int, bool> ChoNhapChiSoDauTheoDichVu,
+        Dictionary<int, string> NguonChiSoDauTheoDichVu);
 }

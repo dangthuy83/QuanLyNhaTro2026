@@ -6,6 +6,7 @@ namespace QuanLyNhaTro.Controllers;
 
 public class ChiSoNgoaiHopDongController(
     ChiSoNgoaiHopDongRepository chiSoNgoaiHopDongRepo,
+    ChiSoDienNuocRepository chiSoRepo,
     PhongRepository phongRepo,
     DichVuRepository dichVuRepo,
     HopDongRepository hopDongRepo) : Controller
@@ -54,6 +55,33 @@ public class ChiSoNgoaiHopDongController(
         ViewBag.DichVuTheoChiSo = (await dichVuRepo.GetAllAsync())
             .Where(dv => dv.LoaiTinhPhi == DichVu.LoaiTheoChiSo)
             .ToList();
+
+        if (phongId.HasValue && dichVuId.HasValue)
+        {
+            var chiSoGanNhat = await chiSoRepo.GetLatestAsync(phongId.Value, dichVuId.Value);
+            var ngoaiHopDongGanNhat = await chiSoNgoaiHopDongRepo.GetLatestAsync(phongId.Value, dichVuId.Value);
+            ViewBag.GoiYTuChiSo = ResolveGoiYTuChiSo(chiSoGanNhat, ngoaiHopDongGanNhat);
+        }
+    }
+
+    private static decimal? ResolveGoiYTuChiSo(
+        ChiSoDienNuoc? chiSoGanNhat,
+        ChiSoNgoaiHopDong? ngoaiHopDongGanNhat)
+    {
+        if (chiSoGanNhat == null)
+            return ngoaiHopDongGanNhat?.DenChiSo;
+
+        if (ngoaiHopDongGanNhat == null)
+            return chiSoGanNhat.ChiSoCuoi;
+
+        var ngayChiSo = chiSoGanNhat.NgayDoc?.Date ?? new DateTime(
+            chiSoGanNhat.Nam,
+            chiSoGanNhat.Thang,
+            DateTime.DaysInMonth(chiSoGanNhat.Nam, chiSoGanNhat.Thang));
+
+        return ngoaiHopDongGanNhat.NgayGhiNhan.Date >= ngayChiSo
+            ? ngoaiHopDongGanNhat.DenChiSo
+            : chiSoGanNhat.ChiSoCuoi;
     }
 
     private async Task<List<string>> ValidateAsync(ChiSoNgoaiHopDong model)

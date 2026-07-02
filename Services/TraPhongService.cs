@@ -223,6 +223,7 @@ public class TraPhongService(
 
             return new KetQuaTraPhongViewModel
             {
+                PhongId = hd.PhongId,
                 TenPhong = phong?.TenPhong ?? $"Phong #{hd.PhongId}",
                 TenKhachChinh = khach?.HoTen ?? "",
                 NgayTraPhong = ngayTraPhong,

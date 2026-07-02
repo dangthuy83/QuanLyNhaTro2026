@@ -78,6 +78,22 @@ public class ChiSoNgoaiHopDongRepository(IDbConnection db) : BaseRepository(db)
             new { PhongId = phongId, DichVuId = dichVuId, CutoffDate = cutoffDate.Date });
     }
 
+    public async Task<ChiSoNgoaiHopDong?> GetLatestAsync(int phongId, int dichVuId)
+    {
+        const string sql = """
+            SELECT *
+            FROM ChiSoNgoaiHopDong
+            WHERE PhongId = @PhongId
+              AND DichVuId = @DichVuId
+            ORDER BY NgayGhiNhan DESC, Id DESC
+            LIMIT 1
+            """;
+
+        return await _db.QueryFirstOrDefaultAsync<ChiSoNgoaiHopDong>(
+            sql,
+            new { PhongId = phongId, DichVuId = dichVuId });
+    }
+
     public async Task<int> InsertAsync(ChiSoNgoaiHopDong item)
     {
         const string sql = """

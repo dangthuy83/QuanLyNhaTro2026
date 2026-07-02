@@ -90,6 +90,7 @@ else
                                     <input type="hidden" name="Rows[@i].TenDichVu" value="@row.TenDichVu" />
                                     <input type="hidden" name="Rows[@i].DonViTinh" value="@row.DonViTinh" />
                                     <input type="hidden" name="Rows[@i].ChiSoId" value="@row.ChiSoId" />
+                                    <input type="hidden" name="Rows[@i].NguonChiSoDau" value="@row.NguonChiSoDau" />
                                     <input type="hidden" name="Rows[@i].ChoNhapChiSoDau" value="@row.ChoNhapChiSoDau.ToString()" />
                                     <input type="hidden" name="Rows[@i].DaNhap" value="@row.DaNhap.ToString()" />
                                     <input type="hidden" name="Rows[@i].SanLuongHienTai" value="@(row.SanLuongHienTai?.ToString(inv) ?? "")" />
@@ -120,6 +121,10 @@ else
                                     {
                                         <input type="hidden" name="Rows[@i].ChiSoDau" value="@row.ChiSoDau.ToString(inv)" />
                                         <span>@row.ChiSoDau.ToString("N2")</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(row.NguonChiSoDau))
+                                    {
+                                        <div class="small text-muted">Nguồn: @row.NguonChiSoDau</div>
                                     }
                                 </td>
                                 <td>

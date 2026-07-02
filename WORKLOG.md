@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công; sau khi restore smoke project tạm ở phiên 36 có thể xuất hiện warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
 
@@ -21,7 +21,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
-| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*` | Thấp |
+| 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
 | 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
@@ -30,7 +30,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 7 | Rà tiếp flow preview chốt hóa đơn hàng loạt sau vận hành | Đã thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc | Thấp |
 | 8 | Nhắc nợ giai đoạn 2/3 | Sau này mới cân nhắc copy mẫu tin, log đã nhắc, Telegram/ZNS/SMS; chưa làm bây giờ | Thấp |
 | 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
-| 10 | Smoke test UI flow chỉ số nhiều đoạn qua browser | DB smoke đã pass; HTTP runtime trong sandbox bị lỗi process nền không giữ listener ổn định, cần test lại bằng app thật nếu cần kiểm UI | Trung bình |
+| 10 | Rà tiếp UI chỉ số nhiều đoạn sau vận hành thật | Phiên 38 đã smoke test qua MVC form thật; in-app browser plugin bị lỗi hạ tầng `failed to write kernel assets` nên chưa có screenshot browser | Thấp |
 
 ### Quy ước GitHub
 
@@ -1420,6 +1420,51 @@ Ghi chú vận hành:
 - DB tạo mới dùng `Database/schema.sql`.
 - DB đang tồn tại cần chạy file update này một lần trong MySQL Workbench hoặc MySQL CLI sau khi backup.
 - DB runtime đã smoke test ở phiên 36 đã được apply schema tương đương.
+
+---
+
+### Phiên 38 - UI Vận Hành Cho Chỉ Số Nhiều Đoạn
+
+Ngày: 02/07/2026
+
+Đã làm:
+
+- Smoke test UI/MVC form với MySQL thật cho flow:
+  - Khách cũ trả phòng trong cùng tháng, nhập chỉ số cuối với `NgayDoc = 10/06/2026`.
+  - Ghi `ChiSoNgoaiHopDong` cho đoạn phòng trống/sửa phòng.
+  - Tạo hợp đồng khách mới cùng phòng trong cùng tháng.
+  - Nhập chỉ số kỳ đầu khách mới, xác nhận `ChiSoDau` lấy đúng từ `DenChiSo` ngoài hợp đồng.
+  - Preview/chốt hóa đơn khách mới, xác nhận dịch vụ theo chỉ số chỉ tính phần khách mới dùng.
+- Thêm link `Ghi chỉ số ngoài hợp đồng` trên màn trả phòng thành công, truyền sẵn `phongId`.
+- Màn `ChiSoNgoaiHopDong` gợi ý `TuChiSo` từ mốc chỉ số cuối gần nhất của phòng/dịch vụ.
+- Màn nhập chỉ số theo hợp đồng, theo phòng và hàng loạt hiển thị nguồn mốc `ChiSoDau`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+1 Warning(s)
+0 Error(s)
+```
+
+Warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed, không phải lỗi compile.
+
+QA với app chạy MySQL thật tại `http://127.0.0.1:5121`:
+
+- GET `/` trả `200`.
+- GET `/ChiSoNgoaiHopDong?phongId=18&dichVuId=1` trả `200`, có gợi ý mốc gần nhất.
+- GET `/ChiSo/Nhap?hopDongId=21&thang=6&nam=2026` trả `200`, hiển thị `Nguồn: Đã nhập trong kỳ này`.
+- GET `/ChiSo/NhapHangLoat?thang=6&nam=2026` trả `200`.
+- Smoke flow dữ liệu `TEST_UI_CONTRACT_SCOPE_20260702213715`:
+  - Hợp đồng cũ `#20`, hợp đồng mới `#21`, hóa đơn mới `#21`.
+  - Preview khớp `20.00 x 4,000 = 80,000`.
+  - Chi tiết hóa đơn khớp `20.00` và `80,000`.
+
+Ghi chú:
+
+- In-app browser plugin bị lỗi hạ tầng `failed to write kernel assets`, nên QA dùng HTTP MVC form thật với antiforgery token thay vì screenshot browser.
+- App test cổng `5121` đã dừng sau khi kiểm tra.
 
 ---
 

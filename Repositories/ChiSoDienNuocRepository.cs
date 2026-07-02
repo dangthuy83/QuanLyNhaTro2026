@@ -120,6 +120,23 @@ public class ChiSoDienNuocRepository(IDbConnection db) : BaseRepository(db)
             });
     }
 
+    public async Task<ChiSoDienNuoc?> GetLatestAsync(int phongId, int dichVuId)
+    {
+        const string sql = """
+            SELECT *
+            FROM ChiSoDienNuoc
+            WHERE PhongId = @PhongId
+              AND DichVuId = @DichVuId
+            ORDER BY COALESCE(NgayDoc, LAST_DAY(STR_TO_DATE(CONCAT(Nam, '-', LPAD(Thang, 2, '0'), '-01'), '%Y-%m-%d'))) DESC,
+                     Nam DESC, Thang DESC, Id DESC
+            LIMIT 1
+            """;
+
+        return await _db.QueryFirstOrDefaultAsync<ChiSoDienNuoc>(
+            sql,
+            new { PhongId = phongId, DichVuId = dichVuId });
+    }
+
     public async Task<int> InsertAsync(ChiSoDienNuoc cs)
     {
         const string sql = """

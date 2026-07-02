@@ -28,6 +28,7 @@ public class TraPhongViewModel
 
 public class KetQuaTraPhongViewModel
 {
+    public int PhongId { get; set; }
     public string TenPhong { get; set; } = "";
     public string TenKhachChinh { get; set; } = "";
     public DateTime NgayTraPhong { get; set; }

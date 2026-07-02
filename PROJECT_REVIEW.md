@@ -109,6 +109,12 @@ Da xu ly trong phien 36:
 - `TraPhongService` va `ChuyenPhongService` khong con bo qua dich vu `TheoChiSo` khi thieu chi so; thieu chi so la loi chan.
 - `ChiSoNgoaiHopDong` bi chan neu ngay ghi nhan dang nam trong mot hop dong cua phong.
 
+Da nang tiep trong phien 38:
+
+- Sau khi tra phong thanh cong, UI co link sang man `ChiSoNgoaiHopDong` va truyen san `phongId`.
+- Man `ChiSoNgoaiHopDong` goi y `TuChiSo` tu moc chi so gan nhat cua phong/dich vu.
+- Man nhap chi so don/theo phong/hang loat hien nguon moc `ChiSoDau` de biet dang noi tu ky truoc, chi so ngoai hop dong hay moc ban giao gan nhat.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.
@@ -465,6 +471,12 @@ Ket qua phien 36:
 - `ChiSoDienNuoc` co `HopDongId` de cung phong/dich vu/thang co the co nhieu dong theo hop dong khac nhau.
 - Man nhap chi so don/theo phong/hang loat co `NgayDoc` de van hanh dung cac ca tra phong/nhan phong trong cung thang.
 - Lap hoa don, tra phong va chuyen phong se dung chi so dung hop dong truoc, fallback moc theo phong neu can.
+
+Ket qua phien 38:
+
+- Sau tra phong co link nhanh sang ghi `ChiSoNgoaiHopDong` cho phong vua tra.
+- `ChiSoNgoaiHopDong/Index` goi y `TuChiSo` tu chi so cuoi gan nhat.
+- Cac man nhap chi so hien nguon `ChiSoDau`, giup chu nha nhin ro moc dau den tu dau truoc khi luu.
 
 ### 5.2. Preview chot hoa don hang loat - DA XU LY PHIEN 30
 

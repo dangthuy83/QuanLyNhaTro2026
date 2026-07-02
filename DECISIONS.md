@@ -297,6 +297,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI nhập chỉ số cho phép nhập `ChiSoDau` ở kỳ đầu chưa có dữ liệu cũ; các kỳ sau tự nối từ chỉ số cuối kỳ trước.
 - UI ghi nhận chỉ số ngoài hợp đồng cho điện/nước phát sinh khi phòng trống/sửa phòng; các dòng này chỉ dùng làm audit và mốc bàn giao, không tính vào hóa đơn khách thuê.
 - Chỉ số điện/nước hỗ trợ nhiều đoạn trong cùng phòng/dịch vụ/tháng bằng `ChiSoDienNuoc.HopDongId`; flow trả phòng/chuyển phòng chặn thiếu chỉ số thay vì bỏ qua dịch vụ theo chỉ số.
+- UI vận hành chỉ số nhiều đoạn đã có link ghi chỉ số ngoài hợp đồng sau trả phòng, gợi ý `TuChiSo` từ mốc gần nhất và hiển thị nguồn mốc `ChiSoDau` khi nhập chỉ số.
 - Preview chốt hóa đơn hàng loạt theo kỳ: hiển thị hợp đồng đang hiệu lực, trạng thái dữ liệu, nợ kỳ trước, tổng dự kiến, hỗ trợ filter theo Nhà/từ khóa/trạng thái dòng và chỉ cho chốt các dòng sẵn sàng theo bộ lọc.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
@@ -341,4 +342,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 36 - 01/07/2026
+Cập nhật lần cuối: Phiên 38 - 02/07/2026

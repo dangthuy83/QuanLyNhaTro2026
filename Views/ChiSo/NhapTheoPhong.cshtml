@@ -9,6 +9,7 @@
     var chiSoHienTai = ViewBag.ChiSoHienTai as Dictionary<int, QuanLyNhaTro.Models.ChiSoDienNuoc> ?? [];
     var chiSoDauTheoDichVu = ViewBag.ChiSoDauTheoDichVu as Dictionary<int, decimal> ?? [];
     var choNhapChiSoDauTheoDichVu = ViewBag.ChoNhapChiSoDauTheoDichVu as Dictionary<int, bool> ?? [];
+    var nguonChiSoDauTheoDichVu = ViewBag.NguonChiSoDauTheoDichVu as Dictionary<int, string> ?? [];
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     var cancelUrl = returnHopDongId.HasValue
         ? Url.Action("Create", "ChuyenPhong", new { hopDongId = returnHopDongId.Value })
@@ -59,6 +60,7 @@ else
                     chiSoHienTai.TryGetValue(dv.Id, out var cs);
                     var chiSoDau = chiSoDauTheoDichVu.TryGetValue(dv.Id, out var dau) ? dau : 0;
                     var choNhapChiSoDau = choNhapChiSoDauTheoDichVu.TryGetValue(dv.Id, out var choNhapDau) && choNhapDau;
+                    var nguonChiSoDau = nguonChiSoDauTheoDichVu.TryGetValue(dv.Id, out var nguon) ? nguon : "";
                     var loaiGhiNhan = cs?.LoaiGhiNhan ?? QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong;
                     var isReset = loaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiReset;
                     var ngayDoc = cs?.NgayDoc ?? DateTime.Today;
@@ -83,6 +85,10 @@ else
                                     <input type="hidden" name="chiSoDaus" value="@chiSoDau.ToString(inv)" />
                                     <input type="text" class="form-control form-control-sm"
                                            value="@chiSoDau.ToString("N2")" disabled />
+                                }
+                                @if (!string.IsNullOrWhiteSpace(nguonChiSoDau))
+                                {
+                                    <div class="form-text">Nguồn: @nguonChiSoDau</div>
                                 }
                             </div>
                             <div class="col-md-4">
