@@ -17,7 +17,7 @@
     <nav id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 bg-dark text-white" style="width:240px; min-height:100vh;">
         <a href="/" class="d-flex align-items-center mb-3 text-white text-decoration-none">
             <i class="bi bi-house-door-fill me-2 fs-5"></i>
-            <span class="fw-semibold">Nhà trọ</span>
+            <span class="fw-semibold">Quản lý nhà trọ</span>
         </a>
         <hr />
         <ul class="nav nav-pills flex-column mb-auto">
@@ -28,52 +28,52 @@
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="Nha" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "nha" ? "active" : "")">
-                    <i class="bi bi-building me-2"></i>Nha
+                    <i class="bi bi-building me-2"></i>Nhà Trọ
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="Phong" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "phong" ? "active" : "")">
-                    <i class="bi bi-door-open me-2"></i>Phòng trọ
+                    <i class="bi bi-door-open me-2"></i>Phòng Trọ
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="KhachThue" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "khachthue" ? "active" : "")">
-                    <i class="bi bi-people me-2"></i>Khách thuê
+                    <i class="bi bi-people me-2"></i>Khách Thuê
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="HopDong" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "hopdong" ? "active" : "")">
-                    <i class="bi bi-file-earmark-text me-2"></i>Hợp đồng
+                    <i class="bi bi-file-earmark-text me-2"></i>Hợp Đồng
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="ChiSo" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "chiso" ? "active" : "")">
-                    <i class="bi bi-lightning-charge me-2"></i>Chỉ số điện nước
+                    <i class="bi bi-lightning-charge me-2"></i>Chỉ Số Điện Nước
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="ChiSoNgoaiHopDong" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "chiso-ngoai" ? "active" : "")">
-                    <i class="bi bi-tools me-2"></i>Chỉ số ngoài HĐ
+                    <i class="bi bi-tools me-2"></i>Chỉ Số Ngoài HĐ
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="HoaDon" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "hoadon" ? "active" : "")">
-                    <i class="bi bi-receipt me-2"></i>Hóa đơn
+                    <i class="bi bi-receipt me-2"></i>Hóa Đơn
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="ThuChi" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "thuchi" ? "active" : "")">
-                    <i class="bi bi-wallet2 me-2"></i>Thu chi
+                    <i class="bi bi-wallet2 me-2"></i>Thu Chi
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="NhacNo" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "nhacno" ? "active" : "")">
-                    <i class="bi bi-bell me-2"></i>Nhắc nợ
+                    <i class="bi bi-bell me-2"></i>Nhắc Nợ
                 </a>
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="DichVu" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "dichvu" ? "active" : "")">
-                    <i class="bi bi-gear me-2"></i>Dịch vụ
+                    <i class="bi bi-gear me-2"></i>Dịch Vụ
                 </a>
             </li>
             <li class="nav-item mt-2">
@@ -81,7 +81,7 @@
             </li>
             <li class="nav-item mt-1">
                 <a asp-controller="BaoCao" asp-action="CongNo" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "baocao" ? "active" : "")">
-                    <i class="bi bi-graph-up-arrow me-2"></i> Công nợ
+                    <i class="bi bi-graph-up-arrow me-2"></i> Công Nợ
                 </a>
             </li>
         </ul>
