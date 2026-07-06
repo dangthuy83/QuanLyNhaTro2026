@@ -13,6 +13,7 @@ public class TraPhongService(
     PhongDichVuRepository phongDvRepo,
     KhachThueRepository khachRepo,
     LichSuThayDoiGiaRepository lichSuRepo,
+    KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     GiaoDichCocService giaoDichCocService,
     CongNoSettlementService congNoSettlementService)
 {
@@ -54,7 +55,10 @@ public class TraPhongService(
         }
 
         decimal tongNo = await hoaDonRepo.GetTongNoConLaiAsync(hopDongId);
-        if (canSinhHd) tongNo += tienPhongProRata + tongDichVuThangCuoi;
+        var khoanPhatSinh = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(hopDongId, ngayTraPhong);
+        decimal tongPhatSinhChuaXuLy = khoanPhatSinh.Sum(x => x.SoTienConLai);
+        if (canSinhHd) tongNo += tienPhongProRata + tongDichVuThangCuoi + tongPhatSinhChuaXuLy;
+        else tongNo += tongPhatSinhChuaXuLy;
         decimal soDuCoc = await giaoDichCocService.GetSoDuHienTaiAsync(hopDongId);
         decimal tienTruNoTuCoc = Math.Min(soDuCoc, Math.Max(0, tongNo));
 
@@ -70,6 +74,7 @@ public class TraPhongService(
             SoNgayTrongThang = soNgayTrongThang,
             TienPhongProRata = tienPhongProRata,
             TongTienDichVuThangCuoi = tongDichVuThangCuoi,
+            TongTienPhatSinhChuaXuLy = tongPhatSinhChuaXuLy,
             TongNoConLai = tongNo,
             TienTruNoTuCoc = tienTruNoTuCoc,
             TienHoanCoc = soDuCoc - tongNo,
@@ -110,6 +115,7 @@ public class TraPhongService(
         try
         {
             int? hoaDonCuoiId = null;
+            List<KhoanPhatSinhHopDong> khoanPhatSinhChuaXuLy = [];
 
             if (canSinhHd)
             {
@@ -120,17 +126,19 @@ public class TraPhongService(
 
                 var chiTietDv = await TinhChiTietDichVuAsync(conn, tx, hd.PhongId, hopDongId, dvPhong, thang, nam);
                 decimal tongDv = chiTietDv.Sum(d => d.ThanhTien);
-                decimal tongCong = tienPhong + tongDv + noKyTruoc;
+                khoanPhatSinhChuaXuLy = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(conn, tx, hopDongId, ngayTraPhong);
+                decimal tongPhatSinh = khoanPhatSinhChuaXuLy.Sum(x => x.SoTienConLai);
+                decimal tongCong = tienPhong + tongDv + tongPhatSinh + noKyTruoc;
 
                 hoaDonCuoiId = await conn.ExecuteScalarAsync<int>(
                     """
                     INSERT INTO HoaDon
                         (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
-                         TongCong, SoTienDaThu, TrangThaiThanhToan,
+                         TongTienPhatSinh, TongCong, SoTienDaThu, TrangThaiThanhToan,
                          SoNgayO, SoNgayTrongThang, TienNoKyTruoc, GhiChu)
                     VALUES
                         (@HopDongId, @Thang, @Nam, NOW(), @TienPhong, @TongDV,
-                         @TongCong, 0, 'ChuaThu',
+                         @TongTienPhatSinh, @TongCong, 0, 'ChuaThu',
                          @SoNgayO, @SoNgayTrongThang, @TienNoKyTruoc, @GhiChu);
                     SELECT LAST_INSERT_ID();
                     """,
@@ -141,6 +149,7 @@ public class TraPhongService(
                         Nam = nam,
                         TienPhong = tienPhong,
                         TongDV = tongDv,
+                        TongTienPhatSinh = tongPhatSinh,
                         TongCong = tongCong,
                         SoNgayO = soNgayO,
                         SoNgayTrongThang = soNgayTrongThang,
@@ -150,6 +159,11 @@ public class TraPhongService(
                     tx);
 
                 await InsertChiTietAsync(conn, tx, hoaDonCuoiId.Value, chiTietDv);
+                await khoanPhatSinhRepo.GanVaoHoaDonAsync(
+                    conn,
+                    tx,
+                    khoanPhatSinhChuaXuLy.Select(x => x.Id),
+                    hoaDonCuoiId.Value);
 
                 if (noKyTruoc > 0)
                 {
@@ -190,7 +204,12 @@ public class TraPhongService(
                 new { Id = hd.PhongId },
                 tx);
 
-            decimal tongNoTruocXuLyCoc = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
+            decimal tongNoHoaDonTruocXuLyCoc = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
+            if (!canSinhHd)
+                khoanPhatSinhChuaXuLy = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(conn, tx, hopDongId, ngayTraPhong);
+
+            decimal tongPhatSinhChuaXuLy = canSinhHd ? 0 : khoanPhatSinhChuaXuLy.Sum(x => x.SoTienConLai);
+            decimal tongNoTruocXuLyCoc = tongNoHoaDonTruocXuLyCoc + tongPhatSinhChuaXuLy;
             var ketQuaCoc = await giaoDichCocService.TatToanCocKhiTraPhongAsync(
                 conn,
                 tx,
@@ -202,17 +221,38 @@ public class TraPhongService(
 
             if (ketQuaCoc.SoTienTruNo > 0)
             {
-                await congNoSettlementService.ThanhToanNoAsync(
-                    conn,
-                    tx,
-                    hopDongId,
-                    ketQuaCoc.SoTienTruNo,
-                    ngayTraPhong,
-                    "TruCoc",
-                    $"Tru no vao coc khi tra phong hop dong #{hopDongId}");
+                var soTienTruNoHoaDon = Math.Min(ketQuaCoc.SoTienTruNo, tongNoHoaDonTruocXuLyCoc);
+                if (soTienTruNoHoaDon > 0)
+                {
+                    await congNoSettlementService.ThanhToanNoAsync(
+                        conn,
+                        tx,
+                        hopDongId,
+                        soTienTruNoHoaDon,
+                        ngayTraPhong,
+                        "TruCoc",
+                        $"Tru no vao coc khi tra phong hop dong #{hopDongId}");
+                }
+
+                var soTienTruPhatSinh = ketQuaCoc.SoTienTruNo - soTienTruNoHoaDon;
+                if (soTienTruPhatSinh > 0)
+                {
+                    var daTruPhatSinh = await khoanPhatSinhRepo.ApDungTruCocAsync(
+                        conn,
+                        tx,
+                        hopDongId,
+                        soTienTruPhatSinh,
+                        ngayTraPhong);
+
+                    if (daTruPhatSinh != soTienTruPhatSinh)
+                        throw new InvalidOperationException("So tien tru coc cho khoan phat sinh khong khop.");
+                }
             }
 
-            decimal tongNoConLai = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
+            decimal tongNoHoaDonConLai = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
+            decimal tongPhatSinhConLai = (await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(conn, tx, hopDongId, ngayTraPhong))
+                .Sum(x => x.SoTienConLai);
+            decimal tongNoConLai = tongNoHoaDonConLai + tongPhatSinhConLai;
 
             await conn.ExecuteAsync(
                 "UPDATE HopDong SET TienCocHoanLai = @TienCocHoanLai WHERE Id = @Id",
@@ -230,6 +270,7 @@ public class TraPhongService(
                 HoaDonCuoiId = hoaDonCuoiId,
                 TienCoc = ketQuaCoc.SoDuCocTruocXuLy,
                 TongNoConLai = tongNoConLai,
+                TongTienPhatSinhConLai = tongPhatSinhConLai,
                 TienTruNoTuCoc = ketQuaCoc.SoTienTruNo,
                 TienHoanCoc = ketQuaCoc.SoTienHoanCoc - ketQuaCoc.KhachConNoThem,
                 KhachConNoThem = ketQuaCoc.KhachConNoThem,

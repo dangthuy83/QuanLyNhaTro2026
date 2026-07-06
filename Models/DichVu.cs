@@ -8,6 +8,7 @@ public class DichVu
     public int Id { get; set; }
     public string TenDichVu { get; set; } = string.Empty;
     public string LoaiTinhPhi { get; set; } = LoaiCoDinh; // CoDinh | TheoChiSo
+    public decimal DonGiaMacDinh { get; set; }
     public string LoaiTinhPhiHienThi => LoaiTinhPhi switch
     {
         LoaiCoDinh => "Cố định",

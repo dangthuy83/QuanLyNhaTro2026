@@ -68,6 +68,7 @@ CREATE TABLE DichVu (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     TenDichVu VARCHAR(100) NOT NULL,
     LoaiTinhPhi VARCHAR(20) NOT NULL,
+    DonGiaMacDinh DECIMAL(12,2) NOT NULL DEFAULT 0,
     DonViTinh VARCHAR(20) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -248,6 +249,7 @@ CREATE TABLE HoaDon (
     SoNgayO TINYINT NULL,
     SoNgayTrongThang TINYINT NULL,
     TongTienDichVu DECIMAL(12,0) NOT NULL DEFAULT 0,
+    TongTienPhatSinh DECIMAL(12,0) NOT NULL DEFAULT 0,
     TienNoKyTruoc DECIMAL(12,0) NOT NULL DEFAULT 0,
     TongCong DECIMAL(12,0) NOT NULL DEFAULT 0,
     SoTienDaThu DECIMAL(12,0) NOT NULL DEFAULT 0,
@@ -321,6 +323,35 @@ CREATE INDEX IX_GiaoDichCoc_HopDong ON GiaoDichCoc(HopDongId, NgayGiaoDich, Id);
 CREATE INDEX IX_GiaoDichCoc_HoaDon ON GiaoDichCoc(HoaDonId);
 
 -- ============================================================
+-- 12.1. KHOANPHATSINHHOPDONG - khoan mot lan gan voi hop dong
+-- Dung cho den bu hu hong, mat chia khoa, phu thu/phat mot lan.
+-- Neu da dua vao hoa don, cong no di theo HoaDon. Neu tra phong chua co
+-- hoa don moi, khoan nay co the duoc tru truc tiep vao coc.
+-- ============================================================
+CREATE TABLE KhoanPhatSinhHopDong (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    HopDongId INT NOT NULL,
+    HoaDonId INT NULL,
+    NgayPhatSinh DATE NOT NULL,
+    LoaiKhoan VARCHAR(50) NOT NULL,
+    MoTa VARCHAR(500) NOT NULL,
+    SoTien DECIMAL(12,0) NOT NULL,
+    SoTienDaXuLy DECIMAL(12,0) NOT NULL DEFAULT 0,
+    TrangThai VARCHAR(30) NOT NULL DEFAULT 'ChuaXuLy',
+    GhiChu VARCHAR(255) NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_KhoanPhatSinh_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
+    CONSTRAINT FK_KhoanPhatSinh_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
+    CONSTRAINT CK_KhoanPhatSinh_Tien CHECK (SoTien > 0 AND SoTienDaXuLy >= 0 AND SoTienDaXuLy <= SoTien),
+    CONSTRAINT CK_KhoanPhatSinh_TrangThai CHECK (TrangThai IN ('ChuaXuLy', 'DaDuaVaoHoaDon', 'DaThu', 'DaTruCoc', 'DaHuy'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_KhoanPhatSinh_HopDong_TrangThai
+    ON KhoanPhatSinhHopDong(HopDongId, TrangThai, NgayPhatSinh, Id);
+CREATE INDEX IX_KhoanPhatSinh_HoaDon
+    ON KhoanPhatSinhHopDong(HoaDonId);
+
+-- ============================================================
 -- 12. THUCHI — Sổ thu chi ngoài tiền phòng (sửa chữa, mua sắm, lương...)
 -- LoaiThuChi: Thu | Chi
 -- PhongId NULL nếu là thu/chi chung, không gắn phòng cụ thể
@@ -371,12 +402,12 @@ CREATE TABLE LichSuThayDoiGia (
 -- ============================================================
 -- DỮ LIỆU MẪU BAN ĐẦU CHO DICHVU (tùy chỉnh lại đơn giá theo thực tế)
 -- ============================================================
-INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, DonViTinh) VALUES
-    ('Điện', 'TheoChiSo', 'kWh'),
-    ('Nước', 'CoDinh', 'người/tháng'),
-    ('Internet', 'CoDinh', 'tháng'),
-    ('Vệ sinh', 'CoDinh', 'tháng'),
-    ('Gửi xe', 'CoDinh', 'xe/tháng');
+INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, DonGiaMacDinh, DonViTinh) VALUES
+    ('Điện', 'TheoChiSo', 0, 'kWh'),
+    ('Nước', 'CoDinh', 0, 'người/tháng'),
+    ('Internet', 'CoDinh', 0, 'tháng'),
+    ('Vệ sinh', 'CoDinh', 0, 'tháng'),
+    ('Gửi xe', 'CoDinh', 0, 'xe/tháng');
 
 -- ============================================================
 -- GHI CHÚ TỔNG QUAN QUAN HỆ
@@ -390,6 +421,7 @@ INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, DonViTinh) VALUES
 -- HoaDon 1-n ThanhToan
 -- Phong n-n DichVu (qua PhongDichVu, giá riêng từng phòng)
 -- ChiSoDienNuoc 1-n ChiTietHoaDon (qua ChiSoDienNuocId)
+-- KhoanPhatSinhHopDong gan voi HopDong; neu dua vao hoa don thi lien ket HoaDonId
 -- ChiSoNgoaiHopDong audit chỉ số phát sinh ngoài hợp đồng, không liên kết HoaDon
 -- LichSuThayDoiGia tham chiếu LOGIC tới HopDong hoặc PhongDichVu qua
 --   (LoaiDoiTuong, DoiTuongId) — không đặt FK cứng vì DoiTuongId có thể

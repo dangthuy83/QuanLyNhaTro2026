@@ -12,6 +12,7 @@ public class ExcelService
         Phong phong,
         IEnumerable<KhachThue> danhSachKhach,
         IEnumerable<ChiTietHoaDon> chiTiet,
+        IEnumerable<KhoanPhatSinhHopDong> khoanPhatSinh,
         IEnumerable<ThanhToan> lichSuThanhToan)
     {
         using var wb = new XLWorkbook();
@@ -66,6 +67,19 @@ public class ExcelService
             ws.Cell(row, 4).Value = ct.SoLuong;
             ws.Cell(row, 5).Value = ct.DonGia;
             ws.Cell(row, 6).Value = ct.ThanhTien;
+            ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
+            ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
+            row++;
+        }
+
+        foreach (var khoan in khoanPhatSinh)
+        {
+            ws.Cell(row, 1).Value = stt++;
+            ws.Cell(row, 2).Value = khoan.MoTa;
+            ws.Cell(row, 3).Value = khoan.LoaiKhoan;
+            ws.Cell(row, 4).Value = 1;
+            ws.Cell(row, 5).Value = khoan.SoTienConLai > 0 ? khoan.SoTienConLai : khoan.SoTien;
+            ws.Cell(row, 6).Value = khoan.SoTienConLai > 0 ? khoan.SoTienConLai : khoan.SoTien;
             ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
             ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
             row++;

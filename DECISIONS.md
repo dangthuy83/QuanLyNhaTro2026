@@ -65,7 +65,7 @@ Nguyên tắc phân tầng:
 
 ## 3. Schema Hiện Hành
 
-Schema có 15 bảng:
+Schema có 16 bảng:
 
 | Bảng | Vai trò |
 |---|---|
@@ -82,6 +82,7 @@ Schema có 15 bảng:
 | `ChiTietHoaDon` | Dòng dịch vụ của hóa đơn |
 | `ThanhToan` | Lịch sử thu tiền |
 | `GiaoDichCoc` | Ledger tiền cọc theo hợp đồng |
+| `KhoanPhatSinhHopDong` | Khoản một lần gắn với hợp đồng như đền bù hư hỏng, mất chìa khóa, phụ thu |
 | `ThuChi` | Thu chi ngoài tiền phòng |
 | `LichSuThayDoiGia` | Lịch sử thay đổi giá |
 
@@ -90,7 +91,8 @@ Các cột dễ nhầm:
 - `ChiSoDienNuoc` dùng `HopDongId` nullable để tách nhiều đoạn chỉ số cùng phòng/dịch vụ/tháng khi khách cũ trả phòng, phòng trống/sửa chữa phát sinh điện/nước, rồi khách mới vào trong cùng kỳ. `HopDongId IS NULL` chỉ dùng cho mốc theo phòng/tạm trước khi có hợp đồng hoặc fallback dữ liệu cũ.
 - `ChiSoDienNuoc` dùng `LoaiGhiNhan`: `BinhThuong` yêu cầu `ChiSoCuoi >= ChiSoDau`; `Reset` dùng thêm `ChiSoTruocReset` và `ChiSoSauReset` để tính sản lượng khi đồng hồ reset/hỏng/thay/quay vòng.
 - `ChiSoNgoaiHopDong` không liên kết `HoaDon`; bảng này chỉ ghi nhận sản lượng ngoài hợp đồng và mốc bàn giao công tơ.
-- `DichVu` chỉ có `TenDichVu`, `LoaiTinhPhi`, `DonViTinh`; không có `Ten`, `DonVi`, `HienThi`, `GhiChu`.
+- `DichVu` có `DonGiaMacDinh` chỉ để gợi ý khi gán dịch vụ cho phòng; hóa đơn vẫn tính theo `PhongDichVu.DonGia` hoặc lịch sử giá áp dụng.
+- `DichVu` không có `Ten`, `DonVi`, `HienThi`, `GhiChu`.
 - `KhachThue` có `AnhCCCDMatTruoc` và `AnhCCCDMatSau`; không có một cột `AnhCCCD` chung.
 - `PhongDichVu` có `DangApDung`; không có `ApDung` hoặc `NgayTao`.
 - `HoaDon` không có `NgayTao`.
@@ -125,6 +127,13 @@ Các cột dễ nhầm:
 - Không dùng số lượng cố định từ `PhongDichVu`.
 - `ChiTietHoaDon.ChiSoDienNuocId` phải được lưu khi dòng dịch vụ dùng chỉ số.
 - Khi preview/chốt hóa đơn hàng loạt, thiếu chỉ số của dịch vụ `TheoChiSo` là lỗi chặn chốt hóa đơn để tránh bỏ sót tiền dịch vụ.
+
+### 4.4.1 Đơn giá mặc định của dịch vụ
+
+- `DichVu.DonGiaMacDinh` là giá gợi ý khi tạo phòng/gán dịch vụ cho phòng.
+- `PhongDichVu.DonGia` vẫn là đơn giá thực tế áp dụng cho phòng và là nguồn tính hóa đơn.
+- Sửa `DonGiaMacDinh` không tự cập nhật các phòng đã gán dịch vụ.
+- Nếu cần cập nhật giá hàng loạt cho các phòng cũ, phải làm thao tác riêng có xác nhận và ghi lịch sử giá.
 
 ### 4.5 Nợ kỳ trước
 
@@ -213,6 +222,15 @@ Ví dụ:
 - Chưa sinh nội dung tin nhắn mẫu, chưa ghi log đã nhắc, chưa gửi tự động cho khách thuê.
 - Giai đoạn 2/3 như copy nội dung, ghi nhận đã nhắc, Telegram/ZNS/SMS sẽ cân nhắc sau.
 
+### 4.10 Khoản phát sinh theo hợp đồng
+
+- `KhoanPhatSinhHopDong` dùng cho khoản một lần gắn với hợp đồng: đền bù hư hỏng tài sản, mất chìa khóa/thẻ xe, phạt vi phạm, phụ thu khác.
+- Không nhét các khoản này vào `ThuChi`, vì `ThuChi` là sổ thu/chi vận hành và không tự tạo công nợ khách thuê.
+- Không tạo dịch vụ giả cho hư hỏng; `DichVu` chỉ dành cho khoản dịch vụ vận hành định kỳ hoặc theo chỉ số.
+- Khi lập hóa đơn, các khoản `ChuaXuLy` có ngày phát sinh tới cuối kỳ được đưa vào `HoaDon.TongTienPhatSinh` và liên kết bằng `KhoanPhatSinhHopDong.HoaDonId`.
+- Khi khoản đã đưa vào hóa đơn, công nợ/thu tiền đi theo hóa đơn để tránh double-count.
+- Khi trả phòng mà còn khoản phát sinh chưa đưa vào hóa đơn, hệ thống cộng khoản đó vào tổng nợ xử lý cọc. Cọc trừ nợ hóa đơn trước, phần còn lại mới trừ các khoản phát sinh chưa vào hóa đơn.
+
 ---
 
 ## 5. Công Thức Module Chính
@@ -222,10 +240,11 @@ Ví dụ:
 ```
 TienPhong     = Gia phòng áp dụng theo kỳ
 TongTienDV    = Sum(ChiTietHoaDon.ThanhTien)
+TongTienPhatSinh = Sum(KhoanPhatSinhHopDong.SoTien chua xu ly duoc dua vao hoa don)
 TheoChiSo     = ChiSoConsumptionCalculator.Calculate(ChiSoDienNuoc) * DonGia
 CoDinh        = 1 * DonGia
 TienNoKyTruoc = snapshot nợ kỳ trước
-TongCong      = TienPhong + TongTienDV + TienNoKyTruoc
+TongCong      = TienPhong + TongTienDV + TongTienPhatSinh + TienNoKyTruoc
 ```
 
 ### Hóa đơn không trọn tháng
@@ -252,6 +271,7 @@ Sinh 2 hóa đơn liên kết qua `HoaDonGhepId`:
 - Trả giữa tháng hoặc kỳ không trọn tháng nhưng đã có hóa đơn tháng đó: không sinh hóa đơn mới.
 - Hóa đơn trả phòng tính dịch vụ `TheoChiSo` theo chỉ số, dịch vụ `CoDinh` thu trọn một lần nếu hóa đơn tháng cuối được sinh.
 - `TienHoanCoc = SoDuCocThucTe - TongNoConLai`; nếu âm thì khách còn nợ thêm.
+- `TongNoConLai` khi trả phòng gồm nợ hóa đơn còn lại và khoản phát sinh chưa xử lý tới ngày trả phòng.
 
 ### Ledger cọc
 
@@ -298,6 +318,8 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI ghi nhận chỉ số ngoài hợp đồng cho điện/nước phát sinh khi phòng trống/sửa phòng; các dòng này chỉ dùng làm audit và mốc bàn giao, không tính vào hóa đơn khách thuê.
 - Chỉ số điện/nước hỗ trợ nhiều đoạn trong cùng phòng/dịch vụ/tháng bằng `ChiSoDienNuoc.HopDongId`; flow trả phòng/chuyển phòng chặn thiếu chỉ số thay vì bỏ qua dịch vụ theo chỉ số.
 - UI vận hành chỉ số nhiều đoạn đã có link ghi chỉ số ngoài hợp đồng sau trả phòng, gợi ý `TuChiSo` từ mốc gần nhất và hiển thị nguồn mốc `ChiSoDau` khi nhập chỉ số.
+- Dịch vụ có `DonGiaMacDinh` để tự điền khi gán dịch vụ cho phòng, nhưng hóa đơn vẫn dùng `PhongDichVu.DonGia`.
+- UI khoản phát sinh theo hợp đồng cho phép ghi nhận đền bù hư hỏng/mất chìa khóa/phụ thu, đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc.
 - Preview chốt hóa đơn hàng loạt theo kỳ: hiển thị hợp đồng đang hiệu lực, trạng thái dữ liệu, nợ kỳ trước, tổng dự kiến, hỗ trợ filter theo Nhà/từ khóa/trạng thái dòng và chỉ cho chốt các dòng sẵn sàng theo bộ lọc.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
 - Xử lý nợ chuyển kỳ/chuyển hợp đồng bằng dòng `ThanhToan` phi tiền mặt để tránh double-count công nợ.
@@ -342,4 +364,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 38 - 02/07/2026
+Cập nhật lần cuối: Phiên 39 - 06/07/2026

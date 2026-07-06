@@ -158,7 +158,7 @@
                                 </div>
                             </td>
                             <td>
-                                @if (row.ChiTiet.Any())
+                                @if (row.ChiTiet.Any() || row.KhoanPhatSinh.Any())
                                 {
                                     <div class="d-flex flex-column gap-1">
                                         @foreach (var ct in row.ChiTiet)
@@ -174,6 +174,13 @@
                                                 }
                                             </div>
                                         }
+                                        @foreach (var khoan in row.KhoanPhatSinh)
+                                        {
+                                            <div class="small text-danger">
+                                                <span class="fw-semibold">@khoan.MoTa</span>
+                                                <span class="text-muted">@khoan.SoTienConLai.ToString("N0") d</span>
+                                            </div>
+                                        }
                                     </div>
                                 }
                                 else
@@ -182,7 +189,13 @@
                                 }
                             </td>
                             <td class="text-end">@row.TienPhong.ToString("N0")</td>
-                            <td class="text-end">@row.TongTienDichVu.ToString("N0")</td>
+                            <td class="text-end">
+                                @row.TongTienDichVu.ToString("N0")
+                                @if (row.TongTienPhatSinh > 0)
+                                {
+                                    <div class="small text-danger">+ @row.TongTienPhatSinh.ToString("N0") phat sinh</div>
+                                }
+                            </td>
                             <td class="text-end @(row.TienNoKyTruoc > 0 ? "text-danger fw-semibold" : "")">@row.TienNoKyTruoc.ToString("N0")</td>
                             <td class="text-end fw-semibold">@row.TongCong.ToString("N0")</td>
                             <td>
@@ -234,7 +247,7 @@
                         <tr>
                             <td colspan="3">Tổng các dòng sẵn sàng theo bộ lọc</td>
                             <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TienPhong).ToString("N0")</td>
-                            <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TongTienDichVu).ToString("N0")</td>
+                            <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TongTienDichVu + x.TongTienPhatSinh).ToString("N0")</td>
                             <td class="text-end">@Model.Rows.Where(x => x.SanSangChot).Sum(x => x.TienNoKyTruoc).ToString("N0")</td>
                             <td class="text-end">@Model.TongDuKien.ToString("N0")</td>
                             <td></td>

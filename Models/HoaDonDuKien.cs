@@ -9,11 +9,13 @@ public class HoaDonDuKien
     public HoaDon? HoaDonDaCo { get; set; }
     public decimal TienPhong { get; set; }
     public decimal TongTienDichVu { get; set; }
+    public decimal TongTienPhatSinh { get; set; }
     public decimal TienNoKyTruoc { get; set; }
     public decimal TongCong { get; set; }
     public int? SoNgayO { get; set; }
     public int? SoNgayTrongThang { get; set; }
     public List<HoaDonDuKienChiTiet> ChiTiet { get; set; } = [];
+    public List<HoaDonDuKienKhoanPhatSinh> KhoanPhatSinh { get; set; } = [];
     public List<string> CanhBao { get; set; } = [];
     public List<string> Loi { get; set; } = [];
 
@@ -26,6 +28,16 @@ public class HoaDonDuKien
         x.Contains("chỉ số", StringComparison.OrdinalIgnoreCase)
         || x.Contains("chi so", StringComparison.OrdinalIgnoreCase));
     public bool SanSangChot => !CoHoaDonDaCo && Loi.Count == 0;
+}
+
+public class HoaDonDuKienKhoanPhatSinh
+{
+    public int Id { get; set; }
+    public DateTime NgayPhatSinh { get; set; }
+    public string LoaiKhoan { get; set; } = "";
+    public string MoTa { get; set; } = "";
+    public decimal SoTien { get; set; }
+    public decimal SoTienConLai { get; set; }
 }
 
 public class HoaDonDuKienChiTiet

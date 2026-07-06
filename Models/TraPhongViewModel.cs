@@ -20,6 +20,7 @@ public class TraPhongViewModel
     public int SoNgayTrongThang { get; set; }
     public decimal TienPhongProRata { get; set; }
     public decimal TongTienDichVuThangCuoi { get; set; }
+    public decimal TongTienPhatSinhChuaXuLy { get; set; }
     public decimal TongNoConLai { get; set; }
     public decimal TienTruNoTuCoc { get; set; }
     public decimal TienHoanCoc { get; set; }
@@ -35,6 +36,7 @@ public class KetQuaTraPhongViewModel
     public int? HoaDonCuoiId { get; set; }
     public decimal TienCoc { get; set; }
     public decimal TongNoConLai { get; set; }
+    public decimal TongTienPhatSinhConLai { get; set; }
     public decimal TienTruNoTuCoc { get; set; }
     public decimal TienHoanCoc { get; set; }
     public decimal KhachConNoThem { get; set; }

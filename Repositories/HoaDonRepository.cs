@@ -76,11 +76,11 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
         const string sql = """
             INSERT INTO HoaDon
                 (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
-                 TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
+                 TongTienPhatSinh, TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
                  SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu)
             VALUES
                 (@HopDongId, @Thang, @Nam, @NgayLap, @TienPhong, @TongTienDichVu,
-                 @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
+                 @TongTienPhatSinh, @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
                  @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu);
             SELECT LAST_INSERT_ID();
             """;
@@ -92,11 +92,11 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
         const string sql = """
             INSERT INTO HoaDon
                 (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
-                 TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
+                 TongTienPhatSinh, TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
                  SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu)
             VALUES
                 (@HopDongId, @Thang, @Nam, @NgayLap, @TienPhong, @TongTienDichVu,
-                 @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
+                 @TongTienPhatSinh, @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
                  @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu);
             SELECT LAST_INSERT_ID();
             """;

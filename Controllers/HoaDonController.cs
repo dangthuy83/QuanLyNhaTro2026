@@ -8,6 +8,7 @@ namespace QuanLyNhaTro.Controllers;
 public class HoaDonController(
     HoaDonRepository hoaDonRepo,
     ChiTietHoaDonRepository chiTietRepo,
+    KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     ThanhToanRepository thanhToanRepo,
     HopDongRepository hopDongRepo,
     KhachThueRepository khachRepo,
@@ -123,6 +124,7 @@ public class HoaDonController(
 
         hd.HopDong       = await hopDongRepo.GetByIdAsync(hd.HopDongId);
         hd.ChiTiet       = (await chiTietRepo.GetByHoaDonAsync(id)).ToList();
+        hd.KhoanPhatSinh = (await khoanPhatSinhRepo.GetByHoaDonAsync(id)).ToList();
         hd.DanhSachThanhToan = (await thanhToanRepo.GetByHoaDonAsync(id)).ToList();
 
         return View(hd);
@@ -234,10 +236,11 @@ public class HoaDonController(
         var phong     = await phongRepo.GetByIdAsync(hopDong.PhongId);
         var khach     = await khachRepo.GetByHopDongAsync(hd.HopDongId);
         var chiTiet   = await chiTietRepo.GetByHoaDonAsync(id);
+        var khoanPhatSinh = await khoanPhatSinhRepo.GetByHoaDonAsync(id);
         var thanhToan = await thanhToanRepo.GetByHoaDonAsync(id);
 
         var bytes = excelService.XuatPhieuThu(
-            hd, hopDong, phong!, khach, chiTiet, thanhToan);
+            hd, hopDong, phong!, khach, chiTiet, khoanPhatSinh, thanhToan);
 
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -264,6 +267,7 @@ public class HoaDonController(
             Phong = phong,
             DanhSachKhach = (await khachRepo.GetByHopDongAsync(hd.HopDongId)).ToList(),
             ChiTiet = (await chiTietRepo.GetByHoaDonAsync(id)).ToList(),
+            KhoanPhatSinh = (await khoanPhatSinhRepo.GetByHoaDonAsync(id)).ToList(),
             LichSuThanhToan = (await thanhToanRepo.GetByHoaDonAsync(id)).ToList()
         };
 

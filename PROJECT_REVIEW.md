@@ -115,6 +115,14 @@ Da nang tiep trong phien 38:
 - Man `ChiSoNgoaiHopDong` goi y `TuChiSo` tu moc chi so gan nhat cua phong/dich vu.
 - Man nhap chi so don/theo phong/hang loat hien nguon moc `ChiSoDau` de biet dang noi tu ky truoc, chi so ngoai hop dong hay moc ban giao gan nhat.
 
+Da xu ly trong phien 39:
+
+- Them `DichVu.DonGiaMacDinh` de giam thao tac nhap lieu khi gan dich vu cho phong; gia tinh hoa don van nam o `PhongDichVu.DonGia`.
+- Them `KhoanPhatSinhHopDong` cho cac khoan mot lan gan voi hop dong nhu den bu hu hong, mat chia khoa, phu thu/phat.
+- `HoaDonService` dua khoan phat sinh chua xu ly vao hoa don ky phu hop va tach tong tien nay o `HoaDon.TongTienPhatSinh`.
+- `TraPhongService` tinh khoan phat sinh chua xu ly vao tong no tra phong; coc tru no hoa don truoc, phan con lai moi tru khoan phat sinh chua vao hoa don.
+- UI toi thieu da co man quan ly khoan phat sinh tu chi tiet hop dong, hien thi trong chi tiet hoa don, phieu thu HTML/Excel va preview chot hoa don.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.
@@ -581,8 +589,9 @@ Neu lam app cho khach thue xem hoa don:
 ## 7. Thu tu uu tien de thao luan/lam tiep
 
 1. Ra UI in phieu thu sau van hanh neu can them logo/thong tin chu nha/mau phieu rieng.
-2. Nang UI ledger coc neu chu nha can doi soat coc thuong xuyen: filter theo hop dong/phong/loai giao dich, in/xuat so coc.
-3. Nhac no giai doan 2/3: copy mau tin, log da nhac, Telegram/ZNS/SMS neu that su can.
+2. Ra soat UI khoan phat sinh sau pilot: co can anh hien trang, danh muc tai san trong phong, hay bao cao rieng khong.
+3. Nang UI ledger coc neu chu nha can doi soat coc thuong xuyen: filter theo hop dong/phong/loai giao dich, in/xuat so coc.
+4. Nhac no giai doan 2/3: copy mau tin, log da nhac, Telegram/ZNS/SMS neu that su can.
 
 ---
 

@@ -11,11 +11,11 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Mục | Trạng thái |
 |---|---|
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
-| Build | `dotnet build --no-restore` thành công; sau khi restore smoke project tạm ở phiên 36 có thể xuất hiện warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed |
+| Build | `dotnet build --no-restore` thành công; sau khi restore smoke project tạm có thể xuất hiện warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
-| Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset` |
+| Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset`; `DichVu.DonGiaMacDinh` chỉ là giá gợi ý, hóa đơn vẫn dùng `PhongDichVu.DonGia`; khoản phát sinh theo hợp đồng được đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc |
 
 ### Việc cần làm tiếp
 
@@ -31,6 +31,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 8 | Nhắc nợ giai đoạn 2/3 | Sau này mới cân nhắc copy mẫu tin, log đã nhắc, Telegram/ZNS/SMS; chưa làm bây giờ | Thấp |
 | 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 | 10 | Rà tiếp UI chỉ số nhiều đoạn sau vận hành thật | Phiên 38 đã smoke test qua MVC form thật; in-app browser plugin bị lỗi hạ tầng `failed to write kernel assets` nên chưa có screenshot browser | Thấp |
+| 11 | Rà UI khoản phát sinh sau pilot | Đã có bản tối thiểu cho hợp đồng/hóa đơn/trả phòng; theo dõi nhu cầu ảnh hiện trạng, danh mục tài sản, hoặc báo cáo riêng | Thấp |
 
 ### Quy ước GitHub
 
@@ -1465,6 +1466,55 @@ Ghi chú:
 
 - In-app browser plugin bị lỗi hạ tầng `failed to write kernel assets`, nên QA dùng HTTP MVC form thật với antiforgery token thay vì screenshot browser.
 - App test cổng `5121` đã dừng sau khi kiểm tra.
+
+---
+
+### Phiên 39 - Giá Dịch Vụ Mặc Định Và Khoản Phát Sinh Hợp Đồng
+
+Ngày: 06/07/2026
+
+Quyết định nghiệp vụ:
+
+- `DichVu.DonGiaMacDinh` chỉ là giá gợi ý khi gán dịch vụ cho phòng.
+- `PhongDichVu.DonGia` vẫn là đơn giá thực tế áp dụng và là nguồn tính hóa đơn.
+- Khi sửa giá mặc định của dịch vụ, không tự cập nhật các phòng đã gán dịch vụ.
+- Khoản khách làm hỏng đồ/mất chìa khóa/phụ thu một lần được quản lý bằng `KhoanPhatSinhHopDong`, không nhét vào `ThuChi` và không tạo dịch vụ giả.
+- Khoản phát sinh chưa xử lý được đưa vào hóa đơn kỳ phù hợp hoặc cộng vào tổng nợ khi trả phòng để có thể trừ cọc.
+
+Đã làm:
+
+- Cập nhật `Database/schema.sql`:
+  - Thêm `DichVu.DonGiaMacDinh`.
+  - Thêm `HoaDon.TongTienPhatSinh`.
+  - Thêm bảng `KhoanPhatSinhHopDong`.
+- Thêm migration `Database/updates/20260706_default_service_price_and_contract_charges.sql`.
+- Thêm model/repository/controller/view cho khoản phát sinh hợp đồng.
+- Màn `DichVu` cho nhập/sửa đơn giá mặc định.
+- Màn tạo phòng tự điền đơn giá dịch vụ từ `DichVu.DonGiaMacDinh`.
+- `HoaDonService` đưa khoản phát sinh chưa xử lý tới cuối kỳ vào hóa đơn và liên kết lại `HoaDonId`.
+- `TraPhongService` cộng khoản phát sinh chưa xử lý vào tổng nợ trả phòng; cọc trừ nợ hóa đơn trước, phần còn lại mới trừ khoản phát sinh chưa vào hóa đơn.
+- Chi tiết hóa đơn, phiếu thu HTML, xuất phiếu thu Excel và preview chốt hóa đơn hiển thị khoản phát sinh.
+- Chi tiết hợp đồng có khu vực/link quản lý khoản phát sinh.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+```
+
+DB runtime:
+
+- Đã apply additive migration bằng runner tạm trong `obj/`.
+- Rerun migration báo các cột/bảng/index đã tồn tại.
+- Warning `NU1900` khi chạy runner do sandbox không truy cập được NuGet vulnerability feed.
+
+Ghi chú:
+
+- HTTP smoke bằng `Start-Job` vẫn bị lỗi hạ tầng Windows EventLog của sandbox khi Kestrel cố ghi event log; không để lại process/cổng treo.
+- DB đang tồn tại ở môi trường khác cần chạy một lần file `Database/updates/20260706_default_service_price_and_contract_charges.sql`.
 
 ---
 

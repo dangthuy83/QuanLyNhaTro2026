@@ -14,6 +14,7 @@ public class HoaDonService(
     HopDongRepository hopDongRepo,
     PhongDichVuRepository phongDichVuRepo,
     ChiSoDienNuocRepository chiSoRepo,
+    KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     LichSuThayDoiGiaRepository lichSuGiaRepo,
     CongNoSettlementService congNoSettlementService)
 {
@@ -52,6 +53,7 @@ public class HoaDonService(
             NgayLap = DateTime.Now,
             TienPhong = duKien.TienPhong,
             TongTienDichVu = duKien.TongTienDichVu,
+            TongTienPhatSinh = duKien.TongTienPhatSinh,
             TienNoKyTruoc = duKien.TienNoKyTruoc,
             TongCong = duKien.TongCong,
             SoTienDaThu = 0,
@@ -87,6 +89,12 @@ public class HoaDonService(
                     ThanhTien = ct.ThanhTien
                 });
             }
+
+            await khoanPhatSinhRepo.GanVaoHoaDonAsync(
+                conn,
+                tx,
+                duKien.KhoanPhatSinh.Select(x => x.Id),
+                hoaDonId);
 
             if (duKien.TienNoKyTruoc > 0)
             {
@@ -225,11 +233,30 @@ public class HoaDonService(
             }
         }
 
+        var denNgay = new DateTime(nam, thang, BillingPeriodCalculator.GetDaysInMonth(thang, nam));
+        var khoanPhatSinh = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(hopDongId, denNgay);
+        foreach (var khoan in khoanPhatSinh)
+        {
+            result.KhoanPhatSinh.Add(new HoaDonDuKienKhoanPhatSinh
+            {
+                Id = khoan.Id,
+                NgayPhatSinh = khoan.NgayPhatSinh,
+                LoaiKhoan = khoan.LoaiKhoan,
+                MoTa = khoan.MoTa,
+                SoTien = khoan.SoTien,
+                SoTienConLai = khoan.SoTienConLai
+            });
+            result.TongTienPhatSinh += khoan.SoTienConLai;
+        }
+
+        if (result.TongTienPhatSinh > 0)
+            result.CanhBao.Add($"Co khoan phat sinh {result.TongTienPhatSinh:N0} d.");
+
         result.TienNoKyTruoc = await TinhNoKyTruocAsync(hopDong, thang, nam);
         if (result.TienNoKyTruoc > 0)
             result.CanhBao.Add($"Co no ky truoc {result.TienNoKyTruoc:N0} d.");
 
-        result.TongCong = result.TienPhong + result.TongTienDichVu + result.TienNoKyTruoc;
+        result.TongCong = result.TienPhong + result.TongTienDichVu + result.TongTienPhatSinh + result.TienNoKyTruoc;
         return result;
     }
 

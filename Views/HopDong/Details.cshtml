@@ -3,6 +3,7 @@
     ViewData["Title"] = "Chi tiết hợp đồng";
     ViewData["ActiveMenu"] = "hopdong";
     var danhSachKhach = ViewBag.DanhSachKhach as IEnumerable<QuanLyNhaTro.Models.HopDongKhachThue> ?? [];
+    var khoanPhatSinh = ViewBag.KhoanPhatSinh as IEnumerable<QuanLyNhaTro.Models.KhoanPhatSinhHopDong> ?? [];
     bool dangHieuLuc = Model.TrangThai == "DangHieuLuc";
     decimal soDuCoc = ViewBag.SoDuCoc is decimal value ? value : Model.TienCoc;
 }
@@ -133,6 +134,10 @@
                            class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-wallet2 me-1"></i>Ledger coc
                         </a>
+                        <a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id"
+                           class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-exclamation-diamond me-1"></i>Khoan phat sinh
+                        </a>
                         <form asp-action="KetThuc" asp-route-id="@Model.Id" method="post"
                               onsubmit="return confirm('Xác nhận kết thúc hợp đồng?')">
                             @Html.AntiForgeryToken()
@@ -146,6 +151,43 @@
                     </div>
                 </div>
             </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="card-title text-muted mb-0">Khoan phat sinh</h6>
+            <a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id"
+               class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-plus-lg me-1"></i>Quan ly
+            </a>
+        </div>
+        @if (khoanPhatSinh.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr><th>Ngay</th><th>Noi dung</th><th class="text-end">So tien</th><th>Trang thai</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in khoanPhatSinh.Take(5))
+                        {
+                            <tr>
+                                <td>@item.NgayPhatSinh.ToString("dd/MM/yyyy")</td>
+                                <td>@item.MoTa</td>
+                                <td class="text-end">@item.SoTien.ToString("N0") d</td>
+                                <td>@item.TrangThai</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted mb-0">Chua co khoan phat sinh nao.</p>
         }
     </div>
 </div>

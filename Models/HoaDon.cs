@@ -11,8 +11,9 @@ public class HoaDon
     // Snapshot — ghi cứng lúc lập, KHÔNG tính lại sau
     public decimal TienPhong { get; set; }
     public decimal TongTienDichVu { get; set; }
+    public decimal TongTienPhatSinh { get; set; }
     public decimal TienNoKyTruoc { get; set; }  // Âm = khách đang dư
-    public decimal TongCong { get; set; }       // = TienPhong + TongTienDichVu + TienNoKyTruoc
+    public decimal TongCong { get; set; }       // = TienPhong + TongTienDichVu + TongTienPhatSinh + TienNoKyTruoc
 
     // Thanh toán
     public decimal SoTienDaThu { get; set; }    // Denormalized sum từ ThanhToan — update cùng transaction
@@ -30,5 +31,6 @@ public class HoaDon
     // Navigation
     public HopDong? HopDong { get; set; }
     public List<ChiTietHoaDon> ChiTiet { get; set; } = [];
+    public List<KhoanPhatSinhHopDong> KhoanPhatSinh { get; set; } = [];
     public List<ThanhToan> DanhSachThanhToan { get; set; } = [];
 }

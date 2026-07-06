@@ -52,6 +52,13 @@
                                 <td class="text-end fw-semibold">@Model.TongTienDichVuThangCuoi.ToString("N0") d</td>
                             </tr>
                         }
+                        @if (Model.TongTienPhatSinhChuaXuLy > 0)
+                        {
+                            <tr>
+                                <td class="text-muted">Khoan phat sinh chua xu ly</td>
+                                <td class="text-end fw-semibold text-danger">@Model.TongTienPhatSinhChuaXuLy.ToString("N0") d</td>
+                            </tr>
+                        }
                         <tr>
                             <td class="text-muted">Tổng nợ còn lại</td>
                             <td class="text-end fw-semibold text-danger">@Model.TongNoConLai.ToString("N0") đ</td>

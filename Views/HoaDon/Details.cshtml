@@ -59,6 +59,23 @@
                                 <td class="text-end">@ct.ThanhTien.ToString("N0") đ</td>
                             </tr>
                         }
+                        @foreach (var khoan in Model.KhoanPhatSinh)
+                        {
+                            <tr>
+                                <td>
+                                    @khoan.MoTa
+                                    <small class="text-muted">(@khoan.LoaiKhoan)</small>
+                                </td>
+                                <td class="text-end">@khoan.SoTien.ToString("N0") d</td>
+                            </tr>
+                        }
+                        @if (!Model.KhoanPhatSinh.Any() && Model.TongTienPhatSinh > 0)
+                        {
+                            <tr class="text-danger">
+                                <td>Tong khoan phat sinh</td>
+                                <td class="text-end">@Model.TongTienPhatSinh.ToString("N0") d</td>
+                            </tr>
+                        }
                         @if (Model.TienNoKyTruoc != 0)
                         {
                             <tr class="@(Model.TienNoKyTruoc > 0 ? "text-danger" : "text-success")">

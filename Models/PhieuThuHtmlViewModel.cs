@@ -7,6 +7,7 @@ public class PhieuThuHtmlViewModel
     public Phong Phong { get; set; } = new();
     public List<KhachThue> DanhSachKhach { get; set; } = [];
     public List<ChiTietHoaDon> ChiTiet { get; set; } = [];
+    public List<KhoanPhatSinhHopDong> KhoanPhatSinh { get; set; } = [];
     public List<ThanhToan> LichSuThanhToan { get; set; } = [];
 
     public decimal ConLai => HoaDon.TongCong - HoaDon.SoTienDaThu;

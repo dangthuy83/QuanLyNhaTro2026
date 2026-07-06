@@ -12,7 +12,8 @@ public class HopDongController(
     KhachThueRepository khachThueRepo,
     HopDongService hopDongService,
     PhongService phongService,
-    GiaoDichCocService giaoDichCocService) : Controller
+    GiaoDichCocService giaoDichCocService,
+    KhoanPhatSinhHopDongRepository khoanPhatSinhRepo) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -28,6 +29,7 @@ public class HopDongController(
 
         ViewBag.DanhSachKhach = await hdKhachRepo.GetByHopDongAsync(id);
         ViewBag.SoDuCoc = await giaoDichCocService.GetSoDuHienTaiAsync(id);
+        ViewBag.KhoanPhatSinh = await khoanPhatSinhRepo.GetByHopDongAsync(id);
         return View(hd);
     }
 

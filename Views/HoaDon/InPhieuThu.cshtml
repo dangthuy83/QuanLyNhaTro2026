@@ -182,6 +182,18 @@
                         <td class="text-end fw-semibold">@ct.ThanhTien.ToString("N0")</td>
                     </tr>
                 }
+                @foreach (var khoan in Model.KhoanPhatSinh)
+                {
+                    stt++;
+                    <tr>
+                        <td>@stt</td>
+                        <td>@khoan.MoTa</td>
+                        <td>@khoan.LoaiKhoan</td>
+                        <td class="text-end">1</td>
+                        <td class="text-end">@khoan.SoTien.ToString("N0")</td>
+                        <td class="text-end fw-semibold">@khoan.SoTien.ToString("N0")</td>
+                    </tr>
+                }
                 @if (Model.HoaDon.TienNoKyTruoc != 0)
                 {
                     stt++;
