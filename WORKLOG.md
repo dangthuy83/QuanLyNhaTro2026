@@ -1630,7 +1630,7 @@ PASS_BULK_AND_PREVIEW=True
 File dọn dữ liệu test:
 
 - `Database/cleanup/TEST_FSB_20260707213224_cleanup.sql`
-- File dùng bảng tạm ID và điều kiện khóa như `Id >= 0`/`Id IN (...)`, phù hợp chạy trong MySQL Workbench khi bật Safe Updates.
+- File dùng ID hằng trực tiếp và khóa ngoại có index, tránh `DELETE ... IN (SELECT ... FROM temp table)` để phù hợp MySQL Workbench khi bật Safe Updates.
 
 ---
 
