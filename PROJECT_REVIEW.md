@@ -123,6 +123,13 @@ Da xu ly trong phien 39:
 - `TraPhongService` tinh khoan phat sinh chua xu ly vao tong no tra phong; coc tru no hoa don truoc, phan con lai moi tru khoan phat sinh chua vao hoa don.
 - UI toi thieu da co man quan ly khoan phat sinh tu chi tiet hop dong, hien thi trong chi tiet hoa don, phieu thu HTML/Excel va preview chot hoa don.
 
+Da xu ly trong phien 40:
+
+- Them `DichVu.CachTinhCoDinh` de giu nguyen `LoaiTinhPhi = CoDinh` nhung tach cach tinh so luong `TheoPhong` hoac `TheoNguoi`.
+- `HoaDonService`, `TraPhongService` va `ChuyenPhongService` tinh dich vu `CoDinh + TheoNguoi` bang so khach dang gan trong `HopDongKhachThue`.
+- Neu hop dong chua gan khach ma co dich vu co dinh tinh theo nguoi, preview/chot hoa don bi chan de tranh tinh `SoLuong = 0`.
+- Chua xu ly bien dong nhan khau theo ngay trong cung hop dong; can them moc ngay rieng vao `HopDongKhachThue` neu sau nay can tinh theo ngay.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.

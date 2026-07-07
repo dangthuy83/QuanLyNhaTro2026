@@ -83,7 +83,13 @@
                     {
                         <tr>
                             <td>@pdv.DichVu?.TenDichVu</td>
-                            <td><span class="badge bg-light text-dark border">@pdv.DichVu?.LoaiTinhPhiHienThi</span></td>
+                            <td>
+                                <span class="badge bg-light text-dark border">@pdv.DichVu?.LoaiTinhPhiHienThi</span>
+                                @if (pdv.DichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh)
+                                {
+                                    <span class="badge bg-light text-dark border">@pdv.DichVu.CachTinhCoDinhHienThi</span>
+                                }
+                            </td>
                             <td class="text-end">
                                 <input type="number" class="form-control form-control-sm text-end"
                                        style="width:120px; display:inline-block"

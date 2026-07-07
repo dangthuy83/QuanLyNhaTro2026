@@ -27,6 +27,7 @@
                 <tr>
                     <th>Tên dịch vụ</th>
                     <th>Loại tính phí</th>
+                    <th>Cách tính cố định</th>
                     <th>Đơn vị</th>
                     <th class="text-end">Giá mặc định</th>
                     <th></th>
@@ -38,6 +39,16 @@
                     <tr>
                         <td class="fw-semibold">@dv.TenDichVu</td>
                         <td><span class="badge bg-light text-dark border">@dv.LoaiTinhPhiHienThi</span></td>
+                        <td>
+                            @if (dv.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh)
+                            {
+                                <span class="badge bg-light text-dark border">@dv.CachTinhCoDinhHienThi</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Không áp dụng</span>
+                            }
+                        </td>
                         <td>@dv.DonViTinh</td>
                         <td class="text-end">@dv.DonGiaMacDinh.ToString("N0") đ</td>
                         <td class="text-end">
@@ -45,6 +56,7 @@
                                     data-id="@dv.Id"
                                     data-ten="@dv.TenDichVu"
                                     data-loai="@dv.LoaiTinhPhi"
+                                    data-cachtinh="@dv.CachTinhCoDinh"
                                     data-donvi="@dv.DonViTinh"
                                     data-dongia="@dv.DonGiaMacDinh.ToString("0.##", CultureInfo.InvariantCulture)"
                                     onclick="suaDichVu(this)">
@@ -55,7 +67,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="5" class="text-center text-muted py-4">Chưa có dịch vụ nào.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4">Chưa có dịch vụ nào.</td></tr>
                 }
             </tbody>
         </table>
@@ -107,13 +119,33 @@
 
 @section Scripts {
 <script>
+function syncCachTinhCoDinh(form) {
+    const loai = form.querySelector('[name=LoaiTinhPhi]');
+    const cachTinh = form.querySelector('[name=CachTinhCoDinh]');
+    if (!loai || !cachTinh) return;
+
+    const isCoDinh = loai.value === 'CoDinh';
+    cachTinh.disabled = !isCoDinh;
+    if (!isCoDinh) {
+        cachTinh.value = 'TheoPhong';
+    }
+}
+
+document.querySelectorAll('#modalThemDV form, #modalSuaDV form').forEach((form) => {
+    form.querySelector('[name=LoaiTinhPhi]')?.addEventListener('change', () => syncCachTinhCoDinh(form));
+    syncCachTinhCoDinh(form);
+});
+
 function suaDichVu(button) {
     const m = document.getElementById('modalSuaDV');
+    const form = m.querySelector('form');
     document.getElementById('editId').value = button.dataset.id;
     m.querySelector('[name=TenDichVu]').value = button.dataset.ten || '';
     m.querySelector('[name=LoaiTinhPhi]').value = button.dataset.loai || 'CoDinh';
+    m.querySelector('[name=CachTinhCoDinh]').value = button.dataset.cachtinh || 'TheoPhong';
     m.querySelector('[name=DonViTinh]').value = button.dataset.donvi || '';
     m.querySelector('[name=DonGiaMacDinh]').value = button.dataset.dongia || 0;
+    syncCachTinhCoDinh(form);
     new bootstrap.Modal(m).show();
 }
 </script>

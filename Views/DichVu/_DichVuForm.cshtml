@@ -13,6 +13,14 @@
     </select>
 </div>
 <div class="mb-2">
+    <label class="form-label small fw-semibold">Cách tính cố định</label>
+    <select name="CachTinhCoDinh" class="form-select form-select-sm">
+        <option value="TheoPhong" selected="@(Model.CachTinhCoDinh == "TheoPhong")">Theo phòng</option>
+        <option value="TheoNguoi" selected="@(Model.CachTinhCoDinh == "TheoNguoi")">Theo người</option>
+    </select>
+    <div class="form-text small">Chỉ áp dụng khi loại tính phí là cố định.</div>
+</div>
+<div class="mb-2">
     <label class="form-label small fw-semibold">Đơn vị</label>
     <input name="DonViTinh" class="form-control form-control-sm" value="@Model.DonViTinh" placeholder="kWh, m3, tháng..." />
 </div>

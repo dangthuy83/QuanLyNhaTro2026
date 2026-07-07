@@ -10,7 +10,7 @@ public class ChiSoNgoaiHopDongRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             SELECT cs.*, p.Id AS PhongSplitId, p.Id, p.NhaId, p.TenPhong, p.TrangThai,
-                   dv.Id AS DichVuSplitId, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.DonViTinh
+                   dv.Id AS DichVuSplitId, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh
             FROM ChiSoNgoaiHopDong cs
             INNER JOIN Phong p ON p.Id = cs.PhongId
             INNER JOIN DichVu dv ON dv.Id = cs.DichVuId

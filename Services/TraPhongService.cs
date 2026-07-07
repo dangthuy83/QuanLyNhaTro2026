@@ -315,12 +315,13 @@ public class TraPhongService(
             }
             else
             {
+                var soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(conn, tx, hopDongId, dv.DichVu!);
                 result.Add(new ChiTietDichVuTam(
                     dv.DichVuId,
                     null,
-                    1,
+                    soLuong,
                     donGia,
-                    Math.Round(donGia, 0)));
+                    Math.Round(soLuong * donGia, 0)));
             }
         }
 

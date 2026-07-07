@@ -47,6 +47,7 @@ public class HoaDonDuKienChiTiet
     public int? ChiSoDienNuocId { get; set; }
     public string TenDichVu { get; set; } = "";
     public string LoaiTinhPhi { get; set; } = "";
+    public string CachTinhCoDinh { get; set; } = "";
     public decimal SoLuong { get; set; }
     public decimal DonGia { get; set; }
     public decimal ThanhTien { get; set; }

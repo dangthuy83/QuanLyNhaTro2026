@@ -11,11 +11,11 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Mục | Trạng thái |
 |---|---|
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
-| Build | `dotnet build --no-restore` thành công; sau khi restore smoke project tạm có thể xuất hiện warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed |
+| Build | `dotnet build --no-restore` thành công với 0 warning, 0 error; `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. Phiên 40 thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`; DB hiện hữu cần chạy file này một lần trước khi dùng code mới. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
-| Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset`; `DichVu.DonGiaMacDinh` chỉ là giá gợi ý, hóa đơn vẫn dùng `PhongDichVu.DonGia`; khoản phát sinh theo hợp đồng được đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc |
+| Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset`; `DichVu.DonGiaMacDinh` chỉ là giá gợi ý, hóa đơn vẫn dùng `PhongDichVu.DonGia`; `DichVu.CachTinhCoDinh` cho dịch vụ cố định dùng `TheoPhong` hoặc `TheoNguoi`; khoản phát sinh theo hợp đồng được đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc |
 
 ### Việc cần làm tiếp
 
@@ -1518,6 +1518,50 @@ Ghi chú:
 
 ---
 
+### Phiên 40 - Cách Tính Dịch Vụ Cố Định Theo Người
+
+Ngày: 07/07/2026
+
+Quyết định nghiệp vụ:
+
+- Giữ `DichVu.LoaiTinhPhi` chỉ gồm `CoDinh` và `TheoChiSo`.
+- Thêm `DichVu.CachTinhCoDinh` cho riêng dịch vụ cố định:
+  - `TheoPhong`: `SoLuong = 1`.
+  - `TheoNguoi`: `SoLuong = COUNT(HopDongKhachThue)` theo hợp đồng.
+- `TheoChiSo` giữ nguyên logic sản lượng từ `ChiSoDienNuoc`.
+- Nếu dịch vụ `CoDinh + TheoNguoi` nhưng hợp đồng chưa gắn khách, preview/chốt hóa đơn bị chặn để tránh tính 0.
+- Chưa làm biến động nhân khẩu theo ngày vì `HopDongKhachThue` chưa có mốc ngày riêng.
+
+Đã làm:
+
+- Cập nhật `Database/schema.sql` thêm `DichVu.CachTinhCoDinh`, CHECK constraint và seed mẫu: `Nước` mặc định `TheoNguoi`, các dịch vụ cố định còn lại giữ `TheoPhong`.
+- Thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`.
+- Cập nhật `DichVu` model, `DichVuRepository` và các repository join `DichVu`.
+- Màn `DichVu` cho chọn cách tính cố định và khóa lựa chọn này khi loại tính phí là `TheoChiSo`.
+- Màn tạo/sửa/chi tiết phòng hiển thị thêm nhãn cách tính cố định cho dịch vụ đã gán.
+- Thêm `FixedServiceQuantityCalculator` dùng chung cho dịch vụ `CoDinh`.
+- Cập nhật `HoaDonService.TinhHoaDonDuKienAsync`, `TraPhongService` và `ChuyenPhongService` để tính `CoDinh + TheoNguoi` theo số khách trong `HopDongKhachThue`.
+- Preview chốt hóa đơn hàng loạt và chốt đơn lẻ dùng lại logic này nên sẽ hiển thị `SoLuong` đúng và chặn dòng thiếu khách.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+
+dotnet test --no-restore
+Exit code 0; no meaningful test output in this repo.
+```
+
+Ghi chú:
+
+- Chưa chạy HTTP smoke vì blocker sandbox Windows EventLog đã được ghi nhận từ phiên 39.
+- DB đang tồn tại cần chạy một lần file `Database/updates/20260707_fixed_service_quantity_method.sql`, sau đó rà lại các dịch vụ cố định thực tế và đổi sang `TheoNguoi` nếu cần.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1550,6 +1594,7 @@ Ghi chú:
 | 34 | `ChiSo/Nhap`, `ChiSo/NhapTheoPhong`, `ChiSo/NhapHangLoat` | Kỳ đầu chưa có dữ liệu cũ bị khóa `ChiSoDau = 0`, sai khi đồng hồ thực tế không bắt đầu từ 0 | Cho nhập `ChiSoDau` khi chưa có kỳ trước; các kỳ sau vẫn tự nối từ chỉ số cuối kỳ trước |
 | 35 | `ChiSoNgoaiHopDong`, `ChiSoController` | Khi phòng trống/sửa phòng có phát sinh điện/nước, chỉ số đầu khách mới có thể khác chỉ số cuối khách cũ | Thêm bảng audit ngoài hợp đồng và dùng `DenChiSo` mới nhất làm mốc đầu kỳ sau nếu phù hợp |
 | 36 | `ChiSoDienNuoc`, `ChiSoController`, `TraPhongService`, `ChuyenPhongService` | Một phòng/dịch vụ/tháng chỉ có một dòng chỉ số nên không tách được khách cũ, phòng trống và khách mới trong cùng tháng | Thêm `HopDongId` nullable cho chỉ số, dùng `NgayDoc` làm mốc bàn giao, cho phép nhiều đoạn theo hợp đồng và chặn thiếu chỉ số khi trả/chuyển phòng |
+| 40 | `DichVu`, `HoaDonService`, `TraPhongService`, `ChuyenPhongService` | Dịch vụ cố định luôn tính `SoLuong = 1`, sai với các khoản thu theo số người | Thêm `DichVu.CachTinhCoDinh`, tính `TheoNguoi` bằng số khách trong `HopDongKhachThue` và chặn hóa đơn nếu hợp đồng chưa gắn khách |
 
 ---
 

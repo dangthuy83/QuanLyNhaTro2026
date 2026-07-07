@@ -10,7 +10,7 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<PhongDichVu>> GetByPhongAsync(int phongId)
     {
         const string sql = """
-            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.DonViTinh, dv.DonGiaMacDinh
+            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh
             FROM PhongDichVu pdv
             INNER JOIN DichVu dv ON dv.Id = pdv.DichVuId
             WHERE pdv.PhongId = @PhongId AND pdv.DangApDung = 1
@@ -48,7 +48,7 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
     public async Task<PhongDichVu?> GetByIdAsync(int id)
     {
         const string sql = """
-            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.DonViTinh, dv.DonGiaMacDinh
+            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh
             FROM PhongDichVu pdv
             JOIN DichVu dv ON pdv.DichVuId = dv.Id
             WHERE pdv.Id = @Id

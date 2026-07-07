@@ -77,7 +77,10 @@
                                        id="dv_@dv.Id" value="@dv.Id" name="dichVuIds"
                                        data-index="@dv.Id" />
                                 <label class="form-check-label" for="dv_@dv.Id">
-                                    @dv.TenDichVu <small class="text-muted">(@dv.LoaiTinhPhiHienThi)</small>
+                                    @dv.TenDichVu
+                                    <small class="text-muted">
+                                        (@dv.LoaiTinhPhiHienThi@if (dv.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh) { <text>, @dv.CachTinhCoDinhHienThi</text> })
+                                    </small>
                                 </label>
                             </div>
                             <div class="input-group input-group-sm" style="max-width:160px">

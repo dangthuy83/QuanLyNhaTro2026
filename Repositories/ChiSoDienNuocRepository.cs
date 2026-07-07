@@ -9,7 +9,7 @@ public class ChiSoDienNuocRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<ChiSoDienNuoc>> GetByHopDongKyAsync(int hopDongId, int thang, int nam)
     {
         const string sql = """
-            SELECT cs.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.DonViTinh
+            SELECT cs.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh
             FROM ChiSoDienNuoc cs
             INNER JOIN HopDong hd ON hd.PhongId = cs.PhongId
             INNER JOIN DichVu dv ON dv.Id = cs.DichVuId
@@ -34,7 +34,7 @@ public class ChiSoDienNuocRepository(IDbConnection db) : BaseRepository(db)
     {
         var sql = hopDongId.HasValue
             ? """
-              SELECT cs.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.DonViTinh
+              SELECT cs.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh
               FROM ChiSoDienNuoc cs
               INNER JOIN DichVu dv ON dv.Id = cs.DichVuId
               WHERE cs.PhongId = @PhongId
@@ -44,7 +44,7 @@ public class ChiSoDienNuocRepository(IDbConnection db) : BaseRepository(db)
               ORDER BY CASE WHEN cs.HopDongId = @HopDongId THEN 0 ELSE 1 END, cs.Id DESC
               """
             : """
-              SELECT cs.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.DonViTinh
+              SELECT cs.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh
               FROM ChiSoDienNuoc cs
               INNER JOIN DichVu dv ON dv.Id = cs.DichVuId
               WHERE cs.PhongId = @PhongId

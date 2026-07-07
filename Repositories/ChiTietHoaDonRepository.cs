@@ -9,7 +9,7 @@ public class ChiTietHoaDonRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<ChiTietHoaDon>> GetByHoaDonAsync(int hoaDonId)
     {
         const string sql = """
-            SELECT ct.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.DonViTinh, dv.DonGiaMacDinh
+            SELECT ct.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh
             FROM ChiTietHoaDon ct
             INNER JOIN DichVu dv ON dv.Id = ct.DichVuId
             WHERE ct.HoaDonId = @HoaDonId

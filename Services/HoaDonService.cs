@@ -218,14 +218,26 @@ public class HoaDonService(
             {
                 if (hoaDonGhepId.HasValue && ghiChu == "PHONG_CU") continue;
 
-                var thanhTien = Math.Round(donGia, 0);
+                decimal soLuong;
+                try
+                {
+                    soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(db, null, hopDongId, pdv.DichVu);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    result.Loi.Add(ex.Message);
+                    continue;
+                }
+
+                var thanhTien = Math.Round(soLuong * donGia, 0);
                 result.ChiTiet.Add(new HoaDonDuKienChiTiet
                 {
                     DichVuId = pdv.DichVuId,
                     PhongDichVuId = pdv.Id,
                     TenDichVu = pdv.DichVu.TenDichVu,
                     LoaiTinhPhi = pdv.DichVu.LoaiTinhPhi,
-                    SoLuong = 1,
+                    CachTinhCoDinh = pdv.DichVu.CachTinhCoDinh,
+                    SoLuong = soLuong,
                     DonGia = donGia,
                     ThanhTien = thanhTien
                 });

@@ -59,6 +59,7 @@ CREATE TABLE KhachThue (
 -- ============================================================
 -- 4. DICHVU — Danh mục loại dịch vụ (Điện, Nước, Internet, Vệ sinh...)
 -- LoaiTinhPhi: CoDinh | TheoChiSo
+-- CachTinhCoDinh: TheoPhong | TheoNguoi, only applies when LoaiTinhPhi = CoDinh.
 -- Đây là "công tắc" quyết định cách tính tiền dịch vụ khi lập hóa đơn.
 -- Muốn đổi Nước từ CoDinh sang TheoChiSo sau này: chỉ cần UPDATE dữ liệu
 -- dòng này, KHÔNG cần sửa schema hay code, miễn Controller luôn rẽ nhánh
@@ -68,8 +69,11 @@ CREATE TABLE DichVu (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     TenDichVu VARCHAR(100) NOT NULL,
     LoaiTinhPhi VARCHAR(20) NOT NULL,
+    CachTinhCoDinh VARCHAR(20) NOT NULL DEFAULT 'TheoPhong',
     DonGiaMacDinh DECIMAL(12,2) NOT NULL DEFAULT 0,
-    DonViTinh VARCHAR(20) NULL
+    DonViTinh VARCHAR(20) NULL,
+    CONSTRAINT CK_DichVu_LoaiTinhPhi CHECK (LoaiTinhPhi IN ('CoDinh', 'TheoChiSo')),
+    CONSTRAINT CK_DichVu_CachTinhCoDinh CHECK (CachTinhCoDinh IN ('TheoPhong', 'TheoNguoi'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -402,12 +406,12 @@ CREATE TABLE LichSuThayDoiGia (
 -- ============================================================
 -- DỮ LIỆU MẪU BAN ĐẦU CHO DICHVU (tùy chỉnh lại đơn giá theo thực tế)
 -- ============================================================
-INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, DonGiaMacDinh, DonViTinh) VALUES
-    ('Điện', 'TheoChiSo', 0, 'kWh'),
-    ('Nước', 'CoDinh', 0, 'người/tháng'),
-    ('Internet', 'CoDinh', 0, 'tháng'),
-    ('Vệ sinh', 'CoDinh', 0, 'tháng'),
-    ('Gửi xe', 'CoDinh', 0, 'xe/tháng');
+INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, CachTinhCoDinh, DonGiaMacDinh, DonViTinh) VALUES
+    ('Điện', 'TheoChiSo', 'TheoPhong', 0, 'kWh'),
+    ('Nước', 'CoDinh', 'TheoNguoi', 0, 'người/tháng'),
+    ('Internet', 'CoDinh', 'TheoPhong', 0, 'tháng'),
+    ('Vệ sinh', 'CoDinh', 'TheoPhong', 0, 'tháng'),
+    ('Gửi xe', 'CoDinh', 'TheoPhong', 0, 'xe/tháng');
 
 -- ============================================================
 -- GHI CHÚ TỔNG QUAN QUAN HỆ
