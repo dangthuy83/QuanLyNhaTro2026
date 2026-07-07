@@ -30,6 +30,14 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
+@if (Model.SoPhongDangThueThieuKhach > 0)
+{
+    <div class="alert alert-warning py-2">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Co @Model.SoPhongDangThueThieuKhach phong dang co hop dong hieu luc nhung chua gan khach.
+        Dich vu tinh theo nguoi se bi chan khi preview/chot hoa don neu chua bo sung khach.
+    </div>
+}
 
 <form method="get" class="border rounded p-3 mb-3 bg-light">
     <div class="row g-2 align-items-end">
@@ -88,6 +96,10 @@
             <div class="text-muted small">Theo bo loc</div>
             <div class="fs-5 fw-semibold">@Model.Rows.Count phong</div>
             <div class="small text-muted">Da gan: @Model.SoPhongDaGan / Chua gan: @Model.SoPhongChuaGan</div>
+            @if (Model.SoPhongDangThueThieuKhach > 0)
+            {
+                <div class="small text-danger">Thieu khach: @Model.SoPhongDangThueThieuKhach phong</div>
+            }
         </div>
     </div>
     <div class="col-md-4">
@@ -139,12 +151,16 @@
                         <th class="text-end">So khach</th>
                         <th>Trang thai dich vu</th>
                         <th class="text-end">Don gia hien tai</th>
+                        <th class="text-end">So luong du kien</th>
+                        <th class="text-end">Thanh tien du kien</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var row in Model.Rows)
                     {
-                        <tr>
+                        var thieuKhach = Model.LaDichVuTheoNguoi && row.HopDongId.HasValue && row.SoKhach == 0;
+                        var soLuongDuKien = ResolveSoLuongDuKien(Model, row);
+                        <tr class="@(thieuKhach ? "table-warning" : "")">
                             <td>
                                 <input class="form-check-input room-check" type="checkbox" name="phongIds" value="@row.PhongId" />
                             </td>
@@ -167,6 +183,10 @@
                             </td>
                             <td class="text-end @(row.HopDongId.HasValue && row.SoKhach == 0 ? "text-danger fw-semibold" : "")">
                                 @row.SoKhach
+                                @if (thieuKhach)
+                                {
+                                    <div class="small">Can bo sung khach</div>
+                                }
                             </td>
                             <td>
                                 @if (row.DaGan && row.DangApDung)
@@ -183,12 +203,37 @@
                                 }
                             </td>
                             <td class="text-end">@(row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value.ToString("N0") + " d" : "-")</td>
+                            <td class="text-end">
+                                @if (Model.LaDichVuTheoChiSo)
+                                {
+                                    <span class="text-muted small">Theo chi so</span>
+                                }
+                                else
+                                {
+                                    <span>@soLuongDuKien.ToString("N0")</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (Model.LaDichVuTheoChiSo)
+                                {
+                                    <span class="text-muted small">Nhap chi so</span>
+                                }
+                                else
+                                {
+                                    <span class="preview-amount" data-quantity="@soLuongDuKien.ToString("0.##", CultureInfo.InvariantCulture)">
+                                        @((soLuongDuKien * Model.DonGia).ToString("N0")) d
+                                    </span>
+                                    <div class="small text-muted">
+                                        @soLuongDuKien.ToString("N0") x <span class="preview-unit-price">@Model.DonGia.ToString("N0")</span>
+                                    </div>
+                                }
+                            </td>
                         </tr>
                     }
                     @if (!Model.Rows.Any())
                     {
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">Khong co phong nao khop bo loc.</td>
+                            <td colspan="8" class="text-center text-muted py-4">Khong co phong nao khop bo loc.</td>
                         </tr>
                     }
                 </tbody>
@@ -206,15 +251,37 @@
 @section Scripts {
     <script>
         const checkAll = document.getElementById('checkAll');
+        const priceInput = document.querySelector('[name=donGia]');
+        const currencyFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
+
+        function refreshPreviewAmounts() {
+            const price = Number(priceInput?.value || 0);
+            document.querySelectorAll('.preview-amount').forEach((element) => {
+                const quantity = Number(element.dataset.quantity || 0);
+                element.textContent = `${currencyFormatter.format(quantity * price)} d`;
+            });
+            document.querySelectorAll('.preview-unit-price').forEach((element) => {
+                element.textContent = currencyFormatter.format(price);
+            });
+        }
+
         checkAll?.addEventListener('change', () => {
             document.querySelectorAll('.room-check').forEach((checkbox) => {
                 checkbox.checked = checkAll.checked;
             });
         });
+        priceInput?.addEventListener('input', refreshPreviewAmounts);
     </script>
 }
 
 @functions {
+    static decimal ResolveSoLuongDuKien(QuanLyNhaTro.Models.GanDichVuHangLoatViewModel model, QuanLyNhaTro.Models.GanDichVuHangLoatRow row)
+    {
+        if (model.LaDichVuTheoNguoi) return row.SoKhach;
+        if (model.LaDichVuTheoPhong) return 1;
+        return 0;
+    }
+
     static string TrangThaiPhongBadge(string tt) => tt switch
     {
         "DangThue" => "<span class='badge bg-success'>Dang thue</span>",

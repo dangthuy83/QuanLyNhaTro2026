@@ -1573,6 +1573,8 @@ Ngày: 07/07/2026
 - Thêm màn `Phong/GanDichVuHangLoat` để chọn dịch vụ, lọc theo Nhà/trạng thái phòng và tick nhiều phòng để gán/cập nhật cùng lúc.
 - Mặc định màn này ưu tiên dịch vụ `CoDinh + TheoNguoi` và lọc phòng `DangThue`, phù hợp bước cấu hình nước/vệ sinh/máy giặt theo người.
 - Bảng hiển thị Nhà/phòng, hợp đồng hiệu lực, số khách, trạng thái dịch vụ đã gán/chưa gán/đang tắt và đơn giá hiện tại.
+- Với dịch vụ `CoDinh + TheoNguoi`, màn hình cảnh báo phòng có hợp đồng hiệu lực nhưng `SoKhach = 0`.
+- Màn hình có cột `So luong du kien` và `Thanh tien du kien`; khi sửa đơn giá, thành tiền dự kiến tự cập nhật ngay trên trình duyệt.
 - Khi lưu, hệ thống ghi vào `PhongDichVu` bằng upsert:
   - Phòng chưa có dịch vụ thì gán mới.
   - Phòng đã có dịch vụ thì cập nhật `DonGia` và bật `DangApDung = 1`.

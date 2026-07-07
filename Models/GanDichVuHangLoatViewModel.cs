@@ -11,8 +11,16 @@ public class GanDichVuHangLoatViewModel
     public List<GanDichVuHangLoatRow> Rows { get; set; } = [];
 
     public DichVu? DichVuDangChon => DanhSachDichVu.FirstOrDefault(x => x.Id == DichVuId);
+    public bool LaDichVuTheoNguoi => DichVuDangChon?.LoaiTinhPhi == DichVu.LoaiCoDinh
+        && DichVuDangChon.CachTinhCoDinh == DichVu.CachTinhTheoNguoi;
+    public bool LaDichVuTheoPhong => DichVuDangChon?.LoaiTinhPhi == DichVu.LoaiCoDinh
+        && DichVuDangChon.CachTinhCoDinh == DichVu.CachTinhTheoPhong;
+    public bool LaDichVuTheoChiSo => DichVuDangChon?.LoaiTinhPhi == DichVu.LoaiTheoChiSo;
     public int SoPhongDaGan => Rows.Count(x => x.DaGan && x.DangApDung);
     public int SoPhongChuaGan => Rows.Count(x => !x.DaGan || !x.DangApDung);
+    public int SoPhongDangThueThieuKhach => LaDichVuTheoNguoi
+        ? Rows.Count(x => x.HopDongId.HasValue && x.SoKhach == 0)
+        : 0;
 }
 
 public class GanDichVuHangLoatRow

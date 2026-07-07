@@ -134,6 +134,7 @@ Da xu ly trong phien 41:
 
 - Them man `Phong/GanDichVuHangLoat` de gan/cap nhat cung mot dich vu cho nhieu phong, giam thao tac sau khi cau hinh danh muc dich vu theo nguoi.
 - Man nay cap nhat truc tiep `PhongDichVu.DonGia`, giu dung quy tac hoa don lay gia theo phong thay vi `DichVu.DonGiaMacDinh`.
+- Man nay canh bao hop dong hieu luc chua co khach khi dich vu tinh theo nguoi, va hien thanh tien du kien theo so khach x don gia de review truoc khi luu.
 - Can smoke test tiep flow: gan dich vu cho phong dang thue, kiem tra don gia trong `PhongDichVu`, preview chot hoa don ky gan nhat de xac nhan `SoLuong = so khach`.
 
 Da xu ly trong phien 30:
