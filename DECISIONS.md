@@ -332,6 +332,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI vận hành chỉ số nhiều đoạn đã có link ghi chỉ số ngoài hợp đồng sau trả phòng, gợi ý `TuChiSo` từ mốc gần nhất và hiển thị nguồn mốc `ChiSoDau` khi nhập chỉ số.
 - Dịch vụ có `DonGiaMacDinh` để tự điền khi gán dịch vụ cho phòng, nhưng hóa đơn vẫn dùng `PhongDichVu.DonGia`.
 - Dịch vụ cố định có `CachTinhCoDinh`: `TheoPhong` tính 1 lần, `TheoNguoi` tính theo số khách gắn trong `HopDongKhachThue` và chặn chốt nếu hợp đồng chưa có khách.
+- Màn `Phong/GanDichVuHangLoat` dùng để gán/cập nhật cùng một dịch vụ cho nhiều phòng; thao tác này ghi vào `PhongDichVu.DonGia`, là nguồn tính hóa đơn.
 - UI khoản phát sinh theo hợp đồng cho phép ghi nhận đền bù hư hỏng/mất chìa khóa/phụ thu, đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc.
 - Preview chốt hóa đơn hàng loạt theo kỳ: hiển thị hợp đồng đang hiệu lực, trạng thái dữ liệu, nợ kỳ trước, tổng dự kiến, hỗ trợ filter theo Nhà/từ khóa/trạng thái dòng và chỉ cho chốt các dòng sẵn sàng theo bộ lọc.
 - Thêm ledger cọc `GiaoDichCoc`, ghi nhận thu cọc ban đầu, chuyển cọc khi chuyển phòng, trừ nợ/hoàn cọc khi trả phòng.
@@ -377,4 +378,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 40 - 07/07/2026
+Cập nhật lần cuối: Phiên 41 - 07/07/2026

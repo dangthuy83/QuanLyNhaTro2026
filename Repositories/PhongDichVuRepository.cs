@@ -33,6 +33,65 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
         return await _db.ExecuteScalarAsync<int>(sql, pdv);
     }
 
+    public async Task<IEnumerable<GanDichVuHangLoatRow>> GetBulkAssignmentRowsAsync(
+        int dichVuId,
+        int? nhaId,
+        string trangThai)
+    {
+        const string sql = """
+            SELECT
+                p.Id AS PhongId,
+                n.TenNha,
+                p.TenPhong,
+                p.TrangThai,
+                hd.Id AS HopDongId,
+                COUNT(hdkt.Id) AS SoKhach,
+                pdv.Id AS PhongDichVuId,
+                pdv.DonGia AS DonGiaHienTai,
+                COALESCE(pdv.DangApDung, 0) AS DangApDung
+            FROM Phong p
+            INNER JOIN Nha n ON n.Id = p.NhaId
+            LEFT JOIN HopDong hd
+                ON hd.PhongId = p.Id
+               AND hd.TrangThai = 'DangHieuLuc'
+            LEFT JOIN HopDongKhachThue hdkt
+                ON hdkt.HopDongId = hd.Id
+            LEFT JOIN PhongDichVu pdv
+                ON pdv.PhongId = p.Id
+               AND pdv.DichVuId = @DichVuId
+            WHERE (@NhaId IS NULL OR p.NhaId = @NhaId)
+              AND (@TrangThai = 'TatCa' OR p.TrangThai = @TrangThai)
+            GROUP BY
+                p.Id, n.TenNha, p.TenPhong, p.TrangThai,
+                hd.Id, pdv.Id, pdv.DonGia, pdv.DangApDung
+            ORDER BY n.TenNha, p.TenPhong
+            """;
+
+        return await _db.QueryAsync<GanDichVuHangLoatRow>(
+            sql,
+            new { DichVuId = dichVuId, NhaId = nhaId, TrangThai = trangThai });
+    }
+
+    public async Task<int> UpsertBulkAsync(IEnumerable<int> phongIds, int dichVuId, decimal donGia)
+    {
+        const string sql = """
+            INSERT INTO PhongDichVu (PhongId, DichVuId, DonGia, DangApDung)
+            VALUES (@PhongId, @DichVuId, @DonGia, 1)
+            ON DUPLICATE KEY UPDATE
+                DonGia = @DonGia,
+                DangApDung = 1
+            """;
+
+        var items = phongIds
+            .Distinct()
+            .Select(phongId => new { PhongId = phongId, DichVuId = dichVuId, DonGia = donGia })
+            .ToList();
+
+        if (items.Count == 0) return 0;
+
+        return await _db.ExecuteAsync(sql, items);
+    }
+
     public async Task UpdateDonGiaAsync(int id, decimal donGiaMoi)
         => await _db.ExecuteAsync(
             "UPDATE PhongDichVu SET DonGia = @DonGia WHERE Id = @Id",

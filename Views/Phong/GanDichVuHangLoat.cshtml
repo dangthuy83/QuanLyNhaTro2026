@@ -1,0 +1,224 @@
+@model QuanLyNhaTro.Models.GanDichVuHangLoatViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Gan dich vu hang loat";
+    ViewData["ActiveMenu"] = "phong";
+    var dichVu = Model.DichVuDangChon;
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+        <h5 class="mb-1">Gan dich vu hang loat</h5>
+        <div class="text-muted small">Cap nhat `PhongDichVu.DonGia`, la don gia that su duoc dung khi lap hoa don.</div>
+    </div>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Danh sach phong
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show py-2">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form method="get" class="border rounded p-3 mb-3 bg-light">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small text-muted mb-1">Dich vu</label>
+            <select name="dichVuId" class="form-select form-select-sm" required>
+                @foreach (var dv in Model.DanhSachDichVu)
+                {
+                    <option value="@dv.Id" selected="@(Model.DichVuId == dv.Id)">
+                        @dv.TenDichVu - @dv.LoaiTinhPhiHienThi@(dv.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh ? $" / {dv.CachTinhCoDinhHienThi}" : "")
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small text-muted mb-1">Nha</label>
+            <select name="nhaId" class="form-select form-select-sm">
+                <option value="">Tat ca nha</option>
+                @foreach (var nha in Model.DanhSachNha)
+                {
+                    <option value="@nha.Id" selected="@(Model.NhaId == nha.Id)">@nha.TenNha</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small text-muted mb-1">Trang thai phong</label>
+            <select name="trangThai" class="form-select form-select-sm">
+                <option value="DangThue" selected="@(Model.TrangThai == "DangThue")">Dang thue</option>
+                <option value="Trong" selected="@(Model.TrangThai == "Trong")">Trong</option>
+                <option value="DangSuaChua" selected="@(Model.TrangThai == "DangSuaChua")">Dang sua</option>
+                <option value="TatCa" selected="@(Model.TrangThai == "TatCa")">Tat ca</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button class="btn btn-sm btn-primary">Loc</button>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Dich vu dang chon</div>
+            <div class="fw-semibold">@dichVu?.TenDichVu</div>
+            <div class="small text-muted">
+                @dichVu?.LoaiTinhPhiHienThi
+                @if (dichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh)
+                {
+                    <span> / @dichVu.CachTinhCoDinhHienThi</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Theo bo loc</div>
+            <div class="fs-5 fw-semibold">@Model.Rows.Count phong</div>
+            <div class="small text-muted">Da gan: @Model.SoPhongDaGan / Chua gan: @Model.SoPhongChuaGan</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Gia goi y tu danh muc</div>
+            <div class="fs-5 fw-semibold">@Model.DonGia.ToString("N0") d</div>
+            <div class="small text-muted">Co the sua truoc khi luu cho phong.</div>
+        </div>
+    </div>
+</div>
+
+<form asp-action="GanDichVuHangLoat" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="dichVuId" value="@Model.DichVuId" />
+    <input type="hidden" name="nhaId" value="@Model.NhaId" />
+    <input type="hidden" name="trangThai" value="@Model.TrangThai" />
+
+    <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body border-bottom">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Don gia ap dung cho cac phong da chon</label>
+                    <div class="input-group input-group-sm">
+                        <input name="donGia" type="number" min="0" step="1" class="form-control"
+                               value="@Model.DonGia.ToString("0.##", CultureInfo.InvariantCulture)" />
+                        <span class="input-group-text">d</span>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="small text-muted">
+                        Neu phong da co dich vu nay, he thong se cap nhat don gia va bat lai trang thai ap dung.
+                        Neu phong chua co, he thong se gan moi.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:48px">
+                            <input class="form-check-input" type="checkbox" id="checkAll" />
+                        </th>
+                        <th>Nha / phong</th>
+                        <th>Hop dong</th>
+                        <th class="text-end">So khach</th>
+                        <th>Trang thai dich vu</th>
+                        <th class="text-end">Don gia hien tai</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td>
+                                <input class="form-check-input room-check" type="checkbox" name="phongIds" value="@row.PhongId" />
+                            </td>
+                            <td>
+                                <div class="text-muted small">@row.TenNha</div>
+                                <a asp-action="Details" asp-route-id="@row.PhongId" class="fw-semibold text-decoration-none">@row.TenPhong</a>
+                                <div class="small">@Html.Raw(TrangThaiPhongBadge(row.TrangThai))</div>
+                            </td>
+                            <td>
+                                @if (row.HopDongId.HasValue)
+                                {
+                                    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@row.HopDongId" class="text-decoration-none">
+                                        HD #@row.HopDongId
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Chua co hop dong hieu luc</span>
+                                }
+                            </td>
+                            <td class="text-end @(row.HopDongId.HasValue && row.SoKhach == 0 ? "text-danger fw-semibold" : "")">
+                                @row.SoKhach
+                            </td>
+                            <td>
+                                @if (row.DaGan && row.DangApDung)
+                                {
+                                    <span class="badge bg-success">Dang ap dung</span>
+                                }
+                                else if (row.DaGan)
+                                {
+                                    <span class="badge bg-warning text-dark">Dang tat</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Chua gan</span>
+                                }
+                            </td>
+                            <td class="text-end">@(row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value.ToString("N0") + " d" : "-")</td>
+                        </tr>
+                    }
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">Khong co phong nao khop bo loc.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2">
+            <div class="small text-muted">Chi cac phong duoc tick moi duoc gan/cap nhat.</div>
+            <button class="btn btn-primary" type="submit" disabled="@(!Model.Rows.Any())">
+                Gan/cap nhat dich vu
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        const checkAll = document.getElementById('checkAll');
+        checkAll?.addEventListener('change', () => {
+            document.querySelectorAll('.room-check').forEach((checkbox) => {
+                checkbox.checked = checkAll.checked;
+            });
+        });
+    </script>
+}
+
+@functions {
+    static string TrangThaiPhongBadge(string tt) => tt switch
+    {
+        "DangThue" => "<span class='badge bg-success'>Dang thue</span>",
+        "DangSuaChua" => "<span class='badge bg-warning text-dark'>Dang sua</span>",
+        _ => "<span class='badge bg-secondary'>Trong</span>"
+    };
+}

@@ -130,6 +130,12 @@ Da xu ly trong phien 40:
 - Neu hop dong chua gan khach ma co dich vu co dinh tinh theo nguoi, preview/chot hoa don bi chan de tranh tinh `SoLuong = 0`.
 - Chua xu ly bien dong nhan khau theo ngay trong cung hop dong; can them moc ngay rieng vao `HopDongKhachThue` neu sau nay can tinh theo ngay.
 
+Da xu ly trong phien 41:
+
+- Them man `Phong/GanDichVuHangLoat` de gan/cap nhat cung mot dich vu cho nhieu phong, giam thao tac sau khi cau hinh danh muc dich vu theo nguoi.
+- Man nay cap nhat truc tiep `PhongDichVu.DonGia`, giu dung quy tac hoa don lay gia theo phong thay vi `DichVu.DonGiaMacDinh`.
+- Can smoke test tiep flow: gan dich vu cho phong dang thue, kiem tra don gia trong `PhongDichVu`, preview chot hoa don ky gan nhat de xac nhan `SoLuong = so khach`.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.

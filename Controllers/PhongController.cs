@@ -19,6 +19,53 @@ public class PhongController(
         return View(danhSach);
     }
 
+    public async Task<IActionResult> GanDichVuHangLoat(
+        int? dichVuId,
+        int? nhaId,
+        string trangThai = "DangThue")
+    {
+        ViewData["ActiveMenu"] = "phong";
+        var model = await BuildGanDichVuHangLoatViewModelAsync(dichVuId, nhaId, NormalizeTrangThaiFilter(trangThai));
+        return View(model);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> GanDichVuHangLoat(
+        int dichVuId,
+        int? nhaId,
+        string trangThai,
+        decimal donGia,
+        int[] phongIds)
+    {
+        trangThai = NormalizeTrangThaiFilter(trangThai);
+
+        if (dichVuId <= 0)
+            ModelState.AddModelError(nameof(dichVuId), "Vui long chon dich vu.");
+
+        if (donGia < 0)
+            ModelState.AddModelError(nameof(donGia), "Don gia khong duoc am.");
+
+        if (phongIds.Length == 0)
+            ModelState.AddModelError(nameof(phongIds), "Vui long chon it nhat mot phong.");
+
+        var dichVu = await dichVuRepo.GetByIdAsync(dichVuId);
+        if (dichVu == null)
+            ModelState.AddModelError(nameof(dichVuId), "Dich vu da chon khong ton tai.");
+
+        if (!ModelState.IsValid)
+        {
+            ViewData["ActiveMenu"] = "phong";
+            var model = await BuildGanDichVuHangLoatViewModelAsync(dichVuId, nhaId, trangThai);
+            model.DonGia = donGia;
+            return View(model);
+        }
+
+        await phongDichVuRepo.UpsertBulkAsync(phongIds, dichVuId, donGia);
+        TempData["Success"] = $"Da gan/cap nhat dich vu {dichVu!.TenDichVu} cho {phongIds.Distinct().Count()} phong.";
+
+        return RedirectToAction(nameof(GanDichVuHangLoat), new { dichVuId, nhaId, trangThai });
+    }
+
     // GET /Phong/Details/5
     public async Task<IActionResult> Details(int id)
     {
@@ -129,6 +176,39 @@ public class PhongController(
             ViewBag.DichVuPhong = await phongDichVuRepo.GetByPhongAsync(phongId.Value);
         }
     }
+
+    private async Task<GanDichVuHangLoatViewModel> BuildGanDichVuHangLoatViewModelAsync(
+        int? dichVuId,
+        int? nhaId,
+        string trangThai)
+    {
+        var danhSachDichVu = (await dichVuRepo.GetAllAsync()).ToList();
+        var dichVu = dichVuId.HasValue
+            ? danhSachDichVu.FirstOrDefault(x => x.Id == dichVuId.Value)
+            : danhSachDichVu.FirstOrDefault(x => x.LoaiTinhPhi == DichVu.LoaiCoDinh && x.CachTinhCoDinh == DichVu.CachTinhTheoNguoi)
+              ?? danhSachDichVu.FirstOrDefault();
+
+        var selectedDichVuId = dichVu?.Id;
+        var rows = selectedDichVuId.HasValue
+            ? (await phongDichVuRepo.GetBulkAssignmentRowsAsync(selectedDichVuId.Value, nhaId, trangThai)).ToList()
+            : [];
+
+        return new GanDichVuHangLoatViewModel
+        {
+            NhaId = nhaId,
+            DichVuId = selectedDichVuId,
+            TrangThai = trangThai,
+            DonGia = dichVu?.DonGiaMacDinh ?? 0,
+            DanhSachNha = (await nhaRepo.GetAllAsync()).ToList(),
+            DanhSachDichVu = danhSachDichVu,
+            Rows = rows
+        };
+    }
+
+    private static string NormalizeTrangThaiFilter(string? trangThai)
+        => trangThai is "TatCa" or "DangThue" or "Trong" or "DangSuaChua"
+            ? trangThai
+            : "DangThue";
 
     private async Task ValidateNhaAsync(int nhaId)
     {

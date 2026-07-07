@@ -11,7 +11,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Mục | Trạng thái |
 |---|---|
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
-| Build | `dotnet build --no-restore` thành công với 0 warning, 0 error; `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
+| Build | `dotnet build --no-restore` thành công; phiên mới nhất có warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed. `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
 | Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. Phiên 40 thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`; DB hiện hữu cần chạy file này một lần trước khi dùng code mới. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
@@ -32,6 +32,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 | 10 | Rà tiếp UI chỉ số nhiều đoạn sau vận hành thật | Phiên 38 đã smoke test qua MVC form thật; in-app browser plugin bị lỗi hạ tầng `failed to write kernel assets` nên chưa có screenshot browser | Thấp |
 | 11 | Rà UI khoản phát sinh sau pilot | Đã có bản tối thiểu cho hợp đồng/hóa đơn/trả phòng; theo dõi nhu cầu ảnh hiện trạng, danh mục tài sản, hoặc báo cáo riêng | Thấp |
+| 12 | Smoke test dịch vụ cố định theo người sau khi gán phòng | Flow cần chạy: gán dịch vụ theo người cho các phòng đang thuê; kiểm tra `PhongDichVu.DonGia`; preview chốt hóa đơn kỳ gần nhất để xác nhận `SoLuong = số khách` và `ThanhTien = số khách x đơn giá` | Cao |
 
 ### Quy ước GitHub
 
@@ -1563,6 +1564,45 @@ Ghi chú:
 
 ---
 
+### Phiên 41 - Gán/Cập Nhật Dịch Vụ Hàng Loạt Cho Phòng
+
+Ngày: 07/07/2026
+
+Đã làm:
+
+- Thêm màn `Phong/GanDichVuHangLoat` để chọn dịch vụ, lọc theo Nhà/trạng thái phòng và tick nhiều phòng để gán/cập nhật cùng lúc.
+- Mặc định màn này ưu tiên dịch vụ `CoDinh + TheoNguoi` và lọc phòng `DangThue`, phù hợp bước cấu hình nước/vệ sinh/máy giặt theo người.
+- Bảng hiển thị Nhà/phòng, hợp đồng hiệu lực, số khách, trạng thái dịch vụ đã gán/chưa gán/đang tắt và đơn giá hiện tại.
+- Khi lưu, hệ thống ghi vào `PhongDichVu` bằng upsert:
+  - Phòng chưa có dịch vụ thì gán mới.
+  - Phòng đã có dịch vụ thì cập nhật `DonGia` và bật `DangApDung = 1`.
+- Thêm link `Gan dich vu hang loat` từ danh sách phòng.
+
+Test flow cần chạy sau:
+
+1. Vào từng nhóm phòng đang thuê, gán các dịch vụ theo người cần áp dụng bằng màn hàng loạt.
+2. Kiểm tra lại đơn giá trong `PhongDichVu`, vì hóa đơn dùng giá theo phòng chứ không dùng `DichVu.DonGiaMacDinh`.
+3. Preview chốt hóa đơn một kỳ gần nhất để xác nhận dòng như `Nước: số khách x đơn giá`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+1 Warning(s)
+0 Error(s)
+
+dotnet test --no-restore
+Exit code 0; no meaningful test output in this repo.
+```
+
+Ghi chú:
+
+- Warning build là `NU1900` do sandbox không truy cập được `https://api.nuget.org/v3/index.json`, không phải lỗi compile.
+- Chưa chạy HTTP smoke vì blocker Windows EventLog của sandbox vẫn là rủi ro môi trường đã biết.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1596,6 +1636,7 @@ Ghi chú:
 | 35 | `ChiSoNgoaiHopDong`, `ChiSoController` | Khi phòng trống/sửa phòng có phát sinh điện/nước, chỉ số đầu khách mới có thể khác chỉ số cuối khách cũ | Thêm bảng audit ngoài hợp đồng và dùng `DenChiSo` mới nhất làm mốc đầu kỳ sau nếu phù hợp |
 | 36 | `ChiSoDienNuoc`, `ChiSoController`, `TraPhongService`, `ChuyenPhongService` | Một phòng/dịch vụ/tháng chỉ có một dòng chỉ số nên không tách được khách cũ, phòng trống và khách mới trong cùng tháng | Thêm `HopDongId` nullable cho chỉ số, dùng `NgayDoc` làm mốc bàn giao, cho phép nhiều đoạn theo hợp đồng và chặn thiếu chỉ số khi trả/chuyển phòng |
 | 40 | `DichVu`, `HoaDonService`, `TraPhongService`, `ChuyenPhongService` | Dịch vụ cố định luôn tính `SoLuong = 1`, sai với các khoản thu theo số người | Thêm `DichVu.CachTinhCoDinh`, tính `TheoNguoi` bằng số khách trong `HopDongKhachThue` và chặn hóa đơn nếu hợp đồng chưa gắn khách |
+| 41 | `PhongDichVu`, `Views/Phong` | Cấu hình danh mục dịch vụ xong nhưng phải gán/cập nhật giá từng phòng thủ công | Thêm màn gán/cập nhật dịch vụ hàng loạt cho nhiều phòng, ghi trực tiếp vào `PhongDichVu.DonGia` |
 
 ---
 
