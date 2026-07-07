@@ -32,7 +32,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 | 10 | Rà tiếp UI chỉ số nhiều đoạn sau vận hành thật | Phiên 38 đã smoke test qua MVC form thật; in-app browser plugin bị lỗi hạ tầng `failed to write kernel assets` nên chưa có screenshot browser | Thấp |
 | 11 | Rà UI khoản phát sinh sau pilot | Đã có bản tối thiểu cho hợp đồng/hóa đơn/trả phòng; theo dõi nhu cầu ảnh hiện trạng, danh mục tài sản, hoặc báo cáo riêng | Thấp |
-| 12 | Smoke test dịch vụ cố định theo người sau khi gán phòng | Flow cần chạy: gán dịch vụ theo người cho các phòng đang thuê; kiểm tra `PhongDichVu.DonGia`; preview chốt hóa đơn kỳ gần nhất để xác nhận `SoLuong = số khách` và `ThanhTien = số khách x đơn giá` | Cao |
+| 12 | Dọn dữ liệu smoke test dịch vụ theo người | Smoke test `TEST_FSB_20260707213224` đã pass và còn dữ liệu test trong DB; file dọn an toàn Workbench: `Database/cleanup/TEST_FSB_20260707213224_cleanup.sql` | Thấp |
 
 ### Quy ước GitHub
 
@@ -1602,6 +1602,35 @@ Ghi chú:
 
 - Warning build là `NU1900` do sandbox không truy cập được `https://api.nuget.org/v3/index.json`, không phải lỗi compile.
 - Chưa chạy HTTP smoke vì blocker Windows EventLog của sandbox vẫn là rủi ro môi trường đã biết.
+
+### Phiên 42 - Smoke Test Dịch Vụ Cố Định Theo Người
+
+Ngày: 07/07/2026
+
+Đã làm:
+
+- Tạo dữ liệu smoke test tiền tố `TEST_FSB_20260707213224` trên MySQL thật.
+- Seed 1 dịch vụ `CoDinh + TheoNguoi`, 2 phòng đang thuê, 2 hợp đồng hiệu lực:
+  - Phòng OK có 2 khách gắn với hợp đồng.
+  - Phòng thiếu khách không có dòng `HopDongKhachThue`.
+- Gán dịch vụ hàng loạt qua repository thật để ghi vào `PhongDichVu.DonGia`.
+- Gọi `HoaDonService.TinhHoaDonDuKienAsync` cho kỳ 07/2026.
+
+Kết quả smoke:
+
+```text
+BulkRows=2
+BulkRowOk: SoKhach=2; DonGia=120000
+BulkRowMissingCustomers: SoKhach=0; DonGia=120000
+PreviewOk: Loi=0; SoLuong=2; DonGia=120000; ThanhTien=240000
+PreviewMissingCustomersErrors=... chua gan khach thue.
+PASS_BULK_AND_PREVIEW=True
+```
+
+File dọn dữ liệu test:
+
+- `Database/cleanup/TEST_FSB_20260707213224_cleanup.sql`
+- File dùng bảng tạm ID và điều kiện khóa như `Id >= 0`/`Id IN (...)`, phù hợp chạy trong MySQL Workbench khi bật Safe Updates.
 
 ---
 

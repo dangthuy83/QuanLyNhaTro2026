@@ -135,7 +135,13 @@ Da xu ly trong phien 41:
 - Them man `Phong/GanDichVuHangLoat` de gan/cap nhat cung mot dich vu cho nhieu phong, giam thao tac sau khi cau hinh danh muc dich vu theo nguoi.
 - Man nay cap nhat truc tiep `PhongDichVu.DonGia`, giu dung quy tac hoa don lay gia theo phong thay vi `DichVu.DonGiaMacDinh`.
 - Man nay canh bao hop dong hieu luc chua co khach khi dich vu tinh theo nguoi, va hien thanh tien du kien theo so khach x don gia de review truoc khi luu.
-- Can smoke test tiep flow: gan dich vu cho phong dang thue, kiem tra don gia trong `PhongDichVu`, preview chot hoa don ky gan nhat de xac nhan `SoLuong = so khach`.
+
+Da smoke test trong phien 42:
+
+- Tao du lieu `TEST_FSB_20260707213224`, gan dich vu `CoDinh + TheoNguoi` cho 2 phong dang thue qua repository hang loat.
+- Xac nhan `PhongDichVu.DonGia = 120000`, preview ky 07/2026 tinh phong co 2 khach thanh `SoLuong = 2`, `ThanhTien = 240000`.
+- Xac nhan hop dong chua gan khach bi bao loi/chặn preview de tranh tinh `SoLuong = 0`.
+- Da sinh file cleanup safe-mode-friendly: `Database/cleanup/TEST_FSB_20260707213224_cleanup.sql`.
 
 Da xu ly trong phien 30:
 
