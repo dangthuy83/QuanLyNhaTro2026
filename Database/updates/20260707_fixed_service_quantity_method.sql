@@ -33,7 +33,8 @@ BEGIN
 
     UPDATE DichVu
     SET CachTinhCoDinh = 'TheoPhong'
-    WHERE CachTinhCoDinh IS NULL OR CachTinhCoDinh = '';
+    WHERE Id >= 0
+      AND (CachTinhCoDinh IS NULL OR CachTinhCoDinh = '');
 
     IF NOT EXISTS (
         SELECT 1

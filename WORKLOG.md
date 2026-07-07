@@ -1559,6 +1559,7 @@ Ghi chú:
 
 - Chưa chạy HTTP smoke vì blocker sandbox Windows EventLog đã được ghi nhận từ phiên 39.
 - DB đang tồn tại cần chạy một lần file `Database/updates/20260707_fixed_service_quantity_method.sql`, sau đó rà lại các dịch vụ cố định thực tế và đổi sang `TheoNguoi` nếu cần.
+- Sau phản hồi runtime, migration đã được chỉnh để câu `UPDATE DichVu` dùng điều kiện theo key `Id`, tránh lỗi MySQL Workbench Safe Updates `Error Code: 1175`.
 
 ---
 
