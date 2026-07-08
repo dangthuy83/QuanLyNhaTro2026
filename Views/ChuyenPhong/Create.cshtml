@@ -1,8 +1,8 @@
 @model QuanLyNhaTro.Models.ChuyenPhongViewModel
-@{ ViewData["Title"] = "Chuyen phong"; }
+@{ ViewData["Title"] = "Chuyển phòng"; }
 
-<h4>Chuyen phong - <span class="text-primary">@Model.TenPhongCu</span></h4>
-<p class="text-muted">Tu dong sinh 2 hoa don thang chuyen va tao hop dong moi.</p>
+<h4>Chuyển phòng - <span class="text-primary">@Model.TenPhongCu</span></h4>
+<p class="text-muted">Tự động sinh 2 hóa đơn tháng chuyển và tạo hợp đồng mới.</p>
 
 @if (TempData["Success"] != null)
 {
@@ -18,57 +18,57 @@
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="HopDongCuId" />
             <div class="mb-3">
-                <label class="form-label">Ngay chuyen di <span class="text-danger">*</span></label>
+                <label class="form-label">Ngày chuyển đi <span class="text-danger">*</span></label>
                 <input asp-for="NgayChuyenDi" type="date" class="form-control" />
-                <div class="form-text">Ngay cuoi o phong cu. Phong moi tinh tu ngay hom sau.</div>
+                <div class="form-text">Ngày cuối ở phòng cũ. Phòng mới tính từ ngày hôm sau.</div>
             </div>
 
             <hr>
-            <h6 class="fw-bold">Phong moi</h6>
+            <h6 class="fw-bold">Phòng mới</h6>
             <div class="mb-3">
-                <label class="form-label">Chon phong <span class="text-danger">*</span></label>
+                <label class="form-label">Chọn phòng <span class="text-danger">*</span></label>
                 <select asp-for="PhongMoiId" class="form-select">
-                    <option value="">-- Chon phong trong --</option>
+                    <option value="">-- Chọn phòng trống --</option>
                     @foreach (var p in Model.DsPhongTrong)
                     {
-                        <option value="@p.Id">@p.TenPhong - @p.GiaThueMacDinh.ToString("N0") d/thang</option>
+                        <option value="@p.Id">@p.TenPhong - @p.GiaThueMacDinh.ToString("N0") đ/tháng</option>
                     }
                 </select>
                 <span asp-validation-for="PhongMoiId" class="text-danger small"></span>
                 <div class="form-text">
-                    Neu phong moi co dich vu theo chi so, hay nhap chi so ky chuyen truoc khi xac nhan.
+                    Nếu phòng mới có dịch vụ theo chỉ số, hãy nhập chỉ số kỳ chuyển trước khi xác nhận.
                 </div>
                 <a id="linkNhapChiSoPhongMoi"
                    href="#"
                    class="btn btn-sm btn-outline-primary mt-2 disabled"
                    aria-disabled="true">
-                    <i class="bi bi-speedometer2"></i> Nhap chi so phong moi
+                    <i class="bi bi-speedometer2"></i> Nhập chỉ số phòng mới
                 </a>
             </div>
 
             <div class="row g-3 mb-3">
                 <div class="col">
-                    <label class="form-label">Tien thue moi (d) <span class="text-danger">*</span></label>
+                    <label class="form-label">Tiền thuê mới (đ) <span class="text-danger">*</span></label>
                     <input asp-for="TienThueMoi" type="number" class="form-control" min="0" step="50000" />
                     <span asp-validation-for="TienThueMoi" class="text-danger small"></span>
                 </div>
                 <div class="col">
-                    <label class="form-label">Tien coc moi (d)</label>
+                    <label class="form-label">Tiền cọc mới (đ)</label>
                     <input asp-for="TienCocMoi" type="number" class="form-control" min="0" step="100000" />
-                    <div class="form-text">Coc cu: @Model.TienCocCu.ToString("N0") d</div>
+                    <div class="form-text">Cọc cũ: @Model.TienCocCu.ToString("N0") đ</div>
                 </div>
             </div>
 
             <div class="alert alert-info py-2 small">
                 <i class="bi bi-info-circle"></i>
-                DV <strong>Co dinh</strong> chi tinh o hoa don phong moi.
-                DV <strong>Theo chi so</strong> can co chi so phong cu va phong moi trong ky chuyen.
+                DV <strong>Cố định</strong> chỉ tính ở hóa đơn phòng mới.
+                DV <strong>Theo chỉ số</strong> cần có chỉ số phòng cũ và phòng mới trong kỳ chuyển.
             </div>
 
             <div class="d-flex gap-2">
-                <button class="btn btn-primary">Xac nhan chuyen phong</button>
+                <button class="btn btn-primary">Xác nhận chuyển phòng</button>
                 <a asp-controller="HopDong" asp-action="Details"
-                   asp-route-id="@Model.HopDongCuId" class="btn btn-outline-secondary">Huy</a>
+                   asp-route-id="@Model.HopDongCuId" class="btn btn-outline-secondary">Hủy</a>
             </div>
         </form>
     </div>

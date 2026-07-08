@@ -1,21 +1,21 @@
 @model QuanLyNhaTro.Models.KiemTraDuLieuViewModel
 @{
-    ViewData["Title"] = "San sang van hanh";
+    ViewData["Title"] = "Sẵn sàng vận hành";
     ViewData["ActiveMenu"] = "kiemtra";
 }
 
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
-        <h5 class="mb-1">San sang van hanh - @Model.Thang/@Model.Nam</h5>
-        <div class="text-muted small">Kiem tra du lieu phong, hop dong, khach, dich vu, don gia va chi so truoc khi chot hoa don.</div>
+        <h5 class="mb-1">Sẵn sàng vận hành - @Model.Thang/@Model.Nam</h5>
+        <div class="text-muted small">Kiểm tra dữ liệu phòng, hợp đồng, khách, dịch vụ, đơn giá và chỉ số trước khi chốt hóa đơn.</div>
     </div>
     <div class="d-flex gap-2">
         <a asp-controller="Phong" asp-action="GanDichVuHangLoat" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-layers"></i> Gan dich vu hang loat
+            <i class="bi bi-layers"></i> Gán dịch vụ hàng loạt
         </a>
         <a asp-controller="HoaDon" asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" asp-route-nhaId="@Model.NhaId"
            class="btn btn-sm btn-primary">
-            <i class="bi bi-receipt"></i> Preview chot hoa don
+            <i class="bi bi-receipt"></i> Xem trước chốt hóa đơn
         </a>
     </div>
 </div>
@@ -23,22 +23,22 @@
 <form method="get" class="border rounded p-3 mb-3 bg-light">
     <div class="row g-2 align-items-end">
         <div class="col-6 col-md-2 col-lg-1">
-            <label class="form-label small text-muted mb-1">Thang</label>
+            <label class="form-label small text-muted mb-1">Tháng</label>
             <select name="thang" class="form-select form-select-sm">
                 @for (int m = 1; m <= 12; m++)
                 {
-                    <option value="@m" selected="@(m == Model.Thang)">Thang @m</option>
+                    <option value="@m" selected="@(m == Model.Thang)">Tháng @m</option>
                 }
             </select>
         </div>
         <div class="col-6 col-md-2 col-lg-1">
-            <label class="form-label small text-muted mb-1">Nam</label>
+            <label class="form-label small text-muted mb-1">Năm</label>
             <input name="nam" type="number" class="form-control form-control-sm" value="@Model.Nam" min="2020" max="2099" />
         </div>
         <div class="col-md-3 col-lg-2">
-            <label class="form-label small text-muted mb-1">Nha</label>
+            <label class="form-label small text-muted mb-1">Nhà</label>
             <select name="nhaId" class="form-select form-select-sm">
-                <option value="">Tat ca nha</option>
+                <option value="">Tất cả nhà</option>
                 @foreach (var nha in Model.DanhSachNha)
                 {
                     <option value="@nha.Id" selected="@(Model.NhaId == nha.Id)">@nha.TenNha</option>
@@ -46,26 +46,26 @@
             </select>
         </div>
         <div class="col-md-3 col-lg-2">
-            <label class="form-label small text-muted mb-1">Trang thai</label>
+            <label class="form-label small text-muted mb-1">Trạng thái</label>
             <select name="trangThaiDong" class="form-select form-select-sm">
-                <option value="TatCa" selected="@(Model.TrangThaiDong == "TatCa")">Tat ca</option>
-                <option value="SanSang" selected="@(Model.TrangThaiDong == "SanSang")">San sang</option>
-                <option value="CanXuLy" selected="@(Model.TrangThaiDong == "CanXuLy")">Can xu ly</option>
-                <option value="ThieuKhach" selected="@(Model.TrangThaiDong == "ThieuKhach")">Thieu khach</option>
-                <option value="ThieuDichVu" selected="@(Model.TrangThaiDong == "ThieuDichVu")">Thieu dich vu</option>
-                <option value="ThieuDonGia" selected="@(Model.TrangThaiDong == "ThieuDonGia")">Thieu don gia</option>
-                <option value="ThieuChiSo" selected="@(Model.TrangThaiDong == "ThieuChiSo")">Thieu chi so</option>
-                <option value="DaCoHoaDon" selected="@(Model.TrangThaiDong == "DaCoHoaDon")">Da co hoa don</option>
+                <option value="TatCa" selected="@(Model.TrangThaiDong == "TatCa")">Tất cả</option>
+                <option value="SanSang" selected="@(Model.TrangThaiDong == "SanSang")">Sẵn sàng</option>
+                <option value="CanXuLy" selected="@(Model.TrangThaiDong == "CanXuLy")">Cần xử lý</option>
+                <option value="ThieuKhach" selected="@(Model.TrangThaiDong == "ThieuKhach")">Thiếu khách</option>
+                <option value="ThieuDichVu" selected="@(Model.TrangThaiDong == "ThieuDichVu")">Thiếu dịch vụ</option>
+                <option value="ThieuDonGia" selected="@(Model.TrangThaiDong == "ThieuDonGia")">Thiếu đơn giá</option>
+                <option value="ThieuChiSo" selected="@(Model.TrangThaiDong == "ThieuChiSo")">Thiếu chỉ số</option>
+                <option value="DaCoHoaDon" selected="@(Model.TrangThaiDong == "DaCoHoaDon")">Đã có hóa đơn</option>
             </select>
         </div>
         <div class="col-md-4 col-lg-4">
-            <label class="form-label small text-muted mb-1">Tim phong/khach</label>
-            <input name="tuKhoa" class="form-control form-control-sm" value="@Model.TuKhoa" placeholder="Ten nha, phong, khach, ma HD" />
+            <label class="form-label small text-muted mb-1">Tìm phòng/khách</label>
+            <input name="tuKhoa" class="form-control form-control-sm" value="@Model.TuKhoa" placeholder="Tên nhà, phòng, khách, mã HĐ" />
         </div>
         <div class="col-md-12 col-lg-2 d-flex gap-2">
-            <button class="btn btn-sm btn-primary flex-fill">Loc</button>
+            <button class="btn btn-sm btn-primary flex-fill">Lọc</button>
             <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
-               class="btn btn-sm btn-outline-secondary flex-fill">Xoa loc</a>
+               class="btn btn-sm btn-outline-secondary flex-fill">Xóa lọc</a>
         </div>
     </div>
 </form>
@@ -73,37 +73,37 @@
 <div class="row g-3 mb-3">
     <div class="col-md-3 col-xl-2">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Dong theo bo loc</div>
+            <div class="text-muted small">Dòng theo bộ lọc</div>
             <div class="fs-5 fw-semibold">@Model.Rows.Count</div>
         </div>
     </div>
     <div class="col-md-3 col-xl-2">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">San sang</div>
+            <div class="text-muted small">Sẵn sàng</div>
             <div class="fs-5 fw-semibold text-success">@Model.SoDongSanSang</div>
         </div>
     </div>
     <div class="col-md-3 col-xl-2">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Can xu ly</div>
+            <div class="text-muted small">Cần xử lý</div>
             <div class="fs-5 fw-semibold text-warning">@Model.SoDongCanXuLy</div>
         </div>
     </div>
     <div class="col-md-3 col-xl-2">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Thieu khach</div>
+            <div class="text-muted small">Thiếu khách</div>
             <div class="fs-5 fw-semibold text-danger">@Model.SoDongThieuKhach</div>
         </div>
     </div>
     <div class="col-md-3 col-xl-2">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Thieu don gia</div>
+            <div class="text-muted small">Thiếu đơn giá</div>
             <div class="fs-5 fw-semibold text-danger">@Model.SoDongThieuDonGia</div>
         </div>
     </div>
     <div class="col-md-3 col-xl-2">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Thieu chi so</div>
+            <div class="text-muted small">Thiếu chỉ số</div>
             <div class="fs-5 fw-semibold text-danger">@Model.SoDongThieuChiSo</div>
         </div>
     </div>
@@ -114,13 +114,13 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Nha / phong / hop dong</th>
-                    <th>Khach</th>
-                    <th>Dich vu</th>
-                    <th>Chi so ky @Model.Thang/@Model.Nam</th>
-                    <th class="text-end">Du kien</th>
-                    <th>Trang thai</th>
-                    <th style="width:220px">Thao tac</th>
+                    <th>Nhà / phòng / hợp đồng</th>
+                    <th>Khách</th>
+                    <th>Dịch vụ</th>
+                    <th>Chỉ số kỳ @Model.Thang/@Model.Nam</th>
+                    <th class="text-end">Dự kiến</th>
+                    <th>Trạng thái</th>
+                    <th style="width:220px">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -131,57 +131,57 @@
                             <div class="text-muted small">@row.TenNha</div>
                             <a asp-controller="Phong" asp-action="Details" asp-route-id="@row.PhongId" class="fw-semibold text-decoration-none">@row.TenPhong</a>
                             <div class="small text-muted">
-                                HD #@row.HopDongId - tu @row.NgayBatDau.ToString("dd/MM/yyyy")
+                                HĐ #@row.HopDongId - từ @row.NgayBatDau.ToString("dd/MM/yyyy")
                             </div>
                         </td>
                         <td>
                             @if (row.SoKhach > 0)
                             {
-                                <div class="fw-semibold">@row.SoKhach khach</div>
+                                <div class="fw-semibold">@row.SoKhach khách</div>
                                 <div class="small text-muted">@row.TenKhach</div>
                             }
                             else
                             {
-                                <span class="badge bg-danger">Thieu khach</span>
+                                <span class="badge bg-danger">Thiếu khách</span>
                             }
                             @if (row.SoDichVuTheoNguoi > 0)
                             {
-                                <div class="small text-muted">Theo nguoi: @row.DichVuTheoNguoi</div>
+                                <div class="small text-muted">Theo người: @row.DichVuTheoNguoi</div>
                             }
                         </td>
                         <td>
                             @if (row.SoDichVuDangApDung == 0)
                             {
-                                <span class="badge bg-warning text-dark">Chua gan dich vu</span>
+                                <span class="badge bg-warning text-dark">Chưa gán dịch vụ</span>
                             }
                             else
                             {
-                                <div>@row.SoDichVuDangApDung dich vu dang ap dung</div>
+                                <div>@row.SoDichVuDangApDung dịch vụ đang áp dụng</div>
                             }
                             @if (row.ThieuDonGia)
                             {
-                                <div class="small text-danger">Don gia can kiem tra: @row.DichVuDonGiaKhongHopLe</div>
+                                <div class="small text-danger">Đơn giá cần kiểm tra: @row.DichVuDonGiaKhongHopLe</div>
                             }
                         </td>
                         <td>
                             @if (row.SoDichVuTheoChiSo == 0)
                             {
-                                <span class="text-muted small">Khong co dich vu theo chi so</span>
+                                <span class="text-muted small">Không có dịch vụ theo chỉ số</span>
                             }
                             else if (row.ThieuChiSo)
                             {
-                                <span class="badge bg-danger">@row.SoChiSoTheoChiSo/@row.SoDichVuTheoChiSo da co chi so</span>
+                                <span class="badge bg-danger">@row.SoChiSoTheoChiSo/@row.SoDichVuTheoChiSo đã có chỉ số</span>
                                 <div class="small text-muted">@row.DichVuTheoChiSo</div>
                             }
                             else
                             {
-                                <span class="badge bg-success">@row.SoChiSoTheoChiSo/@row.SoDichVuTheoChiSo da co chi so</span>
+                                <span class="badge bg-success">@row.SoChiSoTheoChiSo/@row.SoDichVuTheoChiSo đã có chỉ số</span>
                             }
                         </td>
                         <td class="text-end">
                             @if (row.DuKien != null)
                             {
-                                <div class="fw-semibold">@row.DuKien.TongCong.ToString("N0") d</div>
+                                <div class="fw-semibold">@row.DuKien.TongCong.ToString("N0") đ</div>
                                 <div class="small text-muted">DV @row.DuKien.TongTienDichVu.ToString("N0")</div>
                             }
                             else
@@ -193,24 +193,24 @@
                             <div class="d-flex flex-wrap gap-1 mb-1">
                                 @if (row.SanSangVanHanh)
                                 {
-                                    <span class="badge bg-success">San sang</span>
+                                <span class="badge bg-success">Sẵn sàng</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-warning text-dark">Can xu ly</span>
+                                    <span class="badge bg-warning text-dark">Cần xử lý</span>
                                 }
                                 @if (row.DaCoHoaDon)
                                 {
                                     <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@row.DuKien!.HoaDonDaCo!.Id"
-                                       class="badge bg-secondary text-decoration-none">Da co hoa don #@row.DuKien!.HoaDonDaCo!.Id</a>
+                                       class="badge bg-secondary text-decoration-none">Đã có hóa đơn #@row.DuKien!.HoaDonDaCo!.Id</a>
                                 }
                                 @if (row.CoNoKyTruoc)
                                 {
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Co no ky truoc</span>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Có nợ kỳ trước</span>
                                 }
                                 @if (row.SanSangChot)
                                 {
-                                    <span class="badge bg-primary">Co the chot</span>
+                                    <span class="badge bg-primary">Có thể chốt</span>
                                 }
                             </div>
                             @if (row.DuKien != null)
@@ -227,10 +227,10 @@
                         </td>
                         <td>
                             <div class="d-flex flex-wrap gap-1">
-                                <a asp-controller="HopDong" asp-action="Details" asp-route-id="@row.HopDongId" class="btn btn-sm btn-outline-secondary">HD</a>
-                                <a asp-controller="Phong" asp-action="GanDichVuHangLoat" asp-route-nhaId="@row.NhaId" class="btn btn-sm btn-outline-secondary">Dich vu</a>
-                                <a asp-controller="ChiSo" asp-action="Nhap" asp-route-hopDongId="@row.HopDongId" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="btn btn-sm btn-outline-secondary">Chi so</a>
-                                <a asp-controller="HoaDon" asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" asp-route-nhaId="@row.NhaId" asp-route-tuKhoa="@row.HopDongId" class="btn btn-sm btn-outline-primary">Preview</a>
+                                <a asp-controller="HopDong" asp-action="Details" asp-route-id="@row.HopDongId" class="btn btn-sm btn-outline-secondary">HĐ</a>
+                                <a asp-controller="Phong" asp-action="GanDichVuHangLoat" asp-route-nhaId="@row.NhaId" class="btn btn-sm btn-outline-secondary">Dịch vụ</a>
+                                <a asp-controller="ChiSo" asp-action="Nhap" asp-route-hopDongId="@row.HopDongId" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="btn btn-sm btn-outline-secondary">Chỉ số</a>
+                                <a asp-controller="HoaDon" asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" asp-route-nhaId="@row.NhaId" asp-route-tuKhoa="@row.HopDongId" class="btn btn-sm btn-outline-primary">Xem trước</a>
                             </div>
                         </td>
                     </tr>
@@ -238,7 +238,7 @@
                 @if (!Model.Rows.Any())
                 {
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">Khong co hop dong hieu luc nao khop bo loc.</td>
+                        <td colspan="7" class="text-center text-muted py-4">Không có hợp đồng hiệu lực nào khớp bộ lọc.</td>
                     </tr>
                 }
             </tbody>

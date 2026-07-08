@@ -1,17 +1,17 @@
 @model IEnumerable<QuanLyNhaTro.Models.Phong>
 @{
-    ViewData["Title"] = "Danh sach phong";
+    ViewData["Title"] = "Danh sách phòng";
     ViewData["ActiveMenu"] = "phong";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">Danh sach phong</h5>
+    <h5 class="mb-0">Danh sách phòng</h5>
     <div class="d-flex gap-2">
         <a asp-action="GanDichVuHangLoat" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-ui-checks-grid me-1"></i>Gan dich vu hang loat
+            <i class="bi bi-ui-checks-grid me-1"></i>Gán dịch vụ hàng loạt
         </a>
         <a asp-action="Create" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i>Them phong
+            <i class="bi bi-plus-lg me-1"></i>Thêm phòng
         </a>
     </div>
 </div>
@@ -52,14 +52,14 @@
                         <td>@(p.Nha?.TenNha ?? $"#{p.NhaId}")</td>
                         <td><a asp-action="Details" asp-route-id="@p.Id" class="fw-semibold text-decoration-none">@p.TenPhong</a></td>
                         <td>@(p.DienTich.HasValue ? $"{p.DienTich:N1} m2" : "-")</td>
-                        <td class="text-end">@p.GiaThueMacDinh.ToString("N0") d</td>
+                        <td class="text-end">@p.GiaThueMacDinh.ToString("N0") đ</td>
                         <td>@Html.Raw(TrangThaiPhongBadge(p.TrangThai))</td>
                         <td class="text-end">
                             <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary me-1">
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <form asp-action="Delete" asp-route-id="@p.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('Xoa phong @p.TenPhong?')">
+                                  onsubmit="return confirm('Xóa phòng @p.TenPhong?')">
                                 @Html.AntiForgeryToken()
                                 <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                             </form>
@@ -78,8 +78,8 @@
 @functions {
     static string TrangThaiPhongBadge(string tt) => tt switch
     {
-        "DangThue" => "<span class='badge bg-success'>Dang thue</span>",
-        "DangSuaChua" => "<span class='badge bg-warning text-dark'>Dang sua</span>",
-        _ => "<span class='badge bg-secondary'>Trong</span>"
+        "DangThue" => "<span class='badge bg-success'>Đang thuê</span>",
+        "DangSuaChua" => "<span class='badge bg-warning text-dark'>Đang sửa</span>",
+        _ => "<span class='badge bg-secondary'>Trống</span>"
     };
 }

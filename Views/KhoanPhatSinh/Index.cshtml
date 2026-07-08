@@ -1,7 +1,7 @@
 @model IEnumerable<QuanLyNhaTro.Models.KhoanPhatSinhHopDong>
 @{
     var hopDong = ViewBag.HopDong as QuanLyNhaTro.Models.HopDong;
-    ViewData["Title"] = "Khoan phat sinh";
+    ViewData["Title"] = "Khoản phát sinh";
     ViewData["ActiveMenu"] = "hopdong";
 }
 
@@ -9,8 +9,8 @@
     <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong?.Id"
        class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
     <div>
-        <h5 class="mb-0">Khoan phat sinh - @hopDong?.Phong?.TenPhong</h5>
-        <div class="text-muted small">HD #@hopDong?.Id</div>
+        <h5 class="mb-0">Khoản phát sinh - @hopDong?.Phong?.TenPhong</h5>
+        <div class="text-muted small">HĐ #@hopDong?.Id</div>
     </div>
 </div>
 
@@ -28,40 +28,40 @@
 <div class="row g-3">
     <div class="col-lg-5">
         <div class="card shadow-sm">
-            <div class="card-header fw-semibold">Them khoan phat sinh</div>
+            <div class="card-header fw-semibold">Thêm khoản phát sinh</div>
             <div class="card-body">
                 <form asp-action="Create" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="HopDongId" value="@hopDong?.Id" />
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Ngay phat sinh</label>
+                        <label class="form-label fw-semibold">Ngày phát sinh</label>
                         <input name="NgayPhatSinh" type="date" class="form-control"
                                value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Loai khoan</label>
+                        <label class="form-label fw-semibold">Loại khoản</label>
                         <select name="LoaiKhoan" class="form-select">
-                            <option value="HuHongTaiSan">Den bu hu hong tai san</option>
-                            <option value="MatChiaKhoa">Mat chia khoa/the xe</option>
-                            <option value="PhatViPham">Phat vi pham</option>
-                            <option value="PhuThu">Phu thu</option>
-                            <option value="Khac">Khac</option>
+                            <option value="HuHongTaiSan">Đền bù hư hỏng tài sản</option>
+                            <option value="MatChiaKhoa">Mất chìa khóa/thẻ xe</option>
+                            <option value="PhatViPham">Phạt vi phạm</option>
+                            <option value="PhuThu">Phụ thu</option>
+                            <option value="Khac">Khác</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Mo ta</label>
+                        <label class="form-label fw-semibold">Mô tả</label>
                         <input name="MoTa" class="form-control" maxlength="500"
-                               placeholder="VD: Lam hong quat tran phong" required />
+                               placeholder="VD: Làm hỏng quạt trần phòng" required />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">So tien</label>
+                        <label class="form-label fw-semibold">Số tiền</label>
                         <input name="SoTien" type="number" min="1" step="1" class="form-control" required />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Ghi chu</label>
+                        <label class="form-label fw-semibold">Ghi chú</label>
                         <input name="GhiChu" class="form-control" maxlength="255" />
                     </div>
-                    <button class="btn btn-primary w-100">Luu khoan phat sinh</button>
+                    <button class="btn btn-primary w-100">Lưu khoản phát sinh</button>
                 </form>
             </div>
         </div>
@@ -69,15 +69,15 @@
 
     <div class="col-lg-7">
         <div class="card shadow-sm">
-            <div class="card-header fw-semibold">Danh sach khoan phat sinh</div>
+            <div class="card-header fw-semibold">Danh sách khoản phát sinh</div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Ngay</th>
-                            <th>Noi dung</th>
-                            <th class="text-end">So tien</th>
-                            <th>Trang thai</th>
+                            <th>Ngày</th>
+                            <th>Nội dung</th>
+                            <th class="text-end">Số tiền</th>
+                            <th>Trạng thái</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -90,17 +90,17 @@
                                     <div class="fw-semibold">@item.MoTa</div>
                                     <div class="text-muted small">@item.LoaiKhoan @item.GhiChu</div>
                                 </td>
-                                <td class="text-end">@item.SoTien.ToString("N0") d</td>
+                                <td class="text-end">@item.SoTien.ToString("N0") đ</td>
                                 <td>@Html.Raw(TrangThaiBadge(item))</td>
                                 <td class="text-end">
                                     @if (item.TrangThai == QuanLyNhaTro.Models.KhoanPhatSinhHopDong.TrangThaiChuaXuLy)
                                     {
                                         <form asp-action="Huy" method="post"
-                                              onsubmit="return confirm('Huy khoan phat sinh nay?')">
+                                              onsubmit="return confirm('Hủy khoản phát sinh này?')">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
                                             <input type="hidden" name="hopDongId" value="@item.HopDongId" />
-                                            <button class="btn btn-sm btn-outline-danger">Huy</button>
+                                            <button class="btn btn-sm btn-outline-danger">Hủy</button>
                                         </form>
                                     }
                                 </td>
@@ -108,7 +108,7 @@
                         }
                         @if (!Model.Any())
                         {
-                            <tr><td colspan="5" class="text-center text-muted py-4">Chua co khoan phat sinh.</td></tr>
+                            <tr><td colspan="5" class="text-center text-muted py-4">Chưa có khoản phát sinh.</td></tr>
                         }
                     </tbody>
                 </table>
@@ -120,11 +120,11 @@
 @functions {
     static string TrangThaiBadge(QuanLyNhaTro.Models.KhoanPhatSinhHopDong item) => item.TrangThai switch
     {
-        "ChuaXuLy" => $"<span class='badge bg-warning text-dark'>Chua xu ly ({item.SoTienConLai:N0} d)</span>",
-        "DaDuaVaoHoaDon" => $"<span class='badge bg-info text-dark'>Da dua vao hoa don #{item.HoaDonId}</span>",
-        "DaThu" => "<span class='badge bg-success'>Da thu</span>",
-        "DaTruCoc" => "<span class='badge bg-primary'>Da tru coc</span>",
-        "DaHuy" => "<span class='badge bg-secondary'>Da huy</span>",
+        "ChuaXuLy" => $"<span class='badge bg-warning text-dark'>Chưa xử lý ({item.SoTienConLai:N0} đ)</span>",
+        "DaDuaVaoHoaDon" => $"<span class='badge bg-info text-dark'>Đã đưa vào hóa đơn #{item.HoaDonId}</span>",
+        "DaThu" => "<span class='badge bg-success'>Đã thu</span>",
+        "DaTruCoc" => "<span class='badge bg-primary'>Đã trừ cọc</span>",
+        "DaHuy" => "<span class='badge bg-secondary'>Đã hủy</span>",
         _ => $"<span class='badge bg-light text-dark border'>{item.TrangThai}</span>"
     };
 }

@@ -1,18 +1,18 @@
 @model QuanLyNhaTro.Models.GanDichVuHangLoatViewModel
 @using System.Globalization
 @{
-    ViewData["Title"] = "Gan dich vu hang loat";
+    ViewData["Title"] = "Gán dịch vụ hàng loạt";
     ViewData["ActiveMenu"] = "phong";
     var dichVu = Model.DichVuDangChon;
 }
 
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
-        <h5 class="mb-1">Gan dich vu hang loat</h5>
-        <div class="text-muted small">Cap nhat `PhongDichVu.DonGia`, la don gia that su duoc dung khi lap hoa don.</div>
+        <h5 class="mb-1">Gán dịch vụ hàng loạt</h5>
+        <div class="text-muted small">Cập nhật `PhongDichVu.DonGia`, là đơn giá thật sự được dùng khi lập hóa đơn.</div>
     </div>
     <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Danh sach phong
+        <i class="bi bi-arrow-left"></i> Danh sách phòng
     </a>
 </div>
 
@@ -34,15 +34,15 @@
 {
     <div class="alert alert-warning py-2">
         <i class="bi bi-exclamation-triangle me-1"></i>
-        Co @Model.SoPhongDangThueThieuKhach phong dang co hop dong hieu luc nhung chua gan khach.
-        Dich vu tinh theo nguoi se bi chan khi preview/chot hoa don neu chua bo sung khach.
+        Có @Model.SoPhongDangThueThieuKhach phòng đang có hợp đồng hiệu lực nhưng chưa gắn khách.
+        Dịch vụ tính theo người sẽ bị chặn khi preview/chốt hóa đơn nếu chưa bổ sung khách.
     </div>
 }
 
 <form method="get" class="border rounded p-3 mb-3 bg-light">
     <div class="row g-2 align-items-end">
         <div class="col-md-4">
-            <label class="form-label small text-muted mb-1">Dich vu</label>
+            <label class="form-label small text-muted mb-1">Dịch vụ</label>
             <select name="dichVuId" class="form-select form-select-sm" required>
                 @foreach (var dv in Model.DanhSachDichVu)
                 {
@@ -53,9 +53,9 @@
             </select>
         </div>
         <div class="col-md-3">
-            <label class="form-label small text-muted mb-1">Nha</label>
+            <label class="form-label small text-muted mb-1">Nhà</label>
             <select name="nhaId" class="form-select form-select-sm">
-                <option value="">Tat ca nha</option>
+                <option value="">Tất cả nhà</option>
                 @foreach (var nha in Model.DanhSachNha)
                 {
                     <option value="@nha.Id" selected="@(Model.NhaId == nha.Id)">@nha.TenNha</option>
@@ -63,16 +63,16 @@
             </select>
         </div>
         <div class="col-md-3">
-            <label class="form-label small text-muted mb-1">Trang thai phong</label>
+            <label class="form-label small text-muted mb-1">Trạng thái phòng</label>
             <select name="trangThai" class="form-select form-select-sm">
-                <option value="DangThue" selected="@(Model.TrangThai == "DangThue")">Dang thue</option>
-                <option value="Trong" selected="@(Model.TrangThai == "Trong")">Trong</option>
-                <option value="DangSuaChua" selected="@(Model.TrangThai == "DangSuaChua")">Dang sua</option>
-                <option value="TatCa" selected="@(Model.TrangThai == "TatCa")">Tat ca</option>
+                <option value="DangThue" selected="@(Model.TrangThai == "DangThue")">Đang thuê</option>
+                <option value="Trong" selected="@(Model.TrangThai == "Trong")">Trống</option>
+                <option value="DangSuaChua" selected="@(Model.TrangThai == "DangSuaChua")">Đang sửa</option>
+                <option value="TatCa" selected="@(Model.TrangThai == "TatCa")">Tất cả</option>
             </select>
         </div>
         <div class="col-md-2 d-grid">
-            <button class="btn btn-sm btn-primary">Loc</button>
+            <button class="btn btn-sm btn-primary">Lọc</button>
         </div>
     </div>
 </form>
@@ -80,7 +80,7 @@
 <div class="row g-3 mb-3">
     <div class="col-md-4">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Dich vu dang chon</div>
+            <div class="text-muted small">Dịch vụ đang chọn</div>
             <div class="fw-semibold">@dichVu?.TenDichVu</div>
             <div class="small text-muted">
                 @dichVu?.LoaiTinhPhiHienThi
@@ -93,20 +93,20 @@
     </div>
     <div class="col-md-4">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Theo bo loc</div>
-            <div class="fs-5 fw-semibold">@Model.Rows.Count phong</div>
-            <div class="small text-muted">Da gan: @Model.SoPhongDaGan / Chua gan: @Model.SoPhongChuaGan</div>
+            <div class="text-muted small">Theo bộ lọc</div>
+            <div class="fs-5 fw-semibold">@Model.Rows.Count phòng</div>
+            <div class="small text-muted">Đã gán: @Model.SoPhongDaGan / Chưa gán: @Model.SoPhongChuaGan</div>
             @if (Model.SoPhongDangThueThieuKhach > 0)
             {
-                <div class="small text-danger">Thieu khach: @Model.SoPhongDangThueThieuKhach phong</div>
+                <div class="small text-danger">Thiếu khách: @Model.SoPhongDangThueThieuKhach phòng</div>
             }
         </div>
     </div>
     <div class="col-md-4">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Gia goi y tu danh muc</div>
-            <div class="fs-5 fw-semibold">@Model.DonGia.ToString("N0") d</div>
-            <div class="small text-muted">Co the sua truoc khi luu cho phong.</div>
+            <div class="text-muted small">Giá gợi ý từ danh mục</div>
+            <div class="fs-5 fw-semibold">@Model.DonGia.ToString("N0") đ</div>
+            <div class="small text-muted">Có thể sửa trước khi lưu cho phòng.</div>
         </div>
     </div>
 </div>
@@ -123,17 +123,17 @@
         <div class="card-body border-bottom">
             <div class="row g-2 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label small fw-semibold">Don gia ap dung cho cac phong da chon</label>
+                    <label class="form-label small fw-semibold">Đơn giá áp dụng cho các phòng đã chọn</label>
                     <div class="input-group input-group-sm">
                         <input name="donGia" type="number" min="0" step="1" class="form-control"
                                value="@Model.DonGia.ToString("0.##", CultureInfo.InvariantCulture)" />
-                        <span class="input-group-text">d</span>
+                        <span class="input-group-text">đ</span>
                     </div>
                 </div>
                 <div class="col-md-8">
                     <div class="small text-muted">
-                        Neu phong da co dich vu nay, he thong se cap nhat don gia va bat lai trang thai ap dung.
-                        Neu phong chua co, he thong se gan moi.
+                        Nếu phòng đã có dịch vụ này, hệ thống sẽ cập nhật đơn giá và bật lại trạng thái áp dụng.
+                        Nếu phòng chưa có, hệ thống sẽ gán mới.
                     </div>
                 </div>
             </div>
@@ -146,13 +146,13 @@
                         <th style="width:48px">
                             <input class="form-check-input" type="checkbox" id="checkAll" />
                         </th>
-                        <th>Nha / phong</th>
-                        <th>Hop dong</th>
-                        <th class="text-end">So khach</th>
-                        <th>Trang thai dich vu</th>
-                        <th class="text-end">Don gia hien tai</th>
-                        <th class="text-end">So luong du kien</th>
-                        <th class="text-end">Thanh tien du kien</th>
+                        <th>Nhà / phòng</th>
+                        <th>Hợp đồng</th>
+                        <th class="text-end">Số khách</th>
+                        <th>Trạng thái dịch vụ</th>
+                        <th class="text-end">Đơn giá hiện tại</th>
+                        <th class="text-end">Số lượng dự kiến</th>
+                        <th class="text-end">Thành tiền dự kiến</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -178,35 +178,35 @@
                                 }
                                 else
                                 {
-                                    <span class="text-muted small">Chua co hop dong hieu luc</span>
+                                    <span class="text-muted small">Chưa có hợp đồng hiệu lực</span>
                                 }
                             </td>
                             <td class="text-end @(row.HopDongId.HasValue && row.SoKhach == 0 ? "text-danger fw-semibold" : "")">
                                 @row.SoKhach
                                 @if (thieuKhach)
                                 {
-                                    <div class="small">Can bo sung khach</div>
+                                    <div class="small">Cần bổ sung khách</div>
                                 }
                             </td>
                             <td>
                                 @if (row.DaGan && row.DangApDung)
                                 {
-                                    <span class="badge bg-success">Dang ap dung</span>
+                                    <span class="badge bg-success">Đang áp dụng</span>
                                 }
                                 else if (row.DaGan)
                                 {
-                                    <span class="badge bg-warning text-dark">Dang tat</span>
+                                    <span class="badge bg-warning text-dark">Đang tắt</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Chua gan</span>
+                                    <span class="badge bg-secondary">Chưa gán</span>
                                 }
                             </td>
-                            <td class="text-end">@(row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value.ToString("N0") + " d" : "-")</td>
+                            <td class="text-end">@(row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value.ToString("N0") + " đ" : "-")</td>
                             <td class="text-end">
                                 @if (Model.LaDichVuTheoChiSo)
                                 {
-                                    <span class="text-muted small">Theo chi so</span>
+                                    <span class="text-muted small">Theo chỉ số</span>
                                 }
                                 else
                                 {
@@ -216,12 +216,12 @@
                             <td class="text-end">
                                 @if (Model.LaDichVuTheoChiSo)
                                 {
-                                    <span class="text-muted small">Nhap chi so</span>
+                                    <span class="text-muted small">Nhập chỉ số</span>
                                 }
                                 else
                                 {
                                     <span class="preview-amount" data-quantity="@soLuongDuKien.ToString("0.##", CultureInfo.InvariantCulture)">
-                                        @((soLuongDuKien * Model.DonGia).ToString("N0")) d
+                                        @((soLuongDuKien * Model.DonGia).ToString("N0")) đ
                                     </span>
                                     <div class="small text-muted">
                                         @soLuongDuKien.ToString("N0") x <span class="preview-unit-price">@Model.DonGia.ToString("N0")</span>
@@ -233,16 +233,16 @@
                     @if (!Model.Rows.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Khong co phong nao khop bo loc.</td>
+                            <td colspan="8" class="text-center text-muted py-4">Không có phòng nào khớp bộ lọc.</td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
         <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2">
-            <div class="small text-muted">Chi cac phong duoc tick moi duoc gan/cap nhat.</div>
+            <div class="small text-muted">Chỉ các phòng được tick mới được gán/cập nhật.</div>
             <button class="btn btn-primary" type="submit" disabled="@(!Model.Rows.Any())">
-                Gan/cap nhat dich vu
+                Gán/cập nhật dịch vụ
             </button>
         </div>
     </div>
@@ -258,7 +258,7 @@
             const price = Number(priceInput?.value || 0);
             document.querySelectorAll('.preview-amount').forEach((element) => {
                 const quantity = Number(element.dataset.quantity || 0);
-                element.textContent = `${currencyFormatter.format(quantity * price)} d`;
+                element.textContent = `${currencyFormatter.format(quantity * price)} đ`;
             });
             document.querySelectorAll('.preview-unit-price').forEach((element) => {
                 element.textContent = currencyFormatter.format(price);
@@ -284,8 +284,8 @@
 
     static string TrangThaiPhongBadge(string tt) => tt switch
     {
-        "DangThue" => "<span class='badge bg-success'>Dang thue</span>",
-        "DangSuaChua" => "<span class='badge bg-warning text-dark'>Dang sua</span>",
-        _ => "<span class='badge bg-secondary'>Trong</span>"
+        "DangThue" => "<span class='badge bg-success'>Đang thuê</span>",
+        "DangSuaChua" => "<span class='badge bg-warning text-dark'>Đang sửa</span>",
+        _ => "<span class='badge bg-secondary'>Trống</span>"
     };
 }

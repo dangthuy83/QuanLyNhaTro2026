@@ -48,15 +48,15 @@
                                 <td class="text-end fw-semibold">@Model.TienPhongProRata.ToString("N0") đ</td>
                             </tr>
                             <tr>
-                                <td class="text-muted">Dich vu thang cuoi</td>
-                                <td class="text-end fw-semibold">@Model.TongTienDichVuThangCuoi.ToString("N0") d</td>
+                                <td class="text-muted">Dịch vụ tháng cuối</td>
+                                <td class="text-end fw-semibold">@Model.TongTienDichVuThangCuoi.ToString("N0") đ</td>
                             </tr>
                         }
                         @if (Model.TongTienPhatSinhChuaXuLy > 0)
                         {
                             <tr>
-                                <td class="text-muted">Khoan phat sinh chua xu ly</td>
-                                <td class="text-end fw-semibold text-danger">@Model.TongTienPhatSinhChuaXuLy.ToString("N0") d</td>
+                                <td class="text-muted">Khoản phát sinh chưa xử lý</td>
+                                <td class="text-end fw-semibold text-danger">@Model.TongTienPhatSinhChuaXuLy.ToString("N0") đ</td>
                             </tr>
                         }
                         <tr>
@@ -66,8 +66,8 @@
                         @if (Model.TienTruNoTuCoc > 0)
                         {
                             <tr>
-                                <td class="text-muted">Tru no vao coc</td>
-                                <td class="text-end fw-semibold text-warning">@Model.TienTruNoTuCoc.ToString("N0") d</td>
+                                <td class="text-muted">Trừ nợ vào cọc</td>
+                                <td class="text-end fw-semibold text-warning">@Model.TienTruNoTuCoc.ToString("N0") đ</td>
                             </tr>
                         }
                         <tr class="table-light">

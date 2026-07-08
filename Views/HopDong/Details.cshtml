@@ -31,12 +31,12 @@
 {
     <div class="alert alert-warning d-flex align-items-center justify-content-between gap-3">
         <div>
-            <strong>Chenh lech coc chuyen phong chua xu ly.</strong>
-            Vao ledger coc de thu them hoac hoan lai phan chenh lech.
+            <strong>Chênh lệch cọc chuyển phòng chưa xử lý.</strong>
+            Vào ledger cọc để thu thêm hoặc hoàn lại phần chênh lệch.
         </div>
         <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id"
            class="btn btn-sm btn-warning">
-            Xu ly coc
+            Xử lý cọc
         </a>
     </div>
 }
@@ -53,10 +53,10 @@
                             @Model.Phong?.TenPhong
                         </a>
                     </dd>
-                    <dt class="col-5">So du coc</dt>
+                    <dt class="col-5">Số dư cọc</dt>
                     <dd class="col-7">
                         <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id">
-                            @soDuCoc.ToString("N0") d
+                            @soDuCoc.ToString("N0") đ
                         </a>
                     </dd>
                     <dt class="col-5">Ngày bắt đầu</dt> <dd class="col-7">@Model.NgayBatDau.ToString("dd/MM/yyyy")</dd>
@@ -132,11 +132,11 @@
                         </a>
                         <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id"
                            class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-wallet2 me-1"></i>Ledger coc
+                            <i class="bi bi-wallet2 me-1"></i>Ledger cọc
                         </a>
                         <a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id"
                            class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-exclamation-diamond me-1"></i>Khoan phat sinh
+                            <i class="bi bi-exclamation-diamond me-1"></i>Khoản phát sinh
                         </a>
                         <form asp-action="KetThuc" asp-route-id="@Model.Id" method="post"
                               onsubmit="return confirm('Xác nhận kết thúc hợp đồng?')">
@@ -158,10 +158,10 @@
 <div class="card shadow-sm mt-3">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="card-title text-muted mb-0">Khoan phat sinh</h6>
+            <h6 class="card-title text-muted mb-0">Khoản phát sinh</h6>
             <a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id"
                class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-plus-lg me-1"></i>Quan ly
+                <i class="bi bi-plus-lg me-1"></i>Quản lý
             </a>
         </div>
         @if (khoanPhatSinh.Any())
@@ -169,7 +169,7 @@
             <div class="table-responsive">
                 <table class="table table-sm mb-0 align-middle">
                     <thead class="table-light">
-                        <tr><th>Ngay</th><th>Noi dung</th><th class="text-end">So tien</th><th>Trang thai</th></tr>
+                        <tr><th>Ngày</th><th>Nội dung</th><th class="text-end">Số tiền</th><th>Trạng thái</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var item in khoanPhatSinh.Take(5))
@@ -177,8 +177,8 @@
                             <tr>
                                 <td>@item.NgayPhatSinh.ToString("dd/MM/yyyy")</td>
                                 <td>@item.MoTa</td>
-                                <td class="text-end">@item.SoTien.ToString("N0") d</td>
-                                <td>@item.TrangThai</td>
+                                <td class="text-end">@item.SoTien.ToString("N0") đ</td>
+                                <td>@TrangThaiKhoanPhatSinh(item.TrangThai)</td>
                             </tr>
                         }
                     </tbody>
@@ -187,7 +187,19 @@
         }
         else
         {
-            <p class="text-muted mb-0">Chua co khoan phat sinh nao.</p>
+            <p class="text-muted mb-0">Chưa có khoản phát sinh nào.</p>
         }
     </div>
 </div>
+
+@functions {
+    private static string TrangThaiKhoanPhatSinh(string? trangThai) => trangThai switch
+    {
+        QuanLyNhaTro.Models.KhoanPhatSinhHopDong.TrangThaiChuaXuLy => "Chưa xử lý",
+        QuanLyNhaTro.Models.KhoanPhatSinhHopDong.TrangThaiDaDuaVaoHoaDon => "Đã đưa vào hóa đơn",
+        QuanLyNhaTro.Models.KhoanPhatSinhHopDong.TrangThaiDaThu => "Đã thu",
+        QuanLyNhaTro.Models.KhoanPhatSinhHopDong.TrangThaiDaTruCoc => "Đã trừ cọc",
+        QuanLyNhaTro.Models.KhoanPhatSinhHopDong.TrangThaiDaHuy => "Đã hủy",
+        _ => trangThai ?? string.Empty
+    };
+}

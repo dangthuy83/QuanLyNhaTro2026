@@ -24,8 +24,8 @@
             <div class="card-body">
                 <h6 class="card-title text-muted mb-3">Thông tin phòng</h6>
                 <dl class="row mb-0">
-                    <dt class="col-5">Nha</dt><dd class="col-7">@(Model.Nha?.TenNha ?? $"#{Model.NhaId}")</dd>
-                    <dt class="col-5">Dien tich</dt><dd class="col-7">@(Model.DienTich.HasValue ? $"{Model.DienTich:N1} m2" : "-")</dd>
+                    <dt class="col-5">Nhà</dt><dd class="col-7">@(Model.Nha?.TenNha ?? $"#{Model.NhaId}")</dd>
+                    <dt class="col-5">Diện tích</dt><dd class="col-7">@(Model.DienTich.HasValue ? $"{Model.DienTich:N1} m2" : "-")</dd>
                     <dt class="col-5">Giá niêm yết</dt><dd class="col-7">@Model.GiaThueMacDinh.ToString("N0") đ</dd>
                     <dt class="col-5">Trạng thái</dt>
                     <dd class="col-7">

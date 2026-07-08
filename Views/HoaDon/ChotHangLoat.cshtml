@@ -1,12 +1,12 @@
 @model QuanLyNhaTro.Models.HoaDonHangLoatPreviewViewModel
 @{
-    ViewData["Title"] = "Preview chốt hóa đơn";
+    ViewData["Title"] = "Xem trước chốt hóa đơn";
     ViewData["ActiveMenu"] = "hoadon";
 }
 
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
-        <h5 class="mb-1">Preview chốt hóa đơn - @Model.Thang/@Model.Nam</h5>
+        <h5 class="mb-1">Xem trước chốt hóa đơn - @Model.Thang/@Model.Nam</h5>
         <div class="text-muted small">Kiểm tra dữ liệu trước khi tạo hóa đơn thật cho các hợp đồng đang hiệu lực.</div>
     </div>
     <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
@@ -178,7 +178,7 @@
                                         {
                                             <div class="small text-danger">
                                                 <span class="fw-semibold">@khoan.MoTa</span>
-                                                <span class="text-muted">@khoan.SoTienConLai.ToString("N0") d</span>
+                                                <span class="text-muted">@khoan.SoTienConLai.ToString("N0") đ</span>
                                             </div>
                                         }
                                     </div>
@@ -193,7 +193,7 @@
                                 @row.TongTienDichVu.ToString("N0")
                                 @if (row.TongTienPhatSinh > 0)
                                 {
-                                    <div class="small text-danger">+ @row.TongTienPhatSinh.ToString("N0") phat sinh</div>
+                                    <div class="small text-danger">+ @row.TongTienPhatSinh.ToString("N0") phát sinh</div>
                                 }
                             </td>
                             <td class="text-end @(row.TienNoKyTruoc > 0 ? "text-danger fw-semibold" : "")">@row.TienNoKyTruoc.ToString("N0")</td>

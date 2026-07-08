@@ -1,13 +1,13 @@
 @model IEnumerable<QuanLyNhaTro.Models.Nha>
 @{
-    ViewData["Title"] = "Nha";
+    ViewData["Title"] = "Nhà";
     ViewData["ActiveMenu"] = "nha";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">Quan ly Nha</h5>
+    <h5 class="mb-0">Quản lý nhà</h5>
     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalThemNha">
-        <i class="bi bi-plus-lg me-1"></i>Them nha
+        <i class="bi bi-plus-lg me-1"></i>Thêm nhà
     </button>
 </div>
 
@@ -57,7 +57,7 @@
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <form asp-action="Delete" asp-route-id="@nha.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('Xoa nha @nha.TenNha?')">
+                                  onsubmit="return confirm('Xóa nhà @nha.TenNha?')">
                                 @Html.AntiForgeryToken()
                                 <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                             </form>
@@ -79,26 +79,26 @@
             <form asp-action="Create" method="post">
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
-                    <h6 class="modal-title">Them nha</h6>
+                    <h6 class="modal-title">Thêm nhà</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Ten nha <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">Tên nhà <span class="text-danger">*</span></label>
                         <input name="TenNha" class="form-control" maxlength="255" required />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Dia chi</label>
+                        <label class="form-label fw-semibold">Địa chỉ</label>
                         <input name="DiaChi" class="form-control" maxlength="500" />
                     </div>
                     <div class="mb-0">
-                        <label class="form-label fw-semibold">Ghi chu</label>
+                        <label class="form-label fw-semibold">Ghi chú</label>
                         <textarea name="GhiChu" class="form-control" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary btn-sm">Luu</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Huy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
                 </div>
             </form>
         </div>
@@ -112,26 +112,26 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="Id" id="editNhaId" />
                 <div class="modal-header">
-                    <h6 class="modal-title">Sua nha</h6>
+                    <h6 class="modal-title">Sửa nhà</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Ten nha <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">Tên nhà <span class="text-danger">*</span></label>
                         <input name="TenNha" id="editTenNha" class="form-control" maxlength="255" required />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Dia chi</label>
+                        <label class="form-label fw-semibold">Địa chỉ</label>
                         <input name="DiaChi" id="editDiaChi" class="form-control" maxlength="500" />
                     </div>
                     <div class="mb-0">
-                        <label class="form-label fw-semibold">Ghi chu</label>
+                        <label class="form-label fw-semibold">Ghi chú</label>
                         <textarea name="GhiChu" id="editGhiChu" class="form-control" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary btn-sm">Luu thay doi</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Huy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu thay đổi</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
                 </div>
             </form>
         </div>

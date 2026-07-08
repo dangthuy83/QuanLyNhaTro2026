@@ -1,13 +1,13 @@
 @model QuanLyNhaTro.Models.GiaoDichCocViewModel
 @{
-    ViewData["Title"] = "Ledger coc";
+    ViewData["Title"] = "Ledger cọc";
     string FormatDelta(decimal value) => value >= 0 ? $"+{value:N0}" : value.ToString("N0");
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
     <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDong.Id"
        class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Ledger coc - @Model.HopDong.Phong?.TenPhong</h5>
+    <h5 class="mb-0">Ledger cọc - @Model.HopDong.Phong?.TenPhong</h5>
 </div>
 
 @if (TempData["Success"] != null)
@@ -31,40 +31,40 @@
     <div class="alert alert-warning shadow-sm">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div>
-                <div class="fw-semibold mb-1">Chenh lech coc chuyen phong chua xu ly</div>
+                <div class="fw-semibold mb-1">Chênh lệch cọc chuyển phòng chưa xử lý</div>
                 <div class="small">
-                    Coc thoa thuan: <strong>@Model.HopDong.TienCoc.ToString("N0") d</strong>
+                    Cọc thỏa thuận: <strong>@Model.HopDong.TienCoc.ToString("N0") đ</strong>
                     <span class="mx-2">|</span>
-                    So du dang giu: <strong>@Model.SoDuCoc.ToString("N0") d</strong>
+                    Số dư đang giữ: <strong>@Model.SoDuCoc.ToString("N0") đ</strong>
                     <span class="mx-2">|</span>
-                    Chenh lech:
+                    Chênh lệch:
                     <strong class="@(chenhLech > 0 ? "text-success" : "text-danger")">
-                        @FormatDelta(chenhLech) d
+                        @FormatDelta(chenhLech) đ
                     </strong>
                 </div>
                 <div class="small text-muted mt-1">
                     @(chenhLech > 0
-                        ? "Can thu them coc de khop hop dong moi."
+                        ? "Cần thu thêm cọc để khớp hợp đồng mới."
                         : chenhLech < 0
-                            ? "Can hoan lai coc de khop hop dong moi."
-                            : "So du da khop, chi can danh dau hoan tat.")
+                            ? "Cần hoàn lại cọc để khớp hợp đồng mới."
+                            : "Số dư đã khớp, chỉ cần đánh dấu hoàn tất.")
                 </div>
             </div>
             <form asp-action="XuLyChenhLech" method="post" class="d-flex flex-wrap align-items-end gap-2">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="hopDongId" value="@Model.HopDong.Id" />
                 <div>
-                    <label class="form-label small mb-1">Ngay giao dich</label>
+                    <label class="form-label small mb-1">Ngày giao dịch</label>
                     <input name="ngayGiaoDich" type="date" class="form-control form-control-sm"
                            value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                 </div>
                 <div>
-                    <label class="form-label small mb-1">Ghi chu</label>
+                    <label class="form-label small mb-1">Ghi chú</label>
                     <input name="ghiChu" class="form-control form-control-sm"
-                           value="Xu ly chenh lech coc chuyen phong" />
+                           value="Xử lý chênh lệch cọc chuyển phòng" />
                 </div>
                 <button class="btn btn-warning btn-sm">
-                    Xu ly chenh lech
+                    Xử lý chênh lệch
                 </button>
             </form>
         </div>
@@ -73,7 +73,7 @@
 else if (Model.LaHopDongChuyenPhong)
 {
     <div class="alert alert-success py-2">
-        Chenh lech coc chuyen phong da duoc xu ly.
+        Chênh lệch cọc chuyển phòng đã được xử lý.
     </div>
 }
 
@@ -82,8 +82,8 @@ else if (Model.LaHopDongChuyenPhong)
         <div class="card shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="card-title text-muted mb-0">Lich su giao dich</h6>
-                    <span class="badge bg-primary fs-6">So du: @Model.SoDuCoc.ToString("N0") d</span>
+                    <h6 class="card-title text-muted mb-0">Lịch sử giao dịch</h6>
+                    <span class="badge bg-primary fs-6">Số dư: @Model.SoDuCoc.ToString("N0") đ</span>
                 </div>
 
                 @if (Model.GiaoDich.Any())
@@ -92,12 +92,12 @@ else if (Model.LaHopDongChuyenPhong)
                         <table class="table table-sm align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Ngay</th>
-                                    <th>Loai</th>
-                                    <th class="text-end">Phat sinh</th>
-                                    <th class="text-end">So du sau</th>
-                                    <th>Hoa don</th>
-                                    <th>Ghi chu</th>
+                                    <th>Ngày</th>
+                                    <th>Loại</th>
+                                    <th class="text-end">Phát sinh</th>
+                                    <th class="text-end">Số dư sau</th>
+                                    <th>Hóa đơn</th>
+                                    <th>Ghi chú</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -105,7 +105,7 @@ else if (Model.LaHopDongChuyenPhong)
                                 {
                                     <tr>
                                         <td>@gd.NgayGiaoDich.ToString("dd/MM/yyyy")</td>
-                                        <td><span class="badge bg-light text-dark border">@gd.LoaiGiaoDich</span></td>
+                                        <td><span class="badge bg-light text-dark border">@LoaiGiaoDichHienThi(gd.LoaiGiaoDich)</span></td>
                                         <td class="text-end fw-semibold @(gd.SoTien >= 0 ? "text-success" : "text-danger")">
                                             @FormatDelta(gd.SoTien)
                                         </td>
@@ -125,7 +125,7 @@ else if (Model.LaHopDongChuyenPhong)
                 }
                 else
                 {
-                    <p class="text-muted mb-0">Chua co giao dich coc. So du dang lay tu HopDong.TienCoc.</p>
+                    <p class="text-muted mb-0">Chưa có giao dịch cọc. Số dư đang lấy từ HopDong.TienCoc.</p>
                 }
             </div>
         </div>
@@ -134,41 +134,52 @@ else if (Model.LaHopDongChuyenPhong)
     <div class="col-lg-4">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Ghi nhan giao dich</h6>
+                <h6 class="card-title text-muted mb-3">Ghi nhận giao dịch</h6>
                 <form asp-action="Create" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="hopDongId" value="@Model.HopDong.Id" />
 
                     <div class="mb-3">
-                        <label class="form-label">Loai giao dich</label>
+                        <label class="form-label">Loại giao dịch</label>
                         <select name="loaiGiaoDich" class="form-select">
-                            <option value="ThuThemCoc">ThuThemCoc</option>
-                            <option value="HoanCoc">HoanCoc</option>
-                            <option value="TruNo">TruNo</option>
-                            <option value="DieuChinh">DieuChinh</option>
+                            <option value="ThuThemCoc">Thu thêm cọc</option>
+                            <option value="HoanCoc">Hoàn cọc</option>
+                            <option value="TruNo">Trừ nợ</option>
+                            <option value="DieuChinh">Điều chỉnh</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">So tien</label>
+                        <label class="form-label">Số tiền</label>
                         <input name="soTien" type="number" step="10000" class="form-control" required />
-                        <div class="form-text">DieuChinh cho phep nhap so am neu can giam so du.</div>
+                        <div class="form-text">Điều chỉnh cho phép nhập số âm nếu cần giảm số dư.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ngay giao dich</label>
+                        <label class="form-label">Ngày giao dịch</label>
                         <input name="ngayGiaoDich" type="date" class="form-control"
                                value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hoa don lien quan</label>
+                        <label class="form-label">Hóa đơn liên quan</label>
                         <input name="hoaDonId" type="number" min="1" class="form-control" />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ghi chu</label>
+                        <label class="form-label">Ghi chú</label>
                         <input name="ghiChu" class="form-control" />
                     </div>
-                    <button class="btn btn-primary w-100">Luu giao dich</button>
+                    <button class="btn btn-primary w-100">Lưu giao dịch</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+@functions {
+    private static string LoaiGiaoDichHienThi(string? loaiGiaoDich) => loaiGiaoDich switch
+    {
+        "ThuThemCoc" => "Thu thêm cọc",
+        "HoanCoc" => "Hoàn cọc",
+        "TruNo" => "Trừ nợ",
+        "DieuChinh" => "Điều chỉnh",
+        _ => loaiGiaoDich ?? string.Empty
+    };
+}

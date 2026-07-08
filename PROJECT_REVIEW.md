@@ -150,6 +150,13 @@ Da xu ly trong phien 43:
 - Man nay goi lai `HoaDonService.TinhHoaDonDuKienAsync`, khong tao cong thuc tinh tien rieng trong controller/view.
 - Co link nhanh sang hop dong, gan dich vu hang loat, nhap chi so va preview chot hoa don.
 
+Da xu ly trong phien 44:
+
+- Chuan hoa nhan tieng Viet co dau trong cac view van hanh chinh de UI de doc hon khi dung that.
+- Doi cac nhan/muc hien thi con lo ma noi bo nhu `ThuThemCoc`, `HoanCoc`, `TruNo`, `Trong`, `HD`, `Preview` sang nhan nguoi dung de hieu.
+- Chuan hoa ky hieu tien te con sot tu `d` sang `đ` trong cac man preview, hoa don va cau hinh dich vu phong.
+- Them helper hien thi trang thai khoan phat sinh va loai giao dich coc trong view, tranh in thang ma trang thai ra UI.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.

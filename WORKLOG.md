@@ -13,7 +13,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công với 0 warning, 0 error ở phiên mới nhất. `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. Phiên 40 thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`; DB hiện hữu cần chạy file này một lần trước khi dùng code mới. Phiên 43 thêm màn `KiemTraDuLieu/Index` read-only để rà dữ liệu trước vận hành/chốt hóa đơn. |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. Phiên 40 thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`; DB hiện hữu cần chạy file này một lần trước khi dùng code mới. Phiên 43 thêm màn `KiemTraDuLieu/Index` read-only để rà dữ liệu trước vận hành/chốt hóa đơn. Phiên 44 chuẩn hóa tiếng Việt có dấu trên các view vận hành chính. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset`; `DichVu.DonGiaMacDinh` chỉ là giá gợi ý, hóa đơn vẫn dùng `PhongDichVu.DonGia`; `DichVu.CachTinhCoDinh` cho dịch vụ cố định dùng `TheoPhong` hoặc `TheoNguoi`; khoản phát sinh theo hợp đồng được đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc |
 
@@ -1663,6 +1663,36 @@ Ghi chú:
 
 ---
 
+### Phiên 44 - Chuẩn Hóa Nhãn Tiếng Việt Có Dấu Trong View
+
+Ngày: 08/07/2026
+
+Đã làm:
+
+- Rà và chuẩn hóa các nhãn không dấu trong các view vận hành chính: kiểm tra dữ liệu, gán dịch vụ hàng loạt, nhà/phòng, nhập chỉ số, chuyển/trả phòng, khoản phát sinh, ledger cọc và hóa đơn.
+- Đổi các nhãn/mã nội bộ đang lộ ra UI như `ThuThemCoc`, `HoanCoc`, `TruNo`, `Trong`, `HD`, `Preview` sang tiếng Việt có dấu dễ đọc hơn.
+- Chuẩn hóa ký hiệu tiền tệ còn sót từ `d` sang `đ` ở các màn hình preview, hóa đơn và cấu hình dịch vụ phòng.
+- Thêm helper hiển thị trạng thái khoản phát sinh và loại giao dịch cọc trong view để không in thẳng mã trạng thái ra giao diện.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+
+dotnet test --no-restore
+Exit code 0; no meaningful test output in this repo.
+```
+
+Ghi chú:
+
+- Chưa chạy HTTP smoke vì blocker Windows EventLog của sandbox vẫn là rủi ro môi trường đã biết.
+- `appsettings.json` vẫn là thay đổi cấu hình local, không thuộc phạm vi commit.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1698,6 +1728,7 @@ Ghi chú:
 | 40 | `DichVu`, `HoaDonService`, `TraPhongService`, `ChuyenPhongService` | Dịch vụ cố định luôn tính `SoLuong = 1`, sai với các khoản thu theo số người | Thêm `DichVu.CachTinhCoDinh`, tính `TheoNguoi` bằng số khách trong `HopDongKhachThue` và chặn hóa đơn nếu hợp đồng chưa gắn khách |
 | 41 | `PhongDichVu`, `Views/Phong` | Cấu hình danh mục dịch vụ xong nhưng phải gán/cập nhật giá từng phòng thủ công | Thêm màn gán/cập nhật dịch vụ hàng loạt cho nhiều phòng, ghi trực tiếp vào `PhongDichVu.DonGia` |
 | 43 | `KiemTraDuLieu/Index` | Trước khi nhập dữ liệu thật/chốt kỳ cần một nơi nhìn nhanh phòng nào thiếu khách, dịch vụ, đơn giá hoặc chỉ số | Thêm màn kiểm tra read-only theo kỳ, dùng lại `HoaDonService.TinhHoaDonDuKienAsync` và link nhanh sang các màn xử lý |
+| 44 | `Views/*` | Một số view còn nhãn tiếng Việt không dấu hoặc lộ mã nội bộ, làm giao diện vận hành khó đọc | Chuẩn hóa nhãn tiếng Việt có dấu, ký hiệu `đ`, và helper hiển thị trạng thái/loại giao dịch |
 
 ---
 
