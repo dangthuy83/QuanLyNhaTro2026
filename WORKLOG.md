@@ -11,9 +11,9 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Mục | Trạng thái |
 |---|---|
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
-| Build | `dotnet build --no-restore` thành công; phiên mới nhất có warning `NU1900` do sandbox không truy cập được NuGet vulnerability feed. `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
+| Build | `dotnet build --no-restore` thành công với 0 warning, 0 error ở phiên mới nhất. `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. Phiên 40 thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`; DB hiện hữu cần chạy file này một lần trước khi dùng code mới. |
+| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. Phiên 40 thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`; DB hiện hữu cần chạy file này một lần trước khi dùng code mới. Phiên 43 thêm màn `KiemTraDuLieu/Index` read-only để rà dữ liệu trước vận hành/chốt hóa đơn. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset`; `DichVu.DonGiaMacDinh` chỉ là giá gợi ý, hóa đơn vẫn dùng `PhongDichVu.DonGia`; `DichVu.CachTinhCoDinh` cho dịch vụ cố định dùng `TheoPhong` hoặc `TheoNguoi`; khoản phát sinh theo hợp đồng được đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc |
 
@@ -32,7 +32,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 9 | Nâng cấp UI bằng Syncfusion | Làm sau nghiệp vụ lõi; xem `PROJECT_REVIEW.md` mục 8 | Trung bình |
 | 10 | Rà tiếp UI chỉ số nhiều đoạn sau vận hành thật | Phiên 38 đã smoke test qua MVC form thật; in-app browser plugin bị lỗi hạ tầng `failed to write kernel assets` nên chưa có screenshot browser | Thấp |
 | 11 | Rà UI khoản phát sinh sau pilot | Đã có bản tối thiểu cho hợp đồng/hóa đơn/trả phòng; theo dõi nhu cầu ảnh hiện trạng, danh mục tài sản, hoặc báo cáo riêng | Thấp |
-| 12 | Dọn dữ liệu smoke test dịch vụ theo người | Smoke test `TEST_FSB_20260707213224` đã pass và còn dữ liệu test trong DB; file dọn an toàn Workbench: `Database/cleanup/TEST_FSB_20260707213224_cleanup.sql` | Thấp |
+| 12 | Rà màn sẵn sàng vận hành sau khi có dữ liệu thật | Màn `KiemTraDuLieu/Index` đã build pass; cần dùng với dữ liệu thật để tinh chỉnh bộ lọc/badge nếu phát sinh cách vận hành mới | Thấp |
 
 ### Quy ước GitHub
 
@@ -1446,7 +1446,7 @@ Kết quả kiểm tra:
 ```text
 dotnet build --no-restore
 Build succeeded.
-1 Warning(s)
+0 Warning(s)
 0 Error(s)
 ```
 
@@ -1600,7 +1600,6 @@ Exit code 0; no meaningful test output in this repo.
 
 Ghi chú:
 
-- Warning build là `NU1900` do sandbox không truy cập được `https://api.nuget.org/v3/index.json`, không phải lỗi compile.
 - Chưa chạy HTTP smoke vì blocker Windows EventLog của sandbox vẫn là rủi ro môi trường đã biết.
 
 ### Phiên 42 - Smoke Test Dịch Vụ Cố Định Theo Người
@@ -1631,6 +1630,36 @@ File dọn dữ liệu test:
 
 - `Database/cleanup/TEST_FSB_20260707213224_cleanup.sql`
 - File dùng ID hằng trực tiếp và khóa ngoại có index, tránh `DELETE ... IN (SELECT ... FROM temp table)` để phù hợp MySQL Workbench khi bật Safe Updates.
+
+### Phiên 43 - Màn Sẵn Sàng Vận Hành
+
+Ngày: 07/07/2026
+
+Đã làm:
+
+- Thêm màn `KiemTraDuLieu/Index` để rà các hợp đồng `DangHieuLuc` theo kỳ trước khi chốt hóa đơn.
+- Thêm `KiemTraDuLieuRepository` tổng hợp dữ liệu cấu hình: nhà/phòng/hợp đồng, số khách, dịch vụ đang áp dụng, dịch vụ theo chỉ số, chỉ số đã nhập trong kỳ và dịch vụ có đơn giá không hợp lệ.
+- Màn này gọi lại `HoaDonService.TinhHoaDonDuKienAsync` cho từng hợp đồng, nên các lỗi chặn như thiếu chỉ số hoặc dịch vụ cố định theo người thiếu khách vẫn đi qua logic hóa đơn chuẩn.
+- UI có filter theo tháng/năm, nhà, từ khóa và trạng thái: sẵn sàng, cần xử lý, thiếu khách, thiếu dịch vụ, thiếu đơn giá, thiếu chỉ số, đã có hóa đơn.
+- Thêm link nhanh sang chi tiết hợp đồng, gán dịch vụ hàng loạt, nhập chỉ số và preview chốt hóa đơn.
+- Thêm menu sidebar `San Sang Van Hanh`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+1 Warning(s)
+0 Error(s)
+
+dotnet test --no-restore
+Exit code 0; no meaningful test output in this repo.
+```
+
+Ghi chú:
+
+- Warning build là `NU1900` do sandbox không truy cập được `https://api.nuget.org/v3/index.json`, không phải lỗi compile.
+- Chưa chạy HTTP smoke vì blocker Windows EventLog của sandbox vẫn là rủi ro môi trường đã biết.
 
 ---
 
@@ -1668,6 +1697,7 @@ File dọn dữ liệu test:
 | 36 | `ChiSoDienNuoc`, `ChiSoController`, `TraPhongService`, `ChuyenPhongService` | Một phòng/dịch vụ/tháng chỉ có một dòng chỉ số nên không tách được khách cũ, phòng trống và khách mới trong cùng tháng | Thêm `HopDongId` nullable cho chỉ số, dùng `NgayDoc` làm mốc bàn giao, cho phép nhiều đoạn theo hợp đồng và chặn thiếu chỉ số khi trả/chuyển phòng |
 | 40 | `DichVu`, `HoaDonService`, `TraPhongService`, `ChuyenPhongService` | Dịch vụ cố định luôn tính `SoLuong = 1`, sai với các khoản thu theo số người | Thêm `DichVu.CachTinhCoDinh`, tính `TheoNguoi` bằng số khách trong `HopDongKhachThue` và chặn hóa đơn nếu hợp đồng chưa gắn khách |
 | 41 | `PhongDichVu`, `Views/Phong` | Cấu hình danh mục dịch vụ xong nhưng phải gán/cập nhật giá từng phòng thủ công | Thêm màn gán/cập nhật dịch vụ hàng loạt cho nhiều phòng, ghi trực tiếp vào `PhongDichVu.DonGia` |
+| 43 | `KiemTraDuLieu/Index` | Trước khi nhập dữ liệu thật/chốt kỳ cần một nơi nhìn nhanh phòng nào thiếu khách, dịch vụ, đơn giá hoặc chỉ số | Thêm màn kiểm tra read-only theo kỳ, dùng lại `HoaDonService.TinhHoaDonDuKienAsync` và link nhanh sang các màn xử lý |
 
 ---
 

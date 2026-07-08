@@ -143,6 +143,13 @@ Da smoke test trong phien 42:
 - Xac nhan hop dong chua gan khach bi bao loi/chặn preview de tranh tinh `SoLuong = 0`.
 - Da sinh file cleanup safe-mode-friendly: `Database/cleanup/TEST_FSB_20260707213224_cleanup.sql`.
 
+Da xu ly trong phien 43:
+
+- Them man `KiemTraDuLieu/Index` read-only de ra soat hop dong dang hieu luc truoc khi van hanh/chot hoa don.
+- Man nay tong hop thieu khach, thieu dich vu, don gia bang 0, thieu chi so theo ky va trang thai da co hoa don.
+- Man nay goi lai `HoaDonService.TinhHoaDonDuKienAsync`, khong tao cong thuc tinh tien rieng trong controller/view.
+- Co link nhanh sang hop dong, gan dich vu hang loat, nhap chi so va preview chot hoa don.
+
 Da xu ly trong phien 30:
 
 - `HoaDon/ChotHangLoat` da co man preview Bootstrap theo ky cho cac hop dong dang hieu luc.

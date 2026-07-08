@@ -1,0 +1,247 @@
+@model QuanLyNhaTro.Models.KiemTraDuLieuViewModel
+@{
+    ViewData["Title"] = "San sang van hanh";
+    ViewData["ActiveMenu"] = "kiemtra";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+        <h5 class="mb-1">San sang van hanh - @Model.Thang/@Model.Nam</h5>
+        <div class="text-muted small">Kiem tra du lieu phong, hop dong, khach, dich vu, don gia va chi so truoc khi chot hoa don.</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Phong" asp-action="GanDichVuHangLoat" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-layers"></i> Gan dich vu hang loat
+        </a>
+        <a asp-controller="HoaDon" asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" asp-route-nhaId="@Model.NhaId"
+           class="btn btn-sm btn-primary">
+            <i class="bi bi-receipt"></i> Preview chot hoa don
+        </a>
+    </div>
+</div>
+
+<form method="get" class="border rounded p-3 mb-3 bg-light">
+    <div class="row g-2 align-items-end">
+        <div class="col-6 col-md-2 col-lg-1">
+            <label class="form-label small text-muted mb-1">Thang</label>
+            <select name="thang" class="form-select form-select-sm">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    <option value="@m" selected="@(m == Model.Thang)">Thang @m</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-2 col-lg-1">
+            <label class="form-label small text-muted mb-1">Nam</label>
+            <input name="nam" type="number" class="form-control form-control-sm" value="@Model.Nam" min="2020" max="2099" />
+        </div>
+        <div class="col-md-3 col-lg-2">
+            <label class="form-label small text-muted mb-1">Nha</label>
+            <select name="nhaId" class="form-select form-select-sm">
+                <option value="">Tat ca nha</option>
+                @foreach (var nha in Model.DanhSachNha)
+                {
+                    <option value="@nha.Id" selected="@(Model.NhaId == nha.Id)">@nha.TenNha</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 col-lg-2">
+            <label class="form-label small text-muted mb-1">Trang thai</label>
+            <select name="trangThaiDong" class="form-select form-select-sm">
+                <option value="TatCa" selected="@(Model.TrangThaiDong == "TatCa")">Tat ca</option>
+                <option value="SanSang" selected="@(Model.TrangThaiDong == "SanSang")">San sang</option>
+                <option value="CanXuLy" selected="@(Model.TrangThaiDong == "CanXuLy")">Can xu ly</option>
+                <option value="ThieuKhach" selected="@(Model.TrangThaiDong == "ThieuKhach")">Thieu khach</option>
+                <option value="ThieuDichVu" selected="@(Model.TrangThaiDong == "ThieuDichVu")">Thieu dich vu</option>
+                <option value="ThieuDonGia" selected="@(Model.TrangThaiDong == "ThieuDonGia")">Thieu don gia</option>
+                <option value="ThieuChiSo" selected="@(Model.TrangThaiDong == "ThieuChiSo")">Thieu chi so</option>
+                <option value="DaCoHoaDon" selected="@(Model.TrangThaiDong == "DaCoHoaDon")">Da co hoa don</option>
+            </select>
+        </div>
+        <div class="col-md-4 col-lg-4">
+            <label class="form-label small text-muted mb-1">Tim phong/khach</label>
+            <input name="tuKhoa" class="form-control form-control-sm" value="@Model.TuKhoa" placeholder="Ten nha, phong, khach, ma HD" />
+        </div>
+        <div class="col-md-12 col-lg-2 d-flex gap-2">
+            <button class="btn btn-sm btn-primary flex-fill">Loc</button>
+            <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
+               class="btn btn-sm btn-outline-secondary flex-fill">Xoa loc</a>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3 col-xl-2">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Dong theo bo loc</div>
+            <div class="fs-5 fw-semibold">@Model.Rows.Count</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-xl-2">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">San sang</div>
+            <div class="fs-5 fw-semibold text-success">@Model.SoDongSanSang</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-xl-2">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Can xu ly</div>
+            <div class="fs-5 fw-semibold text-warning">@Model.SoDongCanXuLy</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-xl-2">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Thieu khach</div>
+            <div class="fs-5 fw-semibold text-danger">@Model.SoDongThieuKhach</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-xl-2">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Thieu don gia</div>
+            <div class="fs-5 fw-semibold text-danger">@Model.SoDongThieuDonGia</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-xl-2">
+        <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Thieu chi so</div>
+            <div class="fs-5 fw-semibold text-danger">@Model.SoDongThieuChiSo</div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nha / phong / hop dong</th>
+                    <th>Khach</th>
+                    <th>Dich vu</th>
+                    <th>Chi so ky @Model.Thang/@Model.Nam</th>
+                    <th class="text-end">Du kien</th>
+                    <th>Trang thai</th>
+                    <th style="width:220px">Thao tac</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr class="@(row.CanXuLy ? "table-warning" : "")">
+                        <td>
+                            <div class="text-muted small">@row.TenNha</div>
+                            <a asp-controller="Phong" asp-action="Details" asp-route-id="@row.PhongId" class="fw-semibold text-decoration-none">@row.TenPhong</a>
+                            <div class="small text-muted">
+                                HD #@row.HopDongId - tu @row.NgayBatDau.ToString("dd/MM/yyyy")
+                            </div>
+                        </td>
+                        <td>
+                            @if (row.SoKhach > 0)
+                            {
+                                <div class="fw-semibold">@row.SoKhach khach</div>
+                                <div class="small text-muted">@row.TenKhach</div>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Thieu khach</span>
+                            }
+                            @if (row.SoDichVuTheoNguoi > 0)
+                            {
+                                <div class="small text-muted">Theo nguoi: @row.DichVuTheoNguoi</div>
+                            }
+                        </td>
+                        <td>
+                            @if (row.SoDichVuDangApDung == 0)
+                            {
+                                <span class="badge bg-warning text-dark">Chua gan dich vu</span>
+                            }
+                            else
+                            {
+                                <div>@row.SoDichVuDangApDung dich vu dang ap dung</div>
+                            }
+                            @if (row.ThieuDonGia)
+                            {
+                                <div class="small text-danger">Don gia can kiem tra: @row.DichVuDonGiaKhongHopLe</div>
+                            }
+                        </td>
+                        <td>
+                            @if (row.SoDichVuTheoChiSo == 0)
+                            {
+                                <span class="text-muted small">Khong co dich vu theo chi so</span>
+                            }
+                            else if (row.ThieuChiSo)
+                            {
+                                <span class="badge bg-danger">@row.SoChiSoTheoChiSo/@row.SoDichVuTheoChiSo da co chi so</span>
+                                <div class="small text-muted">@row.DichVuTheoChiSo</div>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">@row.SoChiSoTheoChiSo/@row.SoDichVuTheoChiSo da co chi so</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (row.DuKien != null)
+                            {
+                                <div class="fw-semibold">@row.DuKien.TongCong.ToString("N0") d</div>
+                                <div class="small text-muted">DV @row.DuKien.TongTienDichVu.ToString("N0")</div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1 mb-1">
+                                @if (row.SanSangVanHanh)
+                                {
+                                    <span class="badge bg-success">San sang</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Can xu ly</span>
+                                }
+                                @if (row.DaCoHoaDon)
+                                {
+                                    <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@row.DuKien!.HoaDonDaCo!.Id"
+                                       class="badge bg-secondary text-decoration-none">Da co hoa don #@row.DuKien!.HoaDonDaCo!.Id</a>
+                                }
+                                @if (row.CoNoKyTruoc)
+                                {
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Co no ky truoc</span>
+                                }
+                                @if (row.SanSangChot)
+                                {
+                                    <span class="badge bg-primary">Co the chot</span>
+                                }
+                            </div>
+                            @if (row.DuKien != null)
+                            {
+                                foreach (var loi in row.DuKien.Loi)
+                                {
+                                    <div class="small text-danger">@loi</div>
+                                }
+                                foreach (var canhBao in row.DuKien.CanhBao)
+                                {
+                                    <div class="small text-muted">@canhBao</div>
+                                }
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                <a asp-controller="HopDong" asp-action="Details" asp-route-id="@row.HopDongId" class="btn btn-sm btn-outline-secondary">HD</a>
+                                <a asp-controller="Phong" asp-action="GanDichVuHangLoat" asp-route-nhaId="@row.NhaId" class="btn btn-sm btn-outline-secondary">Dich vu</a>
+                                <a asp-controller="ChiSo" asp-action="Nhap" asp-route-hopDongId="@row.HopDongId" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="btn btn-sm btn-outline-secondary">Chi so</a>
+                                <a asp-controller="HoaDon" asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" asp-route-nhaId="@row.NhaId" asp-route-tuKhoa="@row.HopDongId" class="btn btn-sm btn-outline-primary">Preview</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Rows.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">Khong co hop dong hieu luc nao khop bo loc.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
