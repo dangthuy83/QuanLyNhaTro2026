@@ -32,9 +32,12 @@ public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
             INNER JOIN Nha n ON n.Id = p.NhaId
             LEFT JOIN HopDongKhachThue hdkt ON hdkt.HopDongId = hd.Id
             LEFT JOIN KhachThue kt ON kt.Id = hdkt.KhachThueId
+            LEFT JOIN HopDongDichVu hdv
+                ON hdv.HopDongId = hd.Id
+               AND hdv.KyBatDau <= @Ky
+               AND (hdv.KyKetThuc IS NULL OR @Ky < hdv.KyKetThuc)
             LEFT JOIN PhongDichVu pdv
-                ON pdv.PhongId = p.Id
-               AND pdv.DangApDung = 1
+                ON pdv.Id = hdv.PhongDichVuId
             LEFT JOIN DichVu dv ON dv.Id = pdv.DichVuId
             LEFT JOIN ChiSoDienNuoc cs
                 ON cs.PhongId = p.Id
@@ -50,6 +53,12 @@ public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
             ORDER BY n.TenNha, p.TenPhong, hd.Id
             """;
 
-        return await _db.QueryAsync<KiemTraDuLieuRow>(sql, new { Thang = thang, Nam = nam, NhaId = nhaId });
+        return await _db.QueryAsync<KiemTraDuLieuRow>(sql, new
+        {
+            Thang = thang,
+            Nam = nam,
+            NhaId = nhaId,
+            Ky = new DateTime(nam, thang, 1)
+        });
     }
 }

@@ -132,8 +132,8 @@ Da xu ly trong phien 40:
 
 Da xu ly trong phien 41:
 
-- Them man `Phong/GanDichVuHangLoat` de gan/cap nhat cung mot dich vu cho nhieu phong, giam thao tac sau khi cau hinh danh muc dich vu theo nguoi.
-- Man nay cap nhat truc tiep `PhongDichVu.DonGia`, giu dung quy tac hoa don lay gia theo phong thay vi `DichVu.DonGiaMacDinh`.
+- Them man `Phong/GanDichVuHangLoat` de gan/bat lai cung mot dich vu cho nhieu phong, giam thao tac sau khi cau hinh danh muc dich vu theo nguoi.
+- Sau phien 45, man nay chi dat gia khi gan moi; phong da co dich vu giu nguyen don gia va doi gia qua luong lich su theo ky.
 - Man nay canh bao hop dong hieu luc chua co khach khi dich vu tinh theo nguoi, va hien thanh tien du kien theo so khach x don gia de review truoc khi luu.
 
 Da smoke test trong phien 42:
@@ -156,6 +156,16 @@ Da xu ly trong phien 44:
 - Doi cac nhan/muc hien thi con lo ma noi bo nhu `ThuThemCoc`, `HoanCoc`, `TruNo`, `Trong`, `HD`, `Preview` sang nhan nguoi dung de hieu.
 - Chuan hoa ky hieu tien te con sot tu `d` sang `đ` trong cac man preview, hoa don va cau hinh dich vu phong.
 - Them helper hien thi trang thai khoan phat sinh va loai giao dich coc trong view, tranh in thang ma trang thai ra UI.
+
+Da xu ly trong phien 45:
+
+- Them `HopDongDichVu` de tach cau hinh dich vu cua phong khoi dich vu tung hop dong dang ky; hieu luc duoc luu theo ky su dung.
+- Them `DichVu.BatBuocKhiThue`; du lieu mau dat Dien la bat buoc, Nuoc la tuy chon. Tao phong mac dinh chon tat ca dich vu, tao hop dong/chuyen phong mac dinh chon dich vu phong va cho bo dich vu tuy chon.
+- `HoaDonService`, `TraPhongService`, `ChuyenPhongService`, `ChiSoController` va `KiemTraDuLieuRepository` da chuyen sang lay dich vu hop dong theo ky.
+- Sua bo giai gia: ky truoc lan tang gia dau tien dung `GiaCu`; chan trung thay doi cung ky; ghi/xoa lich su gia va gia hien tai trong transaction.
+- Sua xoa phong: phong chi co cau hinh duoc xoa cung `PhongDichVu`; phong da co hop dong/chi so/thu chi bi chan va hien thong bao nghiep vu.
+- Chot baseline database moi tu `Database/schema.sql`; cac update cu duoc chuyen vao `Database/updates/archive_pre_20260710`.
+- Smoke database sach tao du 17 bang; smoke service pass dich vu theo ky, hoa don chi lay dich vu hop dong, gia lich su va xoa phong an toan. HTTP smoke cac GET/POST chinh pass; Browser plugin van loi ha tang `failed to write kernel assets` nen chua co visual screenshot.
 
 Da xu ly trong phien 30:
 

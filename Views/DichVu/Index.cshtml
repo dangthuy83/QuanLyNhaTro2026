@@ -28,6 +28,7 @@
                     <th>Tên dịch vụ</th>
                     <th>Loại tính phí</th>
                     <th>Cách tính cố định</th>
+                    <th>Đăng ký</th>
                     <th>Đơn vị</th>
                     <th class="text-end">Giá mặc định</th>
                     <th></th>
@@ -49,6 +50,16 @@
                                 <span class="text-muted small">Không áp dụng</span>
                             }
                         </td>
+                        <td>
+                            @if (dv.BatBuocKhiThue)
+                            {
+                                <span class="badge bg-danger">Bắt buộc</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Tùy chọn</span>
+                            }
+                        </td>
                         <td>@dv.DonViTinh</td>
                         <td class="text-end">@dv.DonGiaMacDinh.ToString("N0") đ</td>
                         <td class="text-end">
@@ -59,6 +70,7 @@
                                     data-cachtinh="@dv.CachTinhCoDinh"
                                     data-donvi="@dv.DonViTinh"
                                     data-dongia="@dv.DonGiaMacDinh.ToString("0.##", CultureInfo.InvariantCulture)"
+                                    data-batbuoc="@dv.BatBuocKhiThue.ToString().ToLowerInvariant()"
                                     onclick="suaDichVu(this)">
                                 <i class="bi bi-pencil"></i>
                             </button>
@@ -67,7 +79,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="6" class="text-center text-muted py-4">Chưa có dịch vụ nào.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">Chưa có dịch vụ nào.</td></tr>
                 }
             </tbody>
         </table>
@@ -145,6 +157,7 @@ function suaDichVu(button) {
     m.querySelector('[name=CachTinhCoDinh]').value = button.dataset.cachtinh || 'TheoPhong';
     m.querySelector('[name=DonViTinh]').value = button.dataset.donvi || '';
     m.querySelector('[name=DonGiaMacDinh]').value = button.dataset.dongia || 0;
+    m.querySelector('[name=BatBuocKhiThue]').checked = button.dataset.batbuoc === 'true';
     syncCachTinhCoDinh(form);
     new bootstrap.Modal(m).show();
 }

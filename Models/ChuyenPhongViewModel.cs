@@ -22,5 +22,7 @@ public class ChuyenPhongViewModel
 
     public DateTime NgayBatDauMoi => NgayChuyenDi.AddDays(1);
 
+    public int[] PhongDichVuIds { get; set; } = [];
+
     public IEnumerable<Phong> DsPhongTrong { get; set; } = [];
 }

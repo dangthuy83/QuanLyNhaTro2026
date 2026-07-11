@@ -71,6 +71,7 @@ CREATE TABLE DichVu (
     LoaiTinhPhi VARCHAR(20) NOT NULL,
     CachTinhCoDinh VARCHAR(20) NOT NULL DEFAULT 'TheoPhong',
     DonGiaMacDinh DECIMAL(12,2) NOT NULL DEFAULT 0,
+    BatBuocKhiThue BIT NOT NULL DEFAULT 0,
     DonViTinh VARCHAR(20) NULL,
     CONSTRAINT CK_DichVu_LoaiTinhPhi CHECK (LoaiTinhPhi IN ('CoDinh', 'TheoChiSo')),
     CONSTRAINT CK_DichVu_CachTinhCoDinh CHECK (CachTinhCoDinh IN ('TheoPhong', 'TheoNguoi'))
@@ -131,6 +132,31 @@ CREATE TABLE HopDongKhachThue (
     CONSTRAINT FK_HDKT_KhachThue FOREIGN KEY (KhachThueId) REFERENCES KhachThue(Id),
     CONSTRAINT UQ_HopDong_Khach UNIQUE (HopDongId, KhachThueId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
+-- 8. HOPDONGDICHVU — Dịch vụ đăng ký theo hợp đồng và kỳ sử dụng
+-- KyKetThuc là mốc loại trừ: dòng có hiệu lực khi
+-- KyBatDau <= Ky và (KyKetThuc IS NULL hoặc Ky < KyKetThuc).
+-- Đơn giá vẫn nằm ở PhongDichVu và LichSuThayDoiGia.
+-- ============================================================
+CREATE TABLE HopDongDichVu (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    HopDongId INT NOT NULL,
+    PhongDichVuId INT NOT NULL,
+    KyBatDau DATE NOT NULL,
+    KyKetThuc DATE NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_HopDongDichVu_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
+    CONSTRAINT FK_HopDongDichVu_PhongDichVu FOREIGN KEY (PhongDichVuId) REFERENCES PhongDichVu(Id),
+    CONSTRAINT CK_HopDongDichVu_Ky CHECK (
+        DAY(KyBatDau) = 1
+        AND (KyKetThuc IS NULL OR (DAY(KyKetThuc) = 1 AND KyKetThuc > KyBatDau))
+    ),
+    CONSTRAINT UQ_HopDongDichVu_Ky UNIQUE (HopDongId, PhongDichVuId, KyBatDau)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_HopDongDichVu_Ky
+    ON HopDongDichVu(HopDongId, KyBatDau, KyKetThuc);
 
 -- ============================================================
 -- 8. CHISODIENNUOC — Chỉ số đọc theo tháng cho dịch vụ tính theo chỉ số
@@ -400,24 +426,28 @@ CREATE TABLE LichSuThayDoiGia (
     ThangApDung TINYINT NOT NULL,
     NamApDung SMALLINT NOT NULL,
     LyDo VARCHAR(255) NULL,
-    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT UQ_LichSuGia_DoiTuongKy UNIQUE (LoaiDoiTuong, DoiTuongId, ThangApDung, NamApDung)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
 -- DỮ LIỆU MẪU BAN ĐẦU CHO DICHVU (tùy chỉnh lại đơn giá theo thực tế)
 -- ============================================================
-INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, CachTinhCoDinh, DonGiaMacDinh, DonViTinh) VALUES
-    ('Điện', 'TheoChiSo', 'TheoPhong', 0, 'kWh'),
-    ('Nước', 'CoDinh', 'TheoNguoi', 0, 'người/tháng'),
-    ('Internet', 'CoDinh', 'TheoPhong', 0, 'tháng'),
-    ('Vệ sinh', 'CoDinh', 'TheoPhong', 0, 'tháng'),
-    ('Gửi xe', 'CoDinh', 'TheoPhong', 0, 'xe/tháng');
+INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, CachTinhCoDinh, DonGiaMacDinh, BatBuocKhiThue, DonViTinh) VALUES
+    ('Điện', 'TheoChiSo', 'TheoPhong', 4000, 1, 'kWh'),
+    ('Nước', 'CoDinh', 'TheoNguoi', 120000, 0, 'Người/Tháng'),
+    ('Internet', 'CoDinh', 'TheoPhong', 100000, 0, 'Tháng'),
+    ('Vệ sinh', 'CoDinh', 'TheoNguoi', 40000, 0, 'Người/Tháng'),
+    ('Bảo trì thang máy', 'CoDinh', 'TheoNguoi', 50000, 0, 'Người/Tháng'),
+    ('Máy giặt', 'CoDinh', 'TheoNguoi', 80000, 0, 'Người/Tháng'),
+    ('Gửi xe', 'CoDinh', 'TheoNguoi', 0, 0, 'Xe/Tháng');
 
 -- ============================================================
 -- GHI CHÚ TỔNG QUAN QUAN HỆ
 -- Nha 1-n Phong
 -- Phong 1-n HopDong (theo thời gian)
 -- HopDong n-n KhachThue (qua HopDongKhachThue)
+-- HopDong n-n PhongDichVu theo kỳ (qua HopDongDichVu)
 -- HopDong 1-n HopDong (tự tham chiếu qua HopDongTruocId, ca chuyển phòng)
 -- HopDong 1-n HoaDon (theo tháng)
 -- HoaDon 1-n HoaDon (tự tham chiếu qua HoaDonGhepId, ca chuyển phòng)

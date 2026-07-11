@@ -1,9 +1,17 @@
 using MySqlConnector;
 using System.Data;
+using Microsoft.AspNetCore.DataProtection;
 using QuanLyNhaTro.Repositories;
 using QuanLyNhaTro.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Configuration.GetValue<bool>("UseEphemeralDataProtection"))
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddConsole();
+    builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
+}
 
 // ── MVC ──────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
@@ -27,6 +35,7 @@ builder.Services.AddScoped<ThanhToanRepository>();
 builder.Services.AddScoped<GiaoDichCocRepository>();
 builder.Services.AddScoped<DichVuRepository>();
 builder.Services.AddScoped<PhongDichVuRepository>();
+builder.Services.AddScoped<HopDongDichVuRepository>();
 builder.Services.AddScoped<ChiSoDienNuocRepository>();
 builder.Services.AddScoped<ChiSoNgoaiHopDongRepository>();
 builder.Services.AddScoped<KhoanPhatSinhHopDongRepository>();
@@ -43,6 +52,7 @@ builder.Services.AddScoped<ChuyenPhongService>();
 builder.Services.AddScoped<TraPhongService>();
 builder.Services.AddScoped<GiaoDichCocService>();
 builder.Services.AddScoped<CongNoSettlementService>();
+builder.Services.AddScoped<GiaService>();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();

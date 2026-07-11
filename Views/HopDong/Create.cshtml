@@ -1,9 +1,14 @@
+@model QuanLyNhaTro.Models.HopDong
+@using System.Text.Json
 @{
     ViewData["Title"] = "Tạo hợp đồng";
     ViewData["ActiveMenu"] = "hopdong";
     var danhSachPhong = ViewBag.DanhSachPhong as IEnumerable<QuanLyNhaTro.Models.Phong> ?? [];
     var danhSachKhach = ViewBag.DanhSachKhach as IEnumerable<QuanLyNhaTro.Models.KhachThue> ?? [];
     int? phongIdMacDinh = ViewBag.PhongIdMacDinh;
+    var selectedIds = ViewBag.PhongDichVuIdsDaChon as int[];
+    var selectedJson = JsonSerializer.Serialize(selectedIds ?? []);
+    var restoreSelection = selectedIds != null;
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
@@ -15,6 +20,7 @@
     <div class="card-body">
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Phòng <span class="text-danger">*</span></label>
@@ -27,6 +33,14 @@
                         </option>
                     }
                 </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Dịch vụ đăng ký</label>
+                <div id="dichVuHopDong" class="border rounded p-2">
+                    <p class="text-muted small mb-0">Chọn phòng để tải danh sách dịch vụ.</p>
+                </div>
+                <div class="form-text">Tất cả dịch vụ của phòng được chọn sẵn; dịch vụ bắt buộc không thể bỏ.</div>
             </div>
 
             <div class="row g-3 mb-3">
@@ -88,3 +102,58 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(() => {
+    const phongSelect = document.querySelector("[name='PhongId']");
+    const container = document.getElementById('dichVuHopDong');
+    let restoreSelection = @restoreSelection.ToString().ToLowerInvariant();
+    const selectedIds = new Set(@Html.Raw(selectedJson));
+
+    const money = value => Number(value || 0).toLocaleString('vi-VN');
+    const loadServices = async () => {
+        const phongId = phongSelect?.value;
+        if (!phongId) {
+            container.innerHTML = '<p class="text-muted small mb-0">Chọn phòng để tải danh sách dịch vụ.</p>';
+            return;
+        }
+
+        const response = await fetch(`@Url.Action("DichVuTheoPhong")?phongId=${encodeURIComponent(phongId)}`);
+        if (!response.ok) {
+            container.innerHTML = '<p class="text-danger small mb-0">Không tải được danh sách dịch vụ.</p>';
+            return;
+        }
+        const rows = await response.json();
+        if (!rows.length) {
+            container.innerHTML = '<p class="text-warning small mb-0">Phòng chưa được cấu hình dịch vụ.</p>';
+            return;
+        }
+
+        container.innerHTML = rows.map(item => {
+            const checked = item.batBuoc || !restoreSelection || selectedIds.has(item.id);
+            const required = item.batBuoc
+                ? '<span class="badge bg-danger ms-1">Bắt buộc</span>'
+                : '';
+            const lock = item.batBuoc ? 'onclick="return false"' : '';
+            const detail = [item.loaiTinhPhi, item.cachTinh].filter(Boolean).join(', ');
+            return `<div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="phongDichVuIds"
+                       value="${item.id}" id="pdv_${item.id}" ${checked ? 'checked' : ''} ${lock}>
+                <label class="form-check-label" for="pdv_${item.id}">
+                    <strong>${item.tenDichVu}</strong> ${required}
+                    <span class="text-muted small">(${detail}) — ${money(item.donGia)} đ</span>
+                </label>
+            </div>`;
+        }).join('');
+    };
+
+    phongSelect?.addEventListener('change', () => {
+        selectedIds.clear();
+        restoreSelection = false;
+        loadServices();
+    });
+    loadServices();
+})();
+</script>
+}

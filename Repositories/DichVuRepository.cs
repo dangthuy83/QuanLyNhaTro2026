@@ -16,8 +16,8 @@ public class DichVuRepository(IDbConnection db) : BaseRepository(db)
     public async Task<int> InsertAsync(DichVu dichVu)
     {
         const string sql = """
-            INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, CachTinhCoDinh, DonViTinh, DonGiaMacDinh)
-            VALUES (@TenDichVu, @LoaiTinhPhi, @CachTinhCoDinh, @DonViTinh, @DonGiaMacDinh);
+            INSERT INTO DichVu (TenDichVu, LoaiTinhPhi, CachTinhCoDinh, DonViTinh, DonGiaMacDinh, BatBuocKhiThue)
+            VALUES (@TenDichVu, @LoaiTinhPhi, @CachTinhCoDinh, @DonViTinh, @DonGiaMacDinh, @BatBuocKhiThue);
             SELECT LAST_INSERT_ID();
             """;
         return await _db.ExecuteScalarAsync<int>(sql, dichVu);
@@ -29,7 +29,8 @@ public class DichVuRepository(IDbConnection db) : BaseRepository(db)
             UPDATE DichVu SET TenDichVu = @TenDichVu, LoaiTinhPhi = @LoaiTinhPhi,
                 CachTinhCoDinh = @CachTinhCoDinh,
                 DonViTinh = @DonViTinh,
-                DonGiaMacDinh = @DonGiaMacDinh
+                DonGiaMacDinh = @DonGiaMacDinh,
+                BatBuocKhiThue = @BatBuocKhiThue
             WHERE Id = @Id
             """;
         await _db.ExecuteAsync(sql, dichVu);

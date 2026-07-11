@@ -24,6 +24,7 @@
 
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Nhà <span class="text-danger">*</span></label>
@@ -75,9 +76,14 @@
                             <div class="form-check" style="min-width:180px">
                                 <input class="form-check-input dv-check" type="checkbox"
                                        id="dv_@dv.Id" value="@dv.Id" name="dichVuIds"
-                                       data-index="@dv.Id" />
+                                       data-index="@dv.Id" checked
+                                       onclick="@(dv.BatBuocKhiThue ? "return false" : null)" />
                                 <label class="form-check-label" for="dv_@dv.Id">
                                     @dv.TenDichVu
+                                    @if (dv.BatBuocKhiThue)
+                                    {
+                                        <span class="badge bg-danger ms-1">Bắt buộc</span>
+                                    }
                                     <small class="text-muted">
                                         (@dv.LoaiTinhPhiHienThi@if (dv.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh) { <text>, @dv.CachTinhCoDinhHienThi</text> })
                                     </small>
@@ -87,7 +93,7 @@
                                 <input type="number" min="0" class="form-control dv-gia"
                                        name="donGias" placeholder="Đơn giá"
                                        value="@dv.DonGiaMacDinh.ToString("0.##", CultureInfo.InvariantCulture)"
-                                       id="gia_@dv.Id" disabled />
+                                       id="gia_@dv.Id" />
                                 <span class="input-group-text">đ</span>
                             </div>
                         </div>

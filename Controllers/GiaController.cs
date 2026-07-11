@@ -1,13 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
 using QuanLyNhaTro.Models;
 using QuanLyNhaTro.Repositories;
+using QuanLyNhaTro.Services;
 
 namespace QuanLyNhaTro.Controllers;
 
 public class GiaController(
     LichSuThayDoiGiaRepository lichSuRepo,
     PhongRepository phongRepo,
-    PhongDichVuRepository phongDvRepo) : Controller
+    PhongDichVuRepository phongDvRepo,
+    GiaService giaService) : Controller
 {
     // GET /Gia/Phong?phongId=3
     public async Task<IActionResult> Phong(int phongId)
@@ -58,21 +60,16 @@ public class GiaController(
             return View("ThayDoiGia", vm);
         }
 
-        await lichSuRepo.InsertAsync(new LichSuThayDoiGia
+        try
         {
-            LoaiDoiTuong = vm.LoaiDoiTuong,
-            DoiTuongId   = vm.DoiTuongId,
-            GiaCu        = vm.GiaHienTai,
-            GiaMoi       = vm.GiaMoi,
-            ThangApDung  = vm.ThangApDung,
-            NamApDung    = vm.NamApDung,
-            LyDo         = vm.GhiChu
-        });
-
-        if (vm.LoaiDoiTuong == "Phong")
-            await phongRepo.CapNhatGiaThueMacDinhAsync(vm.DoiTuongId, vm.GiaMoi);
-        else
-            await phongDvRepo.UpdateDonGiaAsync(vm.DoiTuongId, vm.GiaMoi);
+            await giaService.LuuThayDoiAsync(vm);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            vm.LichSu = await lichSuRepo.GetByDoiTuongAsync(vm.LoaiDoiTuong, vm.DoiTuongId);
+            return View("ThayDoiGia", vm);
+        }
 
         TempData["Success"] = $"Đã lưu. Hiệu lực từ T{vm.ThangApDung}/{vm.NamApDung}.";
 
@@ -84,7 +81,7 @@ public class GiaController(
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Xoa(int id, string loai, int doiTuongId)
     {
-        await lichSuRepo.DeleteAsync(id);
+        await giaService.XoaThayDoiAsync(id);
         TempData["Success"] = "Đã xóa bản ghi thay đổi giá.";
         return loai == "Phong"
             ? RedirectToAction("Phong", new { phongId = doiTuongId })

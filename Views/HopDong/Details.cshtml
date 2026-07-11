@@ -4,6 +4,7 @@
     ViewData["ActiveMenu"] = "hopdong";
     var danhSachKhach = ViewBag.DanhSachKhach as IEnumerable<QuanLyNhaTro.Models.HopDongKhachThue> ?? [];
     var khoanPhatSinh = ViewBag.KhoanPhatSinh as IEnumerable<QuanLyNhaTro.Models.KhoanPhatSinhHopDong> ?? [];
+    var dichVuHopDong = ViewBag.DichVuHopDong as IEnumerable<QuanLyNhaTro.Models.PhongDichVu> ?? [];
     bool dangHieuLuc = Model.TrangThai == "DangHieuLuc";
     decimal soDuCoc = ViewBag.SoDuCoc is decimal value ? value : Model.TienCoc;
 }
@@ -151,6 +152,48 @@
                     </div>
                 </div>
             </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="card-title text-muted mb-0">Dịch vụ hợp đồng</h6>
+            @if (dangHieuLuc)
+            {
+                <a asp-action="DichVu" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-sliders me-1"></i>Cập nhật từ kỳ tiếp theo
+                </a>
+            }
+        </div>
+        @if (dichVuHopDong.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Dịch vụ</th><th>Loại</th><th class="text-end">Đơn giá hiện tại</th></tr></thead>
+                    <tbody>
+                    @foreach (var pdv in dichVuHopDong)
+                    {
+                        <tr>
+                            <td>
+                                @pdv.DichVu?.TenDichVu
+                                @if (pdv.DichVu?.BatBuocKhiThue == true)
+                                {
+                                    <span class="badge bg-danger ms-1">Bắt buộc</span>
+                                }
+                            </td>
+                            <td>@pdv.DichVu?.LoaiTinhPhiHienThi</td>
+                            <td class="text-end">@pdv.DonGia.ToString("N0") đ</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-warning mb-0">Hợp đồng chưa đăng ký dịch vụ trong kỳ đang xem.</p>
         }
     </div>
 </div>

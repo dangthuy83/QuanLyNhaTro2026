@@ -11,6 +11,7 @@ public class ChiSoController(
     DichVuRepository dichVuRepo,
     PhongRepository phongRepo,
     PhongDichVuRepository phongDichVuRepo,
+    HopDongDichVuRepository hopDongDichVuRepo,
     ChiSoNgoaiHopDongRepository chiSoNgoaiHopDongRepo) : Controller
 {
     public async Task<IActionResult> Index(int? thang, int? nam)
@@ -252,7 +253,10 @@ public class ChiSoController(
         int? hopDongId,
         DateTime? ngayBatDauHopDong)
     {
-        var dichVuTheoChiSo = (await phongDichVuRepo.GetByPhongAsync(phongId))
+        var dichVuNguon = hopDongId.HasValue
+            ? await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(hopDongId.Value, thang, nam)
+            : await phongDichVuRepo.GetByPhongAsync(phongId);
+        var dichVuTheoChiSo = dichVuNguon
             .Where(pdv => pdv.DichVu?.LoaiTinhPhi == "TheoChiSo")
             .Select(pdv => pdv.DichVu!)
             .GroupBy(dv => dv.Id)
@@ -398,7 +402,10 @@ public class ChiSoController(
         var errors = new List<string>();
         var chiSoHienTai = (await chiSoRepo.GetByPhongKyAsync(phongId, thang, nam, hopDongId))
             .ToDictionary(cs => cs.Id);
-        var dichVuTheoChiSoIds = (await phongDichVuRepo.GetByPhongAsync(phongId))
+        var dichVuNguon = hopDongId.HasValue
+            ? await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(hopDongId.Value, thang, nam)
+            : await phongDichVuRepo.GetByPhongAsync(phongId);
+        var dichVuTheoChiSoIds = dichVuNguon
             .Where(pdv => pdv.DichVu?.LoaiTinhPhi == "TheoChiSo")
             .Select(pdv => pdv.DichVuId)
             .ToHashSet();

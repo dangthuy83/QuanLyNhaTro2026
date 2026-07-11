@@ -9,7 +9,7 @@
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
         <h5 class="mb-1">Gán dịch vụ hàng loạt</h5>
-        <div class="text-muted small">Cập nhật `PhongDichVu.DonGia`, là đơn giá thật sự được dùng khi lập hóa đơn.</div>
+        <div class="text-muted small">Gán mới hoặc bật lại dịch vụ cho nhiều phòng. Giá đang dùng của phòng đã có dịch vụ sẽ được giữ nguyên.</div>
     </div>
     <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Danh sách phòng
@@ -104,9 +104,9 @@
     </div>
     <div class="col-md-4">
         <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Giá gợi ý từ danh mục</div>
+            <div class="text-muted small">Giá dùng khi gán mới</div>
             <div class="fs-5 fw-semibold">@Model.DonGia.ToString("N0") đ</div>
-            <div class="small text-muted">Có thể sửa trước khi lưu cho phòng.</div>
+            <div class="small text-muted">Chỉ áp dụng cho phòng chưa từng có dịch vụ này.</div>
         </div>
     </div>
 </div>
@@ -123,7 +123,7 @@
         <div class="card-body border-bottom">
             <div class="row g-2 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label small fw-semibold">Đơn giá áp dụng cho các phòng đã chọn</label>
+                    <label class="form-label small fw-semibold">Đơn giá khi gán mới</label>
                     <div class="input-group input-group-sm">
                         <input name="donGia" type="number" min="0" step="1" class="form-control"
                                value="@Model.DonGia.ToString("0.##", CultureInfo.InvariantCulture)" />
@@ -132,8 +132,8 @@
                 </div>
                 <div class="col-md-8">
                     <div class="small text-muted">
-                        Nếu phòng đã có dịch vụ này, hệ thống sẽ cập nhật đơn giá và bật lại trạng thái áp dụng.
-                        Nếu phòng chưa có, hệ thống sẽ gán mới.
+                        Nếu phòng đã có dịch vụ này, hệ thống chỉ bật lại và giữ nguyên đơn giá.
+                        Nếu phòng chưa có, hệ thống sẽ gán mới với đơn giá bên trái.
                     </div>
                 </div>
             </div>

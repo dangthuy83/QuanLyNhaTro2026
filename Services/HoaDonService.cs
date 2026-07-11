@@ -12,7 +12,7 @@ public class HoaDonService(
     ChiTietHoaDonRepository chiTietRepo,
     ThanhToanRepository thanhToanRepo,
     HopDongRepository hopDongRepo,
-    PhongDichVuRepository phongDichVuRepo,
+    HopDongDichVuRepository hopDongDichVuRepo,
     ChiSoDienNuocRepository chiSoRepo,
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     LichSuThayDoiGiaRepository lichSuGiaRepo,
@@ -25,8 +25,8 @@ public class HoaDonService(
         int nam,
         decimal giaHienTai)
     {
-        var lichSu = await lichSuGiaRepo.GetGiaApDungAsync(loaiDoiTuong, doiTuongId, thang, nam);
-        return lichSu?.GiaMoi ?? giaHienTai;
+        var giaTheoKy = await lichSuGiaRepo.GetGiaTriApDungAsync(loaiDoiTuong, doiTuongId, thang, nam);
+        return giaTheoKy ?? giaHienTai;
     }
 
     public async Task<int> LapHoaDonAsync(
@@ -171,9 +171,10 @@ public class HoaDonService(
             return result;
         }
 
-        var danhSachDV = (await phongDichVuRepo.GetByPhongAsync(hopDong.PhongId)).ToList();
+        var danhSachDV = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
+            hopDongId, thang, nam)).ToList();
         if (danhSachDV.Count == 0)
-            result.CanhBao.Add("Phong chua gan dich vu nao.");
+            result.CanhBao.Add("Hop dong chua dang ky dich vu nao trong ky.");
 
         var chiSoTheoKy = (await chiSoRepo.GetByHopDongKyAsync(hopDongId, thang, nam)).ToList();
 

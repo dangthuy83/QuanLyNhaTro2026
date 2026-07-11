@@ -13,9 +13,9 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
 | Build | `dotnet build --no-restore` thành công với 0 warning, 0 error ở phiên mới nhất. `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Đã chạy app với MySQL thật; ledger cọc/công nợ, edge cases kết chuyển nợ, thu tiền nhanh, nhập chỉ số kỳ đầu/hàng loạt/ngoài hợp đồng, preview chốt hóa đơn hàng loạt có filter vận hành, in phiếu thu HTML và nhắc nợ tối thiểu đã smoke test. Phiên 36 đã apply schema runtime và smoke test DB flow chỉ số nhiều đoạn cùng phòng/tháng. Phiên 38 đã smoke test UI/MVC form flow khách cũ trả phòng -> chỉ số ngoài hợp đồng -> khách mới cùng tháng -> preview/chốt hóa đơn. Phiên 39 đã apply migration giá dịch vụ mặc định/khoản phát sinh hợp đồng trên DB runtime. Phiên 40 thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`; DB hiện hữu cần chạy file này một lần trước khi dùng code mới. Phiên 43 thêm màn `KiemTraDuLieu/Index` read-only để rà dữ liệu trước vận hành/chốt hóa đơn. Phiên 44 chuẩn hóa tiếng Việt có dấu trên các view vận hành chính. |
+| Database | Chưa có dữ liệu vận hành thật. Phiên 45 chốt baseline mới: sau khi hoàn thành sẽ tạo lại database từ `Database/schema.sql`; các update cũ đã chuyển vào `Database/updates/archive_pre_20260710` và không chạy trên baseline mới. Schema sạch đã smoke pass 17 bảng; dịch vụ hợp đồng theo kỳ, hóa đơn, lịch sử giá và xóa phòng an toàn đã smoke bằng database tạm. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
-| Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; đã chốt quy ước ngày vào/ngày ra/chuyển phòng; đã chặn chỉ số âm; đã gom reset/hỏng/thay/quay vòng đồng hồ vào `LoaiGhiNhan = Reset`; `DichVu.DonGiaMacDinh` chỉ là giá gợi ý, hóa đơn vẫn dùng `PhongDichVu.DonGia`; `DichVu.CachTinhCoDinh` cho dịch vụ cố định dùng `TheoPhong` hoặc `TheoNguoi`; khoản phát sinh theo hợp đồng được đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc |
+| Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; `PhongDichVu` giữ cấu hình/đơn giá phòng, `HopDongDichVu` giữ dịch vụ hợp đồng theo kỳ; Điện mẫu là bắt buộc, Nước là tùy chọn; hóa đơn vẫn snapshot đơn giá; thay đổi giá và thay đổi đăng ký dịch vụ đều áp dụng theo kỳ; phòng đã có dữ liệu nghiệp vụ không được xóa cứng. |
 
 ### Việc cần làm tiếp
 
@@ -678,7 +678,7 @@ Quyết định nghiệp vụ:
   - Cập nhật `HopDong.TienCocHoanLai`.
 - Thêm `GiaoDichCocController` và `Views/GiaoDichCoc/Index.cshtml` để xem ledger và ghi nhận giao dịch thủ công.
 - Thêm link ledger cọc từ chi tiết hợp đồng.
-- Thêm `Database/updates/20260628_add_giao_dich_coc.sql` cho DB hiện hữu.
+- Thêm migration lịch sử, nay lưu tại `Database/updates/archive_pre_20260710/20260628_add_giao_dich_coc.sql`.
 - Sửa lỗi nhỏ ở `ChuyenPhongController`: khi render lại form lỗi, danh sách phòng trống phải loại theo `PhongId` cũ, không phải `HopDongCuId`.
 
 Kết quả kiểm tra:
@@ -1407,7 +1407,7 @@ Ngày: 01/07/2026
 
 Đã làm:
 
-- Thêm `Database/updates/20260701_contract_scoped_meter_readings.sql`.
+- Thêm migration lịch sử, nay lưu tại `Database/updates/archive_pre_20260710/20260701_contract_scoped_meter_readings.sql`.
 - Migration dùng stored procedure tạm và `INFORMATION_SCHEMA` để tự kiểm tra trước khi:
   - Thêm `ChiSoDienNuoc.HopDongId`.
   - Thêm generated column `ChiSoScopeKey = COALESCE(HopDongId, 0)`.
@@ -1488,7 +1488,7 @@ Quyết định nghiệp vụ:
   - Thêm `DichVu.DonGiaMacDinh`.
   - Thêm `HoaDon.TongTienPhatSinh`.
   - Thêm bảng `KhoanPhatSinhHopDong`.
-- Thêm migration `Database/updates/20260706_default_service_price_and_contract_charges.sql`.
+- Thêm migration lịch sử, nay lưu tại `Database/updates/archive_pre_20260710/20260706_default_service_price_and_contract_charges.sql`.
 - Thêm model/repository/controller/view cho khoản phát sinh hợp đồng.
 - Màn `DichVu` cho nhập/sửa đơn giá mặc định.
 - Màn tạo phòng tự điền đơn giá dịch vụ từ `DichVu.DonGiaMacDinh`.
@@ -1515,7 +1515,7 @@ DB runtime:
 Ghi chú:
 
 - HTTP smoke bằng `Start-Job` vẫn bị lỗi hạ tầng Windows EventLog của sandbox khi Kestrel cố ghi event log; không để lại process/cổng treo.
-- DB đang tồn tại ở môi trường khác cần chạy một lần file `Database/updates/20260706_default_service_price_and_contract_charges.sql`.
+- Ghi chú này chỉ áp dụng cho baseline cũ; file hiện nằm trong `Database/updates/archive_pre_20260710` và không chạy trên database tạo mới.
 
 ---
 
@@ -1536,7 +1536,7 @@ Quyết định nghiệp vụ:
 Đã làm:
 
 - Cập nhật `Database/schema.sql` thêm `DichVu.CachTinhCoDinh`, CHECK constraint và seed mẫu: `Nước` mặc định `TheoNguoi`, các dịch vụ cố định còn lại giữ `TheoPhong`.
-- Thêm migration `Database/updates/20260707_fixed_service_quantity_method.sql`.
+- Thêm migration lịch sử, nay lưu tại `Database/updates/archive_pre_20260710/20260707_fixed_service_quantity_method.sql`.
 - Cập nhật `DichVu` model, `DichVuRepository` và các repository join `DichVu`.
 - Màn `DichVu` cho chọn cách tính cố định và khóa lựa chọn này khi loại tính phí là `TheoChiSo`.
 - Màn tạo/sửa/chi tiết phòng hiển thị thêm nhãn cách tính cố định cho dịch vụ đã gán.
@@ -1559,7 +1559,7 @@ Exit code 0; no meaningful test output in this repo.
 Ghi chú:
 
 - Chưa chạy HTTP smoke vì blocker sandbox Windows EventLog đã được ghi nhận từ phiên 39.
-- DB đang tồn tại cần chạy một lần file `Database/updates/20260707_fixed_service_quantity_method.sql`, sau đó rà lại các dịch vụ cố định thực tế và đổi sang `TheoNguoi` nếu cần.
+- Ghi chú này chỉ áp dụng cho baseline cũ; database mới lấy trực tiếp `CachTinhCoDinh` từ `Database/schema.sql`.
 - Sau phản hồi runtime, migration đã được chỉnh để câu `UPDATE DichVu` dùng điều kiện theo key `Id`, tránh lỗi MySQL Workbench Safe Updates `Error Code: 1175`.
 
 ---
@@ -1693,6 +1693,44 @@ Ghi chú:
 
 ---
 
+### Phiên 45 - Dịch Vụ Theo Hợp Đồng, Giá Theo Kỳ Và Xóa Phòng An Toàn
+
+Ngày: 11/07/2026
+
+Đã làm:
+
+- Thêm `DichVu.BatBuocKhiThue` và bảng `HopDongDichVu` có `KyBatDau`/`KyKetThuc`.
+- Tạo phòng mặc định chọn toàn bộ dịch vụ; sửa phòng cho phép thêm/bật/tắt dịch vụ, nhưng giá hiện hữu chỉ đổi qua màn giá theo kỳ.
+- Tạo hợp đồng và chuyển phòng cho chọn dịch vụ riêng; dịch vụ bắt buộc không thể bỏ. Thêm màn cập nhật dịch vụ hợp đồng từ một kỳ sử dụng.
+- Đổi nguồn dịch vụ của hóa đơn, nhập chỉ số theo hợp đồng, trả phòng, chuyển phòng và màn kiểm tra dữ liệu sang `HopDongDichVu` theo kỳ.
+- Sửa lịch sử giá để kỳ trước lần đổi đầu tiên dùng `GiaCu`; thêm unique theo đối tượng/kỳ và transaction khi thêm/xóa lịch sử.
+- Sửa xóa phòng: xóa transaction cấu hình của phòng chưa dùng; chặn phòng đã có hợp đồng/chỉ số/thu chi.
+- Chuyển update cũ vào `Database/updates/archive_pre_20260710`; thêm README cho baseline mới.
+- Thêm cấu hình test-only `UseEphemeralDataProtection=true` để HTTP smoke trong sandbox không bị chặn bởi Windows DataProtection/EventLog; mặc định production không bật.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+
+Schema smoke: 17 tables.
+Business smoke: contract service periods, invoice service selection, historical price, safe room deletion passed.
+HTTP smoke: GET Phong/Create, HopDong/Create, HopDong/Details, HopDong/DichVu = 200.
+HTTP POST smoke: mandatory service guard, create room with 5 services, delete unused room,
+block used-room deletion, create/update contract services by period = passed.
+```
+
+Ghi chú:
+
+- In-app Browser plugin vẫn lỗi hạ tầng `failed to write kernel assets`, nên chưa có screenshot/visual QA.
+- Database chính chưa bị thay đổi; cần tạo lại từ `Database/schema.sql` sau khi chốt code.
+- Không đưa thay đổi cục bộ `appsettings.json` vào phạm vi commit.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
@@ -1729,6 +1767,9 @@ Ghi chú:
 | 41 | `PhongDichVu`, `Views/Phong` | Cấu hình danh mục dịch vụ xong nhưng phải gán/cập nhật giá từng phòng thủ công | Thêm màn gán/cập nhật dịch vụ hàng loạt cho nhiều phòng, ghi trực tiếp vào `PhongDichVu.DonGia` |
 | 43 | `KiemTraDuLieu/Index` | Trước khi nhập dữ liệu thật/chốt kỳ cần một nơi nhìn nhanh phòng nào thiếu khách, dịch vụ, đơn giá hoặc chỉ số | Thêm màn kiểm tra read-only theo kỳ, dùng lại `HoaDonService.TinhHoaDonDuKienAsync` và link nhanh sang các màn xử lý |
 | 44 | `Views/*` | Một số view còn nhãn tiếng Việt không dấu hoặc lộ mã nội bộ, làm giao diện vận hành khó đọc | Chuẩn hóa nhãn tiếng Việt có dấu, ký hiệu `đ`, và helper hiển thị trạng thái/loại giao dịch |
+| 45 | `PhongDichVu`, `HopDong`, hóa đơn/chỉ số | Dịch vụ gắn theo phòng làm các hợp đồng kế tiếp không thể đăng ký khác nhau | Thêm `HopDongDichVu` theo kỳ; giữ `PhongDichVu` làm cấu hình và nguồn giá |
+| 45 | `LichSuThayDoiGia` | Lập bù kỳ trước lần đổi giá đầu tiên có thể rơi về giá hiện tại | Dùng `GiaCu` của lần đổi đầu tiên, unique đối tượng/kỳ và transaction cập nhật chuỗi giá |
+| 45 | `PhongController`, `PhongService` | `DELETE FROM Phong` lỗi khóa ngoại ngay cả với phòng mới có `PhongDichVu` | Xóa cấu hình trong transaction nếu phòng chưa dùng; chặn và báo rõ khi đã có dữ liệu nghiệp vụ |
 
 ---
 

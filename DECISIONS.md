@@ -65,7 +65,7 @@ Nguyên tắc phân tầng:
 
 ## 3. Schema Hiện Hành
 
-Schema có 16 bảng:
+Schema có 17 bảng:
 
 | Bảng | Vai trò |
 |---|---|
@@ -76,6 +76,7 @@ Schema có 16 bảng:
 | `PhongDichVu` | Dịch vụ và đơn giá riêng theo phòng |
 | `HopDong` | Hợp đồng thuê |
 | `HopDongKhachThue` | Liên kết nhiều-nhiều hợp đồng và khách thuê |
+| `HopDongDichVu` | Dịch vụ hợp đồng đăng ký, có hiệu lực theo kỳ sử dụng |
 | `ChiSoDienNuoc` | Chỉ số theo hợp đồng/phòng, dịch vụ, tháng, năm |
 | `ChiSoNgoaiHopDong` | Audit chỉ số phát sinh khi phòng trống/sửa phòng, không tính vào hóa đơn khách |
 | `HoaDon` | Hóa đơn theo hợp đồng và kỳ |
@@ -93,6 +94,8 @@ Các cột dễ nhầm:
 - `ChiSoNgoaiHopDong` không liên kết `HoaDon`; bảng này chỉ ghi nhận sản lượng ngoài hợp đồng và mốc bàn giao công tơ.
 - `DichVu` có `DonGiaMacDinh` chỉ để gợi ý khi gán dịch vụ cho phòng; hóa đơn vẫn tính theo `PhongDichVu.DonGia` hoặc lịch sử giá áp dụng.
 - `DichVu.CachTinhCoDinh` chỉ áp dụng khi `LoaiTinhPhi = CoDinh`; giá trị hiện hỗ trợ `TheoPhong` và `TheoNguoi`.
+- `DichVu.BatBuocKhiThue` xác định dịch vụ không được bỏ khỏi hợp đồng; dữ liệu mẫu đặt Điện là bắt buộc, Nước là tùy chọn.
+- `HopDongDichVu.KyKetThuc` là mốc loại trừ; dịch vụ có hiệu lực khi `KyBatDau <= Ky < KyKetThuc`, hoặc không có `KyKetThuc`.
 - `DichVu` không có `Ten`, `DonVi`, `HienThi`, `GhiChu`.
 - `KhachThue` có `AnhCCCDMatTruoc` và `AnhCCCDMatSau`; không có một cột `AnhCCCD` chung.
 - `PhongDichVu` có `DangApDung`; không có `ApDung` hoặc `NgayTao`.
@@ -120,6 +123,8 @@ Các cột dễ nhầm:
 - Thay đổi giá áp dụng từ đầu kỳ `ThangApDung`/`NamApDung`.
 - Các service tính tiền phải tra lịch sử giá bằng kỳ đang lập.
 - `HoaDonService`, `ChuyenPhongService`, `TraPhongService` hiện đã tra giá áp dụng thay vì đọc thẳng giá hiện tại.
+- Nếu kỳ hóa đơn nằm trước lần thay đổi giá đầu tiên, dùng `GiaCu` của lần thay đổi đầu tiên; không được rơi về giá hiện tại.
+- Mỗi đối tượng chỉ có một thay đổi giá trong cùng kỳ; ghi/xóa lịch sử giá và cập nhật giá hiện tại phải cùng transaction.
 
 ### 4.4 Dịch vụ theo chỉ số
 
@@ -145,6 +150,15 @@ Các cột dễ nhầm:
 - Nếu `LoaiTinhPhi = TheoChiSo`, `CachTinhCoDinh` không ảnh hưởng.
 - Nếu dịch vụ `CoDinh + TheoNguoi` nhưng hợp đồng chưa gắn khách thuê, preview/chốt hóa đơn phải báo lỗi và không tạo hóa đơn để tránh tính `SoLuong = 0`.
 - Giai đoạn hiện tại lấy số người theo liên kết hiện có trong `HopDongKhachThue`; chưa xử lý người vào/ra giữa tháng vì bảng này chưa có `NgayBatDau`/`NgayKetThuc` riêng.
+
+### 4.4.3 Dịch vụ đăng ký theo hợp đồng
+
+- `PhongDichVu` là cấu hình dịch vụ có thể cung cấp và đơn giá theo phòng; `HopDongDichVu` là danh sách thực tế từng hợp đồng đăng ký.
+- Khi tạo phòng, tất cả dịch vụ trong danh mục được chọn sẵn. Khi tạo hợp đồng hoặc chuyển phòng, tất cả dịch vụ đang áp dụng của phòng được chọn sẵn nhưng dịch vụ tùy chọn có thể bỏ.
+- Dịch vụ có `BatBuocKhiThue = 1` phải được chọn nếu đang áp dụng tại phòng.
+- Thêm/bỏ dịch vụ giữa hợp đồng áp dụng từ một kỳ sử dụng; không sửa lại hóa đơn đã lập.
+- Hóa đơn, nhập chỉ số theo hợp đồng, trả phòng, chuyển phòng và dashboard kiểm tra dữ liệu phải lấy dịch vụ từ `HopDongDichVu` theo kỳ. Nhập chỉ số ngoài hợp đồng vẫn theo phòng và không tạo tiền hóa đơn.
+- Tắt `PhongDichVu.DangApDung` chỉ ảnh hưởng cấu hình cho hợp đồng mới; không tự dừng dịch vụ của hợp đồng đã đăng ký.
 
 ### 4.5 Nợ kỳ trước
 
@@ -320,6 +334,10 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - Chặn chỉ số điện/nước âm ở controller, service tính hóa đơn và schema chuẩn.
 - Hỗ trợ `Reset` cho đồng hồ reset/hỏng/thay/quay vòng bằng `ChiSoTruocReset`, `ChiSoSauReset`, `LyDoDieuChinh`.
 - Transaction cho lập/xóa hóa đơn và tạo/sửa hợp đồng.
+- Dịch vụ được đăng ký riêng theo hợp đồng/kỳ qua `HopDongDichVu`; Điện mẫu là bắt buộc, Nước là tùy chọn.
+- Tạo phòng mặc định chọn toàn bộ dịch vụ; sửa phòng bật/tắt cấu hình nhưng đổi giá phải qua lịch sử giá theo kỳ.
+- Xóa phòng chỉ xóa cứng phòng chưa có dữ liệu nghiệp vụ; phòng đã có hợp đồng/chỉ số/thu chi bị chặn bằng thông báo nghiệp vụ.
+- Baseline database ngày 10/07/2026 tạo trực tiếp từ `Database/schema.sql`; các update cũ nằm trong `Database/updates/archive_pre_20260710`.
 - UI quan ly `Nha`; form tao/sua `Phong` bat buoc chon `NhaId` tu bang `Nha`.
 - Da chay app voi MySQL that va smoke test flow Nha -> Phong -> Khach thue -> Hop dong -> Hoa don -> Thu tien.
 - Da test voi MySQL that flow gan dich vu theo phong, nhap chi so binh thuong, nhap chi so reset, lap hoa don co dich vu va xac nhan `ChiTietHoaDon.ChiSoDienNuocId`.
@@ -332,7 +350,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - UI vận hành chỉ số nhiều đoạn đã có link ghi chỉ số ngoài hợp đồng sau trả phòng, gợi ý `TuChiSo` từ mốc gần nhất và hiển thị nguồn mốc `ChiSoDau` khi nhập chỉ số.
 - Dịch vụ có `DonGiaMacDinh` để tự điền khi gán dịch vụ cho phòng, nhưng hóa đơn vẫn dùng `PhongDichVu.DonGia`.
 - Dịch vụ cố định có `CachTinhCoDinh`: `TheoPhong` tính 1 lần, `TheoNguoi` tính theo số khách gắn trong `HopDongKhachThue` và chặn chốt nếu hợp đồng chưa có khách.
-- Màn `Phong/GanDichVuHangLoat` dùng để gán/cập nhật cùng một dịch vụ cho nhiều phòng; thao tác này ghi vào `PhongDichVu.DonGia`, là nguồn tính hóa đơn.
+- Màn `Phong/GanDichVuHangLoat` dùng để gán/bật lại cùng một dịch vụ cho nhiều phòng; nếu phòng đã có dịch vụ thì giữ nguyên đơn giá để tránh bỏ qua lịch sử giá theo kỳ.
 - Màn `KiemTraDuLieu/Index` là dashboard read-only để rà dữ liệu trước vận hành/chốt hóa đơn: khách gắn hợp đồng, dịch vụ phòng, đơn giá, chỉ số theo kỳ và trạng thái preview.
 - Màn kiểm tra dữ liệu không tự tính lại nghiệp vụ hóa đơn ở view/controller; trạng thái chốt phải dựa trên `HoaDonService.TinhHoaDonDuKienAsync`.
 - UI khoản phát sinh theo hợp đồng cho phép ghi nhận đền bù hư hỏng/mất chìa khóa/phụ thu, đưa vào hóa đơn hoặc xử lý khi trả phòng/trừ cọc.

@@ -10,7 +10,7 @@ public class TraPhongService(
     HopDongRepository hopDongRepo,
     HoaDonRepository hoaDonRepo,
     PhongRepository phongRepo,
-    PhongDichVuRepository phongDvRepo,
+    HopDongDichVuRepository hopDongDichVuRepo,
     KhachThueRepository khachRepo,
     LichSuThayDoiGiaRepository lichSuRepo,
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
@@ -27,7 +27,8 @@ public class TraPhongService(
 
         var phong = await phongRepo.GetByIdAsync(hd.PhongId);
         var khach = (await khachRepo.GetByHopDongAsync(hopDongId)).FirstOrDefault();
-        var dvPhong = (await phongDvRepo.GetByPhongAsync(hd.PhongId)).ToList();
+        var dvPhong = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
+            hopDongId, ngayTraPhong.Month, ngayTraPhong.Year)).ToList();
 
         int thang = ngayTraPhong.Month;
         int nam = ngayTraPhong.Year;
@@ -95,7 +96,8 @@ public class TraPhongService(
 
         var phong = await phongRepo.GetByIdAsync(hd.PhongId);
         var khach = (await khachRepo.GetByHopDongAsync(hopDongId)).FirstOrDefault();
-        var dvPhong = (await phongDvRepo.GetByPhongAsync(hd.PhongId)).ToList();
+        var dvPhong = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
+            hopDongId, ngayTraPhong.Month, ngayTraPhong.Year)).ToList();
 
         int thang = ngayTraPhong.Month;
         int nam = ngayTraPhong.Year;
@@ -357,14 +359,14 @@ public class TraPhongService(
 
     private async Task<decimal> LayGiaPhongAsync(HopDong hd, int thang, int nam)
     {
-        var ls = await lichSuRepo.GetGiaApDungAsync("Phong", hd.PhongId, thang, nam);
-        return ls?.GiaMoi ?? hd.TienThueThoaThuan;
+        var gia = await lichSuRepo.GetGiaTriApDungAsync("Phong", hd.PhongId, thang, nam);
+        return gia ?? hd.TienThueThoaThuan;
     }
 
     private async Task<decimal> LayGiaDichVuAsync(PhongDichVu dv, int thang, int nam)
     {
-        var ls = await lichSuRepo.GetGiaApDungAsync("DichVu", dv.Id, thang, nam);
-        return ls?.GiaMoi ?? dv.DonGia;
+        var gia = await lichSuRepo.GetGiaTriApDungAsync("DichVu", dv.Id, thang, nam);
+        return gia ?? dv.DonGia;
     }
 
     private static async Task<ChiSoDienNuoc?> LayChiSoAsync(

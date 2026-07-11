@@ -11,6 +11,7 @@ public class ChuyenPhongService(
     HoaDonRepository hoaDonRepo,
     PhongRepository phongRepo,
     PhongDichVuRepository phongDvRepo,
+    HopDongDichVuRepository hopDongDichVuRepo,
     LichSuThayDoiGiaRepository lichSuRepo,
     GiaoDichCocService giaoDichCocService,
     CongNoSettlementService congNoSettlementService)
@@ -43,8 +44,8 @@ public class ChuyenPhongService(
         decimal tienPhongCu = BillingPeriodCalculator.CalculateRoomCharge(giaPhongCu, soNgayOCu, soNgayTrongThang);
         decimal tienPhongMoi = BillingPeriodCalculator.CalculateRoomCharge(vm.TienThueMoi, soNgayOMoi, soNgayTrongThang);
 
-        var dvCu = (await phongDvRepo.GetByPhongAsync(hdCu.PhongId)).ToList();
-        var dvMoi = (await phongDvRepo.GetByPhongAsync(vm.PhongMoiId)).ToList();
+        var dvCu = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
+            vm.HopDongCuId, thang, nam)).ToList();
 
         decimal noXuyen = await hoaDonRepo.GetTongNoConLaiAsync(vm.HopDongCuId);
 
@@ -89,6 +90,17 @@ public class ChuyenPhongService(
                 FROM HopDongKhachThue WHERE HopDongId = @CuId
                 """,
                 new { MoiId = hdMoiId, CuId = vm.HopDongCuId }, tx);
+
+            var selectedIds = vm.PhongDichVuIds.Distinct().ToHashSet();
+            var dvMoi = await phongDvRepo.GetSelectedForPhongAsync(
+                conn, tx, vm.PhongMoiId, selectedIds);
+            if (dvMoi.Count != selectedIds.Count)
+                throw new InvalidOperationException("Danh sach dich vu phong moi khong hop le.");
+            var requiredIds = await phongDvRepo.GetRequiredIdsForPhongAsync(conn, tx, vm.PhongMoiId);
+            if (requiredIds.Except(selectedIds).Any())
+                throw new InvalidOperationException("Phai chon day du cac dich vu bat buoc cua phong moi.");
+            await hopDongDichVuRepo.InsertManyAsync(
+                conn, tx, hdMoiId, selectedIds, vm.NgayBatDauMoi);
 
             await conn.ExecuteAsync(
                 "UPDATE Phong SET TrangThai='DangThue' WHERE Id=@Id",
@@ -266,14 +278,14 @@ public class ChuyenPhongService(
 
     private async Task<decimal> LayGiaPhongAsync(HopDong hd, int thang, int nam)
     {
-        var ls = await lichSuRepo.GetGiaApDungAsync("Phong", hd.PhongId, thang, nam);
-        return ls?.GiaMoi ?? hd.TienThueThoaThuan;
+        var gia = await lichSuRepo.GetGiaTriApDungAsync("Phong", hd.PhongId, thang, nam);
+        return gia ?? hd.TienThueThoaThuan;
     }
 
     private async Task<decimal> LayGiaDichVuAsync(PhongDichVu dv, int thang, int nam)
     {
-        var ls = await lichSuRepo.GetGiaApDungAsync("DichVu", dv.Id, thang, nam);
-        return ls?.GiaMoi ?? dv.DonGia;
+        var gia = await lichSuRepo.GetGiaTriApDungAsync("DichVu", dv.Id, thang, nam);
+        return gia ?? dv.DonGia;
     }
 
     private static async Task<ChiSoDienNuoc?> LayChiSoAsync(

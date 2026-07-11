@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using QuanLyNhaTro.Models;
 using QuanLyNhaTro.Repositories;
+using QuanLyNhaTro.Services;
 
 namespace QuanLyNhaTro.Controllers;
 
@@ -9,7 +10,8 @@ public class PhongController(
     NhaRepository nhaRepo,
     HopDongRepository hopDongRepo,
     PhongDichVuRepository phongDichVuRepo,
-    DichVuRepository dichVuRepo) : Controller
+    DichVuRepository dichVuRepo,
+    PhongService phongService) : Controller
 {
     // GET /Phong
     public async Task<IActionResult> Index()
@@ -61,7 +63,7 @@ public class PhongController(
         }
 
         await phongDichVuRepo.UpsertBulkAsync(phongIds, dichVuId, donGia);
-        TempData["Success"] = $"Da gan/cap nhat dich vu {dichVu!.TenDichVu} cho {phongIds.Distinct().Count()} phong.";
+        TempData["Success"] = $"Đã gán mới hoặc bật lại dịch vụ {dichVu!.TenDichVu} cho {phongIds.Distinct().Count()} phòng; đơn giá hiện có được giữ nguyên.";
 
         return RedirectToAction(nameof(GanDichVuHangLoat), new { dichVuId, nhaId, trangThai });
     }
@@ -101,19 +103,15 @@ public class PhongController(
             return View(phong);
         }
 
-        phong.TrangThai = "Trong";
-        var phongId = await phongRepo.InsertAsync(phong);
-
-        // Gắn dịch vụ cho phòng
-        for (int i = 0; i < dichVuIds.Length; i++)
+        try
         {
-            await phongDichVuRepo.InsertAsync(new PhongDichVu
-            {
-                PhongId  = phongId,
-                DichVuId = dichVuIds[i],
-                DonGia   = i < donGias.Length ? donGias[i] : 0,
-                DangApDung = true
-            });
+            await phongService.TaoPhongAsync(phong, dichVuIds, donGias);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            await LoadPhongFormDataAsync();
+            return View(phong);
         }
 
         TempData["Success"] = "Đã thêm phòng thành công.";
@@ -133,7 +131,11 @@ public class PhongController(
 
     // POST /Phong/Edit/5
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, Phong phong)
+    public async Task<IActionResult> Edit(
+        int id,
+        Phong phong,
+        int[] dichVuIds,
+        decimal[] donGias)
     {
         if (id != phong.Id) return BadRequest();
         await ValidateNhaAsync(phong.NhaId);
@@ -144,7 +146,16 @@ public class PhongController(
             return View(phong);
         }
 
-        await phongRepo.UpdateAsync(phong);
+        try
+        {
+            await phongService.SuaPhongAsync(phong, dichVuIds, donGias);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            await LoadPhongFormDataAsync(id);
+            return View(phong);
+        }
         TempData["Success"] = "Đã cập nhật phòng.";
         return RedirectToAction(nameof(Index));
     }
@@ -153,17 +164,16 @@ public class PhongController(
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        await phongRepo.DeleteAsync(id);
-        TempData["Success"] = "Đã xoá phòng.";
+        try
+        {
+            await phongService.XoaPhongAsync(id);
+            TempData["Success"] = "Đã xoá phòng.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
         return RedirectToAction(nameof(Index));
-    }
-
-    // POST /Phong/CapNhatDonGia  — AJAX: cập nhật đơn giá 1 dịch vụ
-    [HttpPost]
-    public async Task<IActionResult> CapNhatDonGia(int phongDichVuId, decimal donGia)
-    {
-        await phongDichVuRepo.UpdateDonGiaAsync(phongDichVuId, donGia);
-        return Ok();
     }
 
     private async Task LoadPhongFormDataAsync(int? phongId = null)
@@ -173,7 +183,7 @@ public class PhongController(
 
         if (phongId.HasValue)
         {
-            ViewBag.DichVuPhong = await phongDichVuRepo.GetByPhongAsync(phongId.Value);
+            ViewBag.DichVuPhong = await phongDichVuRepo.GetAllByPhongAsync(phongId.Value);
         }
     }
 

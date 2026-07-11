@@ -12,6 +12,7 @@ public class DichVu
     public string LoaiTinhPhi { get; set; } = LoaiCoDinh; // CoDinh | TheoChiSo
     public string CachTinhCoDinh { get; set; } = CachTinhTheoPhong; // TheoPhong | TheoNguoi
     public decimal DonGiaMacDinh { get; set; }
+    public bool BatBuocKhiThue { get; set; }
     public string LoaiTinhPhiHienThi => LoaiTinhPhi switch
     {
         LoaiCoDinh => "Cố định",

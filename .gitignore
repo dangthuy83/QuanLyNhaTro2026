@@ -3,10 +3,12 @@ obj/
 *.user
 .vs/
 appsettings.Development.json
+appsettings.json
 .appdata/
 .dotnet/
 .nuget/
 .agents/
 .codex/
+.tmp/
 .tmp-*.log
 *.log

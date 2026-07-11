@@ -1,9 +1,12 @@
 @model QuanLyNhaTro.Models.Phong
+@using System.Globalization
 @{
     ViewData["Title"] = "Sửa phòng";
     ViewData["ActiveMenu"] = "phong";
     var danhSachNha = ViewBag.DanhSachNha as IEnumerable<QuanLyNhaTro.Models.Nha> ?? [];
     var dichVuPhong = ViewBag.DichVuPhong as IEnumerable<QuanLyNhaTro.Models.PhongDichVu> ?? [];
+    var danhSachDichVu = ViewBag.DanhSachDichVu as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? [];
+    var dichVuTheoId = dichVuPhong.ToDictionary(x => x.DichVuId);
     var coNha = danhSachNha.Any();
 }
 
@@ -17,6 +20,7 @@
         <form asp-action="Edit" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Nhà <span class="text-danger">*</span></label>
@@ -64,59 +68,62 @@
                 <textarea asp-for="GhiChu" class="form-control" rows="2"></textarea>
             </div>
 
+            @if (danhSachDichVu.Any())
+            {
+                <hr />
+                <p class="fw-semibold mb-2">Dịch vụ cung cấp tại phòng</p>
+                @foreach (var dv in danhSachDichVu)
+                {
+                    dichVuTheoId.TryGetValue(dv.Id, out var pdv);
+                    var isChecked = dv.BatBuocKhiThue || pdv?.DangApDung == true;
+                    var donGia = pdv?.DonGia ?? dv.DonGiaMacDinh;
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <div class="form-check" style="min-width:220px">
+                            <input class="form-check-input dv-check" type="checkbox"
+                                   id="dv_@dv.Id" name="dichVuIds" value="@dv.Id"
+                                   checked="@isChecked"
+                                   onclick="@(dv.BatBuocKhiThue ? "return false" : null)" />
+                            <label class="form-check-label" for="dv_@dv.Id">
+                                @dv.TenDichVu
+                                @if (dv.BatBuocKhiThue)
+                                {
+                                    <span class="badge bg-danger ms-1">Bắt buộc</span>
+                                }
+                                <small class="text-muted">(@dv.LoaiTinhPhiHienThi)</small>
+                            </label>
+                        </div>
+                        <div class="input-group input-group-sm" style="max-width:170px">
+                            <input type="number" min="0" name="donGias" id="gia_@dv.Id"
+                                   class="form-control dv-gia" value="@donGia.ToString("0.##", CultureInfo.InvariantCulture)"
+                                   disabled="@(!isChecked)" readonly="@(pdv != null)" />
+                            <span class="input-group-text">đ</span>
+                        </div>
+                        @if (pdv != null)
+                        {
+                            <a asp-controller="Gia" asp-action="DichVu" asp-route-phongDichVuId="@pdv.Id"
+                               class="btn btn-sm btn-outline-warning">Đổi giá theo kỳ</a>
+                        }
+                    </div>
+                }
+                <div class="form-text">Tắt dịch vụ ở phòng không làm thay đổi hợp đồng đã đăng ký. Giá dịch vụ hiện có chỉ thay đổi qua luồng giá theo kỳ.</div>
+            }
+
             <div class="mt-4 d-flex gap-2">
                 <button type="submit" class="btn btn-primary" disabled="@(!coNha)">Lưu thay đổi</button>
                 <a asp-action="Index" class="btn btn-outline-secondary">Huỷ</a>
             </div>
         </form>
 
-        @if (dichVuPhong.Any())
-        {
-            <hr />
-            <p class="fw-semibold mb-2">Đơn giá dịch vụ</p>
-            <table class="table table-sm">
-                <thead class="table-light">
-                    <tr><th>Dịch vụ</th><th>Loại</th><th class="text-end">Đơn giá</th><th></th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var pdv in dichVuPhong)
-                    {
-                        <tr>
-                            <td>@pdv.DichVu?.TenDichVu</td>
-                            <td>
-                                <span class="badge bg-light text-dark border">@pdv.DichVu?.LoaiTinhPhiHienThi</span>
-                                @if (pdv.DichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh)
-                                {
-                                    <span class="badge bg-light text-dark border">@pdv.DichVu.CachTinhCoDinhHienThi</span>
-                                }
-                            </td>
-                            <td class="text-end">
-                                <input type="number" class="form-control form-control-sm text-end"
-                                       style="width:120px; display:inline-block"
-                                       id="gia_@pdv.Id" value="@pdv.DonGia" min="0" />
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary"
-                                        onclick="capNhatGia(@pdv.Id)">Lưu</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
     </div>
 </div>
 
 @section Scripts {
 <script>
-    async function capNhatGia(id) {
-        const donGia = document.getElementById('gia_' + id).value;
-        const res = await fetch('/Phong/CapNhatDonGia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `phongDichVuId=${id}&donGia=${donGia}`
+    document.querySelectorAll('.dv-check').forEach(cb => {
+        cb.addEventListener('change', function () {
+            const input = document.getElementById('gia_' + this.value);
+            if (input) input.disabled = !this.checked;
         });
-        if (res.ok) alert('Đã cập nhật đơn giá.');
-    }
+    });
 </script>
 }

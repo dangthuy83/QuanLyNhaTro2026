@@ -1,5 +1,10 @@
 @model QuanLyNhaTro.Models.ChuyenPhongViewModel
-@{ ViewData["Title"] = "Chuyển phòng"; }
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Chuyển phòng";
+    var selectedJson = JsonSerializer.Serialize(Model.PhongDichVuIds ?? []);
+    var restoreSelection = Model.PhongDichVuIds?.Length > 0;
+}
 
 <h4>Chuyển phòng - <span class="text-primary">@Model.TenPhongCu</span></h4>
 <p class="text-muted">Tự động sinh 2 hóa đơn tháng chuyển và tạo hợp đồng mới.</p>
@@ -21,6 +26,14 @@
                 <label class="form-label">Ngày chuyển đi <span class="text-danger">*</span></label>
                 <input asp-for="NgayChuyenDi" type="date" class="form-control" />
                 <div class="form-text">Ngày cuối ở phòng cũ. Phòng mới tính từ ngày hôm sau.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Dịch vụ hợp đồng mới</label>
+                <div id="dichVuPhongMoi" class="border rounded p-2">
+                    <p class="text-muted small mb-0">Chọn phòng mới để tải dịch vụ.</p>
+                </div>
+                <div class="form-text">Dịch vụ bắt buộc không thể bỏ.</div>
             </div>
 
             <hr>
@@ -79,7 +92,11 @@
         const phongSelect = document.querySelector("[name='PhongMoiId']");
         const ngayChuyenDiInput = document.querySelector("[name='NgayChuyenDi']");
         const link = document.getElementById("linkNhapChiSoPhongMoi");
+        const serviceContainer = document.getElementById('dichVuPhongMoi');
+        let restoreSelection = @restoreSelection.ToString().ToLowerInvariant();
+        const selectedIds = new Set(@Html.Raw(selectedJson));
         const baseUrl = "@Url.Action("NhapTheoPhong", "ChiSo")";
+        const serviceUrl = "@Url.Action("DichVuTheoPhong", "HopDong")";
         const hopDongCuId = "@Model.HopDongCuId";
 
         const syncLink = () => {
@@ -108,8 +125,41 @@
             link.removeAttribute("aria-disabled");
         };
 
-        phongSelect?.addEventListener("change", syncLink);
+        const loadServices = async () => {
+            const phongId = phongSelect?.value;
+            if (!phongId) {
+                serviceContainer.innerHTML = '<p class="text-muted small mb-0">Chọn phòng mới để tải dịch vụ.</p>';
+                return;
+            }
+            const response = await fetch(`${serviceUrl}?phongId=${encodeURIComponent(phongId)}`);
+            if (!response.ok) {
+                serviceContainer.innerHTML = '<p class="text-danger small mb-0">Không tải được dịch vụ.</p>';
+                return;
+            }
+            const rows = await response.json();
+            serviceContainer.innerHTML = rows.map(item => {
+                const checked = item.batBuoc || !restoreSelection || selectedIds.has(item.id);
+                const lock = item.batBuoc ? 'onclick="return false"' : '';
+                const badge = item.batBuoc ? '<span class="badge bg-danger ms-1">Bắt buộc</span>' : '';
+                return `<div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="PhongDichVuIds"
+                           value="${item.id}" id="pdv_${item.id}" ${checked ? 'checked' : ''} ${lock}>
+                    <label class="form-check-label" for="pdv_${item.id}">
+                        ${item.tenDichVu} ${badge}
+                        <span class="text-muted small">— ${Number(item.donGia || 0).toLocaleString('vi-VN')} đ</span>
+                    </label>
+                </div>`;
+            }).join('') || '<p class="text-warning small mb-0">Phòng chưa cấu hình dịch vụ.</p>';
+        };
+
+        phongSelect?.addEventListener("change", () => {
+            selectedIds.clear();
+            restoreSelection = false;
+            syncLink();
+            loadServices();
+        });
         ngayChuyenDiInput?.addEventListener("change", syncLink);
         syncLink();
+        loadServices();
     })();
 </script>

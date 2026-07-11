@@ -65,6 +65,16 @@ public class PhongRepository(IDbConnection db) : BaseRepository(db)
         return await _db.ExecuteScalarAsync<int>(sql, phong);
     }
 
+    public async Task<int> InsertAsync(IDbConnection conn, IDbTransaction tx, Phong phong)
+    {
+        const string sql = """
+            INSERT INTO Phong (NhaId, TenPhong, DienTich, GiaThueMacDinh, TrangThai, GhiChu, NgayTao)
+            VALUES (@NhaId, @TenPhong, @DienTich, @GiaThueMacDinh, @TrangThai, @GhiChu, NOW());
+            SELECT LAST_INSERT_ID();
+            """;
+        return await conn.ExecuteScalarAsync<int>(sql, phong, transaction: tx);
+    }
+
     public async Task UpdateAsync(Phong phong)
     {
         const string sql = """
@@ -73,6 +83,16 @@ public class PhongRepository(IDbConnection db) : BaseRepository(db)
             WHERE Id = @Id
             """;
         await _db.ExecuteAsync(sql, phong);
+    }
+
+    public async Task UpdateAsync(IDbConnection conn, IDbTransaction tx, Phong phong)
+    {
+        const string sql = """
+            UPDATE Phong SET NhaId = @NhaId, TenPhong = @TenPhong, DienTich = @DienTich,
+                GiaThueMacDinh = @GiaThueMacDinh, TrangThai = @TrangThai, GhiChu = @GhiChu
+            WHERE Id = @Id
+            """;
+        await conn.ExecuteAsync(sql, phong, transaction: tx);
     }
 
     public async Task UpdateTrangThaiAsync(int id, string trangThai)

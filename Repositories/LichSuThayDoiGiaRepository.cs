@@ -23,6 +23,27 @@ public class LichSuThayDoiGiaRepository(IDbConnection db) : BaseRepository(db)
             new { LoaiDoiTuong = loaiDoiTuong, DoiTuongId = doiTuongId, Thang = thang, Nam = nam });
     }
 
+    public async Task<decimal?> GetGiaTriApDungAsync(
+        string loaiDoiTuong,
+        int doiTuongId,
+        int thang,
+        int nam)
+    {
+        var truocHoacTrongKy = await GetGiaApDungAsync(loaiDoiTuong, doiTuongId, thang, nam);
+        if (truocHoacTrongKy != null) return truocHoacTrongKy.GiaMoi;
+
+        const string sql = """
+            SELECT * FROM LichSuThayDoiGia
+            WHERE LoaiDoiTuong = @LoaiDoiTuong AND DoiTuongId = @DoiTuongId
+              AND (NamApDung > @Nam OR (NamApDung = @Nam AND ThangApDung > @Thang))
+            ORDER BY NamApDung, ThangApDung
+            LIMIT 1
+            """;
+        var sauKy = await _db.QueryFirstOrDefaultAsync<LichSuThayDoiGia>(sql,
+            new { LoaiDoiTuong = loaiDoiTuong, DoiTuongId = doiTuongId, Thang = thang, Nam = nam });
+        return sauKy?.GiaCu;
+    }
+
     public async Task<IEnumerable<LichSuThayDoiGia>> GetByDoiTuongAsync(string loaiDoiTuong, int doiTuongId)
         => await _db.QueryAsync<LichSuThayDoiGia>(
             """

@@ -10,7 +10,7 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<PhongDichVu>> GetByPhongAsync(int phongId)
     {
         const string sql = """
-            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh
+            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh, dv.BatBuocKhiThue
             FROM PhongDichVu pdv
             INNER JOIN DichVu dv ON dv.Id = pdv.DichVuId
             WHERE pdv.PhongId = @PhongId AND pdv.DangApDung = 1
@@ -21,6 +21,96 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
             (pdv, dv) => { pdv.DichVu = dv; return pdv; },
             new { PhongId = phongId },
             splitOn: "Id");
+    }
+
+    public async Task<IEnumerable<PhongDichVu>> GetAllByPhongAsync(int phongId)
+    {
+        const string sql = """
+            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh,
+                   dv.DonViTinh, dv.DonGiaMacDinh, dv.BatBuocKhiThue
+            FROM PhongDichVu pdv
+            INNER JOIN DichVu dv ON dv.Id = pdv.DichVuId
+            WHERE pdv.PhongId = @PhongId
+            ORDER BY dv.TenDichVu
+            """;
+        return await _db.QueryAsync<PhongDichVu, DichVu, PhongDichVu>(
+            sql,
+            (pdv, dv) => { pdv.DichVu = dv; return pdv; },
+            new { PhongId = phongId },
+            splitOn: "Id");
+    }
+
+    public async Task<List<PhongDichVu>> GetSelectedForPhongAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int phongId,
+        IEnumerable<int> phongDichVuIds,
+        bool requireActive = true)
+    {
+        var ids = phongDichVuIds.Distinct().ToArray();
+        if (ids.Length == 0) return [];
+
+        const string sql = """
+            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh,
+                   dv.DonViTinh, dv.DonGiaMacDinh, dv.BatBuocKhiThue
+            FROM PhongDichVu pdv
+            INNER JOIN DichVu dv ON dv.Id = pdv.DichVuId
+            WHERE pdv.PhongId = @PhongId
+              AND (@RequireActive = 0 OR pdv.DangApDung = 1)
+              AND pdv.Id IN @Ids
+            ORDER BY dv.TenDichVu
+            """;
+        var rows = await conn.QueryAsync<PhongDichVu, DichVu, PhongDichVu>(
+            sql,
+            (pdv, dv) => { pdv.DichVu = dv; return pdv; },
+            new { PhongId = phongId, Ids = ids, RequireActive = requireActive },
+            transaction: tx,
+            splitOn: "Id");
+        return rows.ToList();
+    }
+
+    public async Task<HashSet<int>> GetRequiredIdsForPhongAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int phongId)
+    {
+        var ids = await conn.QueryAsync<int>(
+            """
+            SELECT pdv.Id
+            FROM PhongDichVu pdv
+            INNER JOIN DichVu dv ON dv.Id = pdv.DichVuId
+            WHERE pdv.PhongId = @PhongId
+              AND pdv.DangApDung = 1
+              AND dv.BatBuocKhiThue = 1
+            """,
+            new { PhongId = phongId },
+            transaction: tx);
+        return ids.ToHashSet();
+    }
+
+    public async Task SyncForPhongAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int phongId,
+        IReadOnlyDictionary<int, decimal> selectedDichVuPrices)
+    {
+        await conn.ExecuteAsync(
+            "UPDATE PhongDichVu SET DangApDung = 0 WHERE PhongId = @PhongId",
+            new { PhongId = phongId },
+            transaction: tx);
+
+        const string sql = """
+            INSERT INTO PhongDichVu (PhongId, DichVuId, DonGia, DangApDung)
+            VALUES (@PhongId, @DichVuId, @DonGia, 1)
+            ON DUPLICATE KEY UPDATE DonGia = @DonGia, DangApDung = 1
+            """;
+        var items = selectedDichVuPrices.Select(x => new
+        {
+            PhongId = phongId,
+            DichVuId = x.Key,
+            DonGia = x.Value
+        });
+        await conn.ExecuteAsync(sql, items, transaction: tx);
     }
 
     public async Task<int> InsertAsync(PhongDichVu pdv)
@@ -78,7 +168,6 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
             INSERT INTO PhongDichVu (PhongId, DichVuId, DonGia, DangApDung)
             VALUES (@PhongId, @DichVuId, @DonGia, 1)
             ON DUPLICATE KEY UPDATE
-                DonGia = @DonGia,
                 DangApDung = 1
             """;
 
@@ -107,7 +196,7 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
     public async Task<PhongDichVu?> GetByIdAsync(int id)
     {
         const string sql = """
-            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh
+            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh, dv.BatBuocKhiThue
             FROM PhongDichVu pdv
             JOIN DichVu dv ON pdv.DichVuId = dv.Id
             WHERE pdv.Id = @Id

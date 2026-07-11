@@ -5,6 +5,14 @@
     <label class="form-label small fw-semibold">Tên dịch vụ <span class="text-danger">*</span></label>
     <input name="TenDichVu" class="form-control form-control-sm" value="@Model.TenDichVu" required />
 </div>
+<div class="form-check mb-2">
+    <label class="form-check-label small fw-semibold">
+        <input name="BatBuocKhiThue" type="checkbox" value="true"
+               class="form-check-input me-1" checked="@Model.BatBuocKhiThue" />
+        Bắt buộc khi thuê
+    </label>
+    <div class="form-text small">Dịch vụ bắt buộc không thể bỏ khỏi hợp đồng.</div>
+</div>
 <div class="mb-2">
     <label class="form-label small fw-semibold">Loại tính phí</label>
     <select name="LoaiTinhPhi" class="form-select form-select-sm">
