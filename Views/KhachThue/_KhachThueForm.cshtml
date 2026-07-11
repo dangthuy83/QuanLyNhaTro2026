@@ -30,7 +30,8 @@
 <div class="row g-3 mb-3">
     <div class="col-6">
         <label class="form-label fw-semibold">Ảnh CCCD mặt trước</label>
-        <input type="file" name="anhCCCDMatTruoc" class="form-control" accept="image/*" />
+        <input type="file" name="anhCCCDMatTruoc" class="form-control" accept=".jpg,.jpeg,.png,.webp" />
+        <div class="form-text">JPG, PNG hoặc WEBP; tối đa 5 MB.</div>
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatTruoc))
         {
             <img src="@Model.AnhCCCDMatTruoc" alt="CCCD mặt trước" class="mt-2 rounded" style="max-height:120px;" />
@@ -39,7 +40,8 @@
     </div>
     <div class="col-6">
         <label class="form-label fw-semibold">Ảnh CCCD mặt sau</label>
-        <input type="file" name="anhCCCDMatSau" class="form-control" accept="image/*" />
+        <input type="file" name="anhCCCDMatSau" class="form-control" accept=".jpg,.jpeg,.png,.webp" />
+        <div class="form-text">JPG, PNG hoặc WEBP; tối đa 5 MB.</div>
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatSau))
         {
             <img src="@Model.AnhCCCDMatSau" alt="CCCD mặt sau" class="mt-2 rounded" style="max-height:120px;" />

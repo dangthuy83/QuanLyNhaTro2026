@@ -4,8 +4,13 @@ using QuanLyNhaTro.Repositories;
 
 namespace QuanLyNhaTro.Controllers;
 
-public class KhachThueController(KhachThueRepository khachThueRepo) : Controller
+public class KhachThueController(
+    KhachThueRepository khachThueRepo,
+    IWebHostEnvironment environment) : Controller
 {
+    private const long MaxImageSize = 5 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedImageExtensions =
+        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
     // GET /KhachThue
     public async Task<IActionResult> Index()
     {
@@ -35,10 +40,8 @@ public class KhachThueController(KhachThueRepository khachThueRepo) : Controller
     {
         if (!ModelState.IsValid) return View(khach);
 
-        if (anhCCCDMatTruoc != null && anhCCCDMatTruoc.Length > 0)
-            khach.AnhCCCDMatTruoc = await LuuAnhAsync(anhCCCDMatTruoc);
-        if (anhCCCDMatSau != null && anhCCCDMatSau.Length > 0)
-            khach.AnhCCCDMatSau = await LuuAnhAsync(anhCCCDMatSau);
+        if (!await TryLuuAnhAsync(khach, anhCCCDMatTruoc, anhCCCDMatSau))
+            return View(khach);
 
         await khachThueRepo.InsertAsync(khach);
         TempData["Success"] = "Đã thêm khách thuê.";
@@ -61,10 +64,8 @@ public class KhachThueController(KhachThueRepository khachThueRepo) : Controller
         if (id != khach.Id) return BadRequest();
         if (!ModelState.IsValid) return View(khach);
 
-        if (anhCCCDMatTruoc != null && anhCCCDMatTruoc.Length > 0)
-            khach.AnhCCCDMatTruoc = await LuuAnhAsync(anhCCCDMatTruoc);
-        if (anhCCCDMatSau != null && anhCCCDMatSau.Length > 0)
-            khach.AnhCCCDMatSau = await LuuAnhAsync(anhCCCDMatSau);
+        if (!await TryLuuAnhAsync(khach, anhCCCDMatTruoc, anhCCCDMatSau))
+            return View(khach);
 
         await khachThueRepo.UpdateAsync(khach);
         TempData["Success"] = "Đã cập nhật thông tin khách thuê.";
@@ -81,12 +82,61 @@ public class KhachThueController(KhachThueRepository khachThueRepo) : Controller
     }
 
     // ── Helper ──────────────────────────────────────────────────────────────
+    private async Task<bool> TryLuuAnhAsync(
+        KhachThue khach,
+        IFormFile? anhCCCDMatTruoc,
+        IFormFile? anhCCCDMatSau)
+    {
+        if (!ValidateImage(anhCCCDMatTruoc, "Ảnh CCCD mặt trước")
+            || !ValidateImage(anhCCCDMatSau, "Ảnh CCCD mặt sau"))
+            return false;
+
+        try
+        {
+            if (anhCCCDMatTruoc is { Length: > 0 })
+                khach.AnhCCCDMatTruoc = await LuuAnhAsync(anhCCCDMatTruoc);
+            if (anhCCCDMatSau is { Length: > 0 })
+                khach.AnhCCCDMatSau = await LuuAnhAsync(anhCCCDMatSau);
+            return true;
+        }
+        catch (IOException)
+        {
+            ModelState.AddModelError(string.Empty, "Không thể lưu ảnh CCCD. Vui lòng kiểm tra quyền ghi thư mục uploads hoặc thử lại.");
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            ModelState.AddModelError(string.Empty, "Ứng dụng không có quyền ghi ảnh vào thư mục uploads.");
+            return false;
+        }
+    }
+
+    private bool ValidateImage(IFormFile? file, string label)
+    {
+        if (file == null || file.Length == 0) return true;
+        if (file.Length > MaxImageSize)
+        {
+            ModelState.AddModelError(string.Empty, $"{label} không được vượt quá 5 MB.");
+            return false;
+        }
+
+        var extension = Path.GetExtension(file.FileName);
+        if (!AllowedImageExtensions.Contains(extension))
+        {
+            ModelState.AddModelError(string.Empty, $"{label} chỉ chấp nhận JPG, PNG hoặc WEBP.");
+            return false;
+        }
+        return true;
+    }
+
     private async Task<string> LuuAnhAsync(IFormFile file)
     {
-        var ext = Path.GetExtension(file.FileName);
-        var fileName = $"{Guid.NewGuid()}{ext}";
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", fileName);
-        await using var stream = new FileStream(path, FileMode.Create);
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var uploadDirectory = Path.Combine(environment.WebRootPath, "uploads");
+        Directory.CreateDirectory(uploadDirectory);
+        var path = Path.Combine(uploadDirectory, fileName);
+        await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         await file.CopyToAsync(stream);
         return $"/uploads/{fileName}";
     }

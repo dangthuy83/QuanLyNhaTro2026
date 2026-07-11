@@ -54,6 +54,18 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 ## Phiên Làm Việc
 
+### Phiên 47 - Sửa lỗi lưu ảnh CCCD khách thuê
+
+Ngày: 12/07/2026
+
+- Nguyên nhân: `KhachThueController` ghép đường dẫn từ `Directory.GetCurrentDirectory()` và giả định sẵn `wwwroot/uploads`; khi working directory lúc chạy khác thư mục dự án, upload mới phát sinh lỗi lưu file.
+- Chuyển sang `IWebHostEnvironment.WebRootPath`, tự tạo thư mục `uploads`, dùng tên file ngẫu nhiên an toàn.
+- Chỉ nhận JPG/JPEG/PNG/WEBP, giới hạn 5 MB mỗi ảnh và trả lỗi rõ ràng ngay trên form.
+- Smoke ghi ảnh PNG vào `WebRootPath/uploads` pass và đã dọn file test.
+- `dotnet build --no-restore` thành công, 0 error; `NU1900` là cảnh báo môi trường do không truy cập được NuGet vulnerability feed.
+
+---
+
 ### Phiên 46 - Lịch sử hình thức dịch vụ theo kỳ
 
 Ngày: 11/07/2026
