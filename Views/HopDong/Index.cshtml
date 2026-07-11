@@ -26,6 +26,7 @@
                 <tr>
                     <th>Phòng</th>
                     <th>Ngày bắt đầu</th>
+                    <th>Ngày kết thúc</th>
                     <th class="text-end">Giá thuê TT</th>
                     <th class="text-end">Tiền cọc</th>
                     <th>Trạng thái</th>
@@ -42,6 +43,7 @@
                             </a>
                         </td>
                         <td>@hd.NgayBatDau.ToString("dd/MM/yyyy")</td>
+                        <td>@(hd.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Không xác định")</td>
                         <td class="text-end">@hd.TienThueThoaThuan.ToString("N0") đ</td>
                         <td class="text-end">@hd.TienCoc.ToString("N0") đ</td>
                         <td>@Html.Raw(TrangThaiBadge(hd.TrangThai))</td>
@@ -55,7 +57,7 @@
                 }
                 @if (!Model.Any())
                 {
-                    <tr><td colspan="6" class="text-center text-muted py-4">Chưa có hợp đồng nào.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">Chưa có hợp đồng nào.</td></tr>
                 }
             </tbody>
         </table>

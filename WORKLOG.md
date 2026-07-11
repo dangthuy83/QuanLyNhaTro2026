@@ -54,6 +54,21 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 ## Phiên Làm Việc
 
+### Phiên 48 - Thông tin CCCD, phương tiện và mặc định hợp đồng
+
+Ngày: 12/07/2026
+
+- Bổ sung `KhachThue.NgayCapCCCD`, `NgheNghiep`, `LoaiXe`, `BienSoXe` xuyên suốt schema/model/repository/form/danh sách/chi tiết.
+- Sắp xếp thông tin khách thuê theo thứ tự vận hành: họ tên, ngày sinh, điện thoại, CCCD, ngày cấp, biển số xe, loại xe, nghề nghiệp, ghi chú.
+- Danh sách hợp đồng hiển thị thêm ngày kết thúc.
+- Form tạo hợp đồng tự điền `TienThueThoaThuan` và `TienCoc` bằng `Phong.GiaThueMacDinh` khi chọn phòng, nhưng vẫn là input cho phép sửa.
+- Xác nhận `HopDongService.TaoHopDongAsync` đã tự chuyển phòng sang `DangThue` trong cùng transaction tạo hợp đồng.
+- Cập nhật DB hiện tại và thêm script idempotent `Database/updates/20260712_khach_thue_identity_vehicle.sql`.
+- DB smoke pass round-trip đầy đủ 4 cột mới và rollback sạch dữ liệu `TEST_*`.
+- `dotnet build --no-restore` pass 0 warning, 0 error trước restore smoke; `NU1900` sau restore là giới hạn vulnerability feed của môi trường.
+
+---
+
 ### Phiên 47 - Sửa lỗi lưu ảnh CCCD khách thuê
 
 Ngày: 12/07/2026

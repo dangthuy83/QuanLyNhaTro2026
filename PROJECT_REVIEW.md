@@ -15,6 +15,12 @@ Da xu ly trong phien 46:
 - Them guard hoa don ky truoc/hoa don tu ky ap dung, guard chi so ky cuoi va chi so dau chuyen doi tung phong.
 - Phu cac luong hoa don, nhap chi so, tra/chuyen phong va kiem tra du lieu; hoa don cu giu snapshot.
 
+Da xu ly trong phien 48:
+
+- Mo rong ho so khach thue voi ngay cap CCCD, nghe nghiep, loai xe va bien so xe.
+- Form hop dong lay gia phong lam mac dinh cho gia thue va tien coc; danh sach hien ngay ket thuc.
+- Xac nhan trang thai phong tu dong sang `DangThue` trong transaction tao hop dong.
+
 Du an dang di dung huong cho muc tieu thay Excel:
 
 - Da tach duoc cac nhom nghiep vu chinh: phong, khach thue, hop dong, chi so, hoa don, thanh toan, thu chi, chuyen phong, tra phong.

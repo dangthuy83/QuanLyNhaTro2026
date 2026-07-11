@@ -28,9 +28,11 @@ public class KhachThueRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             INSERT INTO KhachThue
-                (HoTen, CCCD, SoDienThoai, NgaySinh, QueQuan, AnhCCCDMatTruoc, AnhCCCDMatSau, GhiChu, NgayTao)
+                (HoTen, CCCD, SoDienThoai, NgaySinh, NgayCapCCCD, NgheNghiep, LoaiXe, BienSoXe,
+                 QueQuan, AnhCCCDMatTruoc, AnhCCCDMatSau, GhiChu, NgayTao)
             VALUES
-                (@HoTen, @CCCD, @SoDienThoai, @NgaySinh, @QueQuan, @AnhCCCDMatTruoc, @AnhCCCDMatSau, @GhiChu, NOW());
+                (@HoTen, @CCCD, @SoDienThoai, @NgaySinh, @NgayCapCCCD, @NgheNghiep, @LoaiXe, @BienSoXe,
+                 @QueQuan, @AnhCCCDMatTruoc, @AnhCCCDMatSau, @GhiChu, NOW());
             SELECT LAST_INSERT_ID();
             """;
         return await _db.ExecuteScalarAsync<int>(sql, khach);
@@ -44,6 +46,10 @@ public class KhachThueRepository(IDbConnection db) : BaseRepository(db)
                 CCCD = @CCCD,
                 SoDienThoai = @SoDienThoai,
                 NgaySinh = @NgaySinh,
+                NgayCapCCCD = @NgayCapCCCD,
+                NgheNghiep = @NgheNghiep,
+                LoaiXe = @LoaiXe,
+                BienSoXe = @BienSoXe,
                 QueQuan = @QueQuan,
                 AnhCCCDMatTruoc = @AnhCCCDMatTruoc,
                 AnhCCCDMatSau = @AnhCCCDMatSau,

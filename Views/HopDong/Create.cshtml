@@ -28,7 +28,7 @@
                     <option value="">— Chọn phòng —</option>
                     @foreach (var p in danhSachPhong)
                     {
-                        <option value="@p.Id" selected="@(p.Id == phongIdMacDinh)">
+                        <option value="@p.Id" data-gia="@p.GiaThueMacDinh.ToString("0")" selected="@(p.Id == phongIdMacDinh || p.Id == Model?.PhongId)">
                             @p.TenPhong (@p.TrangThai)
                         </option>
                     }
@@ -59,11 +59,11 @@
             <div class="row g-3 mb-3">
                 <div class="col-6">
                     <label class="form-label fw-semibold">Giá thuê thỏa thuận (đ) <span class="text-danger">*</span></label>
-                    <input name="TienThueThoaThuan" type="number" min="0" class="form-control" required />
+                    <input name="TienThueThoaThuan" id="tienThue" type="number" min="0" class="form-control" required value="@(Model?.TienThueThoaThuan.ToString("0") ?? "")" />
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-semibold">Tiền cọc (đ)</label>
-                    <input name="TienCoc" type="number" min="0" class="form-control" value="0" />
+                    <input name="TienCoc" id="tienCoc" type="number" min="0" class="form-control" value="@(Model?.TienCoc.ToString("0") ?? "")" />
                 </div>
             </div>
 
@@ -108,6 +108,8 @@
 (() => {
     const phongSelect = document.querySelector("[name='PhongId']");
     const container = document.getElementById('dichVuHopDong');
+    const tienThue = document.getElementById('tienThue');
+    const tienCoc = document.getElementById('tienCoc');
     let restoreSelection = @restoreSelection.ToString().ToLowerInvariant();
     const selectedIds = new Set(@Html.Raw(selectedJson));
 
@@ -148,11 +150,18 @@
         }).join('');
     };
 
+    const applyRoomPrice = () => {
+        const gia = phongSelect?.selectedOptions[0]?.dataset.gia;
+        if (gia !== undefined) { tienThue.value = gia; tienCoc.value = gia; }
+    };
+
     phongSelect?.addEventListener('change', () => {
         selectedIds.clear();
         restoreSelection = false;
+        applyRoomPrice();
         loadServices();
     });
+    if (!restoreSelection && phongSelect?.value) applyRoomPrice();
     loadServices();
 })();
 </script>

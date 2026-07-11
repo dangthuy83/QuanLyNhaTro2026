@@ -1,56 +1,107 @@
 @model QuanLyNhaTro.Models.KhachThue
 
 <div class="mb-3">
-    <label class="form-label fw-semibold">Họ tên <span class="text-danger">*</span></label>
+    <label asp-for="HoTen" class="form-label fw-semibold">
+        Họ tên <span class="text-danger">*</span>
+    </label>
     <input asp-for="HoTen" class="form-control" required />
     <span asp-validation-for="HoTen" class="text-danger small"></span>
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-6">
-        <label class="form-label fw-semibold">Số điện thoại</label>
-        <input asp-for="SoDienThoai" class="form-control" />
-    </div>
-    <div class="col-6">
-        <label class="form-label fw-semibold">Ngày sinh</label>
+    <div class="col-md-6">
+        <label asp-for="NgaySinh" class="form-label fw-semibold">Ngày sinh</label>
         <input asp-for="NgaySinh" type="date" class="form-control" />
     </div>
-</div>
-
-<div class="mb-3">
-    <label class="form-label fw-semibold">Số CCCD</label>
-    <input asp-for="CCCD" class="form-control" />
-</div>
-
-<div class="mb-3">
-    <label class="form-label fw-semibold">Quê quán</label>
-    <input asp-for="QueQuan" class="form-control" />
+    <div class="col-md-6">
+        <label asp-for="SoDienThoai" class="form-label fw-semibold">Điện thoại</label>
+        <input asp-for="SoDienThoai" class="form-control" />
+    </div>
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-6">
+    <div class="col-md-6">
+        <label asp-for="CCCD" class="form-label fw-semibold">CCCD</label>
+        <input asp-for="CCCD" class="form-control" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="NgayCapCCCD" class="form-label fw-semibold">Ngày cấp CCCD</label>
+        <input asp-for="NgayCapCCCD" type="date" class="form-control" />
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <label asp-for="BienSoXe" class="form-label fw-semibold">Biển số xe</label>
+        <input asp-for="BienSoXe" class="form-control" placeholder="Ví dụ: 59X1-123.45" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="LoaiXe" class="form-label fw-semibold">Loại xe</label>
+        <input asp-for="LoaiXe"
+               class="form-control"
+               list="loaiXeSuggestions"
+               placeholder="Chọn hoặc nhập loại xe" />
+        <datalist id="loaiXeSuggestions">
+            <option value="Xe máy"></option>
+            <option value="Ô tô"></option>
+            <option value="Xe máy điện"></option>
+            <option value="Ô tô điện"></option>
+            <option value="Xe đạp"></option>
+            <option value="Xe đạp điện"></option>
+        </datalist>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <label asp-for="NgheNghiep" class="form-label fw-semibold">Nghề nghiệp</label>
+        <input asp-for="NgheNghiep" class="form-control" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="QueQuan" class="form-label fw-semibold">Quê quán</label>
+        <input asp-for="QueQuan" class="form-control" />
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
         <label class="form-label fw-semibold">Ảnh CCCD mặt trước</label>
-        <input type="file" name="anhCCCDMatTruoc" class="form-control" accept=".jpg,.jpeg,.png,.webp" />
+        <input type="file"
+               name="anhCCCDMatTruoc"
+               class="form-control"
+               accept=".jpg,.jpeg,.png,.webp" />
         <div class="form-text">JPG, PNG hoặc WEBP; tối đa 5 MB.</div>
+
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatTruoc))
         {
-            <img src="@Model.AnhCCCDMatTruoc" alt="CCCD mặt trước" class="mt-2 rounded" style="max-height:120px;" />
+            <img src="@Model.AnhCCCDMatTruoc"
+                 alt="CCCD mặt trước"
+                 class="mt-2 rounded"
+                 style="max-height:120px;" />
             <input type="hidden" asp-for="AnhCCCDMatTruoc" />
         }
     </div>
-    <div class="col-6">
+
+    <div class="col-md-6">
         <label class="form-label fw-semibold">Ảnh CCCD mặt sau</label>
-        <input type="file" name="anhCCCDMatSau" class="form-control" accept=".jpg,.jpeg,.png,.webp" />
+        <input type="file"
+               name="anhCCCDMatSau"
+               class="form-control"
+               accept=".jpg,.jpeg,.png,.webp" />
         <div class="form-text">JPG, PNG hoặc WEBP; tối đa 5 MB.</div>
+
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatSau))
         {
-            <img src="@Model.AnhCCCDMatSau" alt="CCCD mặt sau" class="mt-2 rounded" style="max-height:120px;" />
+            <img src="@Model.AnhCCCDMatSau"
+                 alt="CCCD mặt sau"
+                 class="mt-2 rounded"
+                 style="max-height:120px;" />
             <input type="hidden" asp-for="AnhCCCDMatSau" />
         }
     </div>
 </div>
 
 <div class="mb-3">
-    <label class="form-label fw-semibold">Ghi chú</label>
+    <label asp-for="GhiChu" class="form-label fw-semibold">Ghi chú</label>
     <textarea asp-for="GhiChu" class="form-control" rows="2"></textarea>
 </div>

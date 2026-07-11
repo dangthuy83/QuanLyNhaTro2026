@@ -99,7 +99,7 @@ Các cột dễ nhầm:
 - `DichVu.BatBuocKhiThue` xác định dịch vụ không được bỏ khỏi hợp đồng; dữ liệu mẫu đặt Điện là bắt buộc, Nước là tùy chọn.
 - `HopDongDichVu.KyKetThuc` là mốc loại trừ; dịch vụ có hiệu lực khi `KyBatDau <= Ky < KyKetThuc`, hoặc không có `KyKetThuc`.
 - `DichVu` không có `Ten`, `DonVi`, `HienThi`, `GhiChu`.
-- `KhachThue` có `AnhCCCDMatTruoc` và `AnhCCCDMatSau`; không có một cột `AnhCCCD` chung.
+- `KhachThue` có `NgayCapCCCD`, `NgheNghiep`, `LoaiXe`, `BienSoXe`, `AnhCCCDMatTruoc` và `AnhCCCDMatSau`; không có một cột `AnhCCCD` chung.
 - `PhongDichVu` có `DangApDung`; không có `ApDung` hoặc `NgayTao`.
 - `HoaDon` không có `NgayTao`.
 - `HopDongKhachThue` không có `NgayTao`.
@@ -206,6 +206,8 @@ Màn chi tiết hóa đơn phải hiển thị `KetChuyenNo` và `TruCoc` bằng
 Quy ước đã chốt:
 
 - `HopDong.NgayBatDau` là ngày đầu tiên tính tiền phòng.
+- Khi tạo hợp đồng, giá thuê thỏa thuận và tiền cọc mặc định cùng lấy từ `Phong.GiaThueMacDinh`; người dùng được sửa trước khi lưu.
+- Tạo hợp đồng thành công tự chuyển `Phong.TrangThai` sang `DangThue` trong cùng transaction; người dùng không chỉnh trạng thái phòng thủ công.
 - `HopDong.NgayKetThuc` / ngày trả phòng là ngày cuối cùng khách sử dụng phòng cũ, vẫn tính tiền ngày đó.
 - Khi chuyển phòng, `NgayChuyenDi` là ngày cuối ở phòng cũ; `NgayBatDauMoi = NgayChuyenDi + 1 ngày`.
 - Số ngày ở trong một kỳ hóa đơn là phần giao giữa kỳ tháng `[ngày 1, ngày 1 tháng sau)` và khoảng ở thực tế `[ngày bắt đầu, ngày kết thúc + 1)`.

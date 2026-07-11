@@ -7,6 +7,10 @@ public class KhachThue
     public string? CCCD { get; set; }
     public string? SoDienThoai { get; set; }
     public DateTime? NgaySinh { get; set; }
+    public DateTime? NgayCapCCCD { get; set; }
+    public string? NgheNghiep { get; set; }
+    public string? LoaiXe { get; set; }
+    public string? BienSoXe { get; set; }
     public string? QueQuan { get; set; }
     public string? AnhCCCDMatTruoc { get; set; }
     public string? AnhCCCDMatSau { get; set; }

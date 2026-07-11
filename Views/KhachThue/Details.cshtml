@@ -19,10 +19,14 @@
                 <h6 class="card-title text-muted mb-3">Thông tin cá nhân</h6>
                 <dl class="row mb-0">
                     <dt class="col-5">Họ tên</dt><dd class="col-7">@Model.HoTen</dd>
-                    <dt class="col-5">Điện thoại</dt><dd class="col-7">@(Model.SoDienThoai ?? "-")</dd>
                     <dt class="col-5">Ngày sinh</dt><dd class="col-7">@(Model.NgaySinh?.ToString("dd/MM/yyyy") ?? "-")</dd>
+                    <dt class="col-5">Điện thoại</dt><dd class="col-7">@(Model.SoDienThoai ?? "-")</dd>
+                    <dt class="col-5">CCCD</dt><dd class="col-7">@(Model.CCCD ?? "-")</dd>
+                    <dt class="col-5">Ngày cấp</dt><dd class="col-7">@(Model.NgayCapCCCD?.ToString("dd/MM/yyyy") ?? "-")</dd>
+                    <dt class="col-5">Biển số xe</dt><dd class="col-7">@(Model.BienSoXe ?? "-")</dd>
+                    <dt class="col-5">Loại xe</dt><dd class="col-7">@(Model.LoaiXe ?? "-")</dd>
+                    <dt class="col-5">Nghề nghiệp</dt><dd class="col-7">@(Model.NgheNghiep ?? "-")</dd>
                     <dt class="col-5">Quê quán</dt><dd class="col-7">@(Model.QueQuan ?? "-")</dd>
-                    <dt class="col-5">Số CCCD</dt><dd class="col-7">@(Model.CCCD ?? "-")</dd>
                 </dl>
             </div>
         </div>
