@@ -56,7 +56,11 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Giá thuê niêm yết (đ)</label>
-                <input asp-for="GiaThueMacDinh" type="number" min="0" class="form-control" />
+                <input asp-for="GiaThueMacDinh" type="number" min="0" step="1"
+                       class="form-control money-input" data-money-preview="gia-thue-preview" />
+                <div id="gia-thue-preview" class="form-text fw-semibold text-primary">
+                    @Model.GiaThueMacDinh.ToString("N0", CultureInfo.InvariantCulture) đ
+                </div>
                 <div class="form-text">Giá thỏa thuận thực tế nhập trong hợp đồng.</div>
             </div>
 
@@ -93,9 +97,13 @@
                                 <input type="number" min="0" class="form-control dv-gia"
                                        name="donGias" placeholder="Đơn giá"
                                        value="@dv.DonGiaMacDinh.ToString("0.##", CultureInfo.InvariantCulture)"
+                                       data-money-preview="gia-dv-preview-@dv.Id"
                                        id="gia_@dv.Id" />
                                 <span class="input-group-text">đ</span>
                             </div>
+                            <small id="gia-dv-preview-@dv.Id" class="text-primary fw-semibold text-nowrap">
+                                @dv.DonGiaMacDinh.ToString("N0", CultureInfo.InvariantCulture) đ
+                            </small>
                         </div>
                     }
                 </div>
@@ -111,6 +119,22 @@
 
 @section Scripts {
 <script>
+    const moneyFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+    function updateMoneyPreview(input) {
+        const previewId = input.dataset.moneyPreview;
+        if (!previewId) return;
+
+        const preview = document.getElementById(previewId);
+        const value = Number(input.value);
+        preview.textContent = `${moneyFormatter.format(Number.isFinite(value) ? value : 0)} đ`;
+    }
+
+    document.querySelectorAll('[data-money-preview]').forEach(input => {
+        input.addEventListener('input', () => updateMoneyPreview(input));
+        updateMoneyPreview(input);
+    });
+
     // Bật/tắt input đơn giá theo checkbox
     document.querySelectorAll('.dv-check').forEach(cb => {
         cb.addEventListener('change', function () {
