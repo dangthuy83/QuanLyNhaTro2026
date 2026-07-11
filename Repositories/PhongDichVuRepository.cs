@@ -23,6 +23,19 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
             splitOn: "Id");
     }
 
+    public async Task<IEnumerable<PhongDichVu>> GetByPhongKyAsync(int phongId, int thang, int nam)
+    {
+        var rows=(await GetByPhongAsync(phongId)).ToList();
+        var ky=new DateTime(nam,thang,1);
+        foreach(var row in rows.Where(x=>x.DichVu!=null))
+        {
+            var effective=await _db.QueryFirstOrDefaultAsync<(string LoaiTinhPhiMoi,string CachTinhCoDinhMoi)>("SELECT LoaiTinhPhiMoi,CachTinhCoDinhMoi FROM LichSuHinhThucDichVu WHERE DichVuId=@DichVuId AND KyApDung<=@Ky ORDER BY KyApDung DESC LIMIT 1",new{DichVuId=row.DichVuId,Ky=ky});
+            if(!string.IsNullOrEmpty(effective.LoaiTinhPhiMoi)){row.DichVu!.LoaiTinhPhi=effective.LoaiTinhPhiMoi;row.DichVu.CachTinhCoDinh=effective.CachTinhCoDinhMoi;}
+            else { var first=await _db.QueryFirstOrDefaultAsync<(string LoaiTinhPhiCu,string CachTinhCoDinhCu)>("SELECT LoaiTinhPhiCu,CachTinhCoDinhCu FROM LichSuHinhThucDichVu WHERE DichVuId=@DichVuId ORDER BY KyApDung LIMIT 1",new{DichVuId=row.DichVuId}); if(!string.IsNullOrEmpty(first.LoaiTinhPhiCu)){row.DichVu!.LoaiTinhPhi=first.LoaiTinhPhiCu;row.DichVu.CachTinhCoDinh=first.CachTinhCoDinhCu;} }
+        }
+        return rows;
+    }
+
     public async Task<IEnumerable<PhongDichVu>> GetAllByPhongAsync(int phongId)
     {
         const string sql = """

@@ -9,7 +9,8 @@ public class ChiSoNgoaiHopDongController(
     ChiSoDienNuocRepository chiSoRepo,
     PhongRepository phongRepo,
     DichVuRepository dichVuRepo,
-    HopDongRepository hopDongRepo) : Controller
+    HopDongRepository hopDongRepo,
+    LichSuHinhThucDichVuRepository lichSuHinhThucRepo) : Controller
 {
     public async Task<IActionResult> Index(int? phongId, int? dichVuId)
     {
@@ -92,8 +93,14 @@ public class ChiSoNgoaiHopDongController(
             errors.Add("Phong khong hop le.");
 
         var dichVu = model.DichVuId > 0 ? await dichVuRepo.GetByIdAsync(model.DichVuId) : null;
-        if (dichVu == null || dichVu.LoaiTinhPhi != DichVu.LoaiTheoChiSo)
-            errors.Add("Dich vu phai la loai TheoChiSo.");
+        if (dichVu == null)
+            errors.Add("Dich vu khong hop le.");
+        else if (model.NgayGhiNhan != default)
+        {
+            var effective = await lichSuHinhThucRepo.ResolveAsync(dichVu.Id, model.NgayGhiNhan.Month, model.NgayGhiNhan.Year, dichVu);
+            if (effective.Loai != DichVu.LoaiTheoChiSo)
+                errors.Add("Dich vu khong phai loai TheoChiSo tai ky cua ngay ghi nhan.");
+        }
 
         if (model.TuChiSo < 0 || model.DenChiSo < 0)
             errors.Add("Chi so khong duoc am.");

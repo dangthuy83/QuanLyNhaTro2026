@@ -54,6 +54,32 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 ## Phiên Làm Việc
 
+### Phiên 46 - Lịch sử hình thức dịch vụ theo kỳ
+
+Ngày: 11/07/2026
+
+Đã làm:
+
+- Thêm `LichSuHinhThucDichVu` và `ChiSoDauChuyenDoiDichVu` vào schema chuẩn; không tạo backfill SQL vì database chưa có dữ liệu vận hành và `Database/schema.sql` là baseline.
+- Chặn sửa trực tiếp hình thức khi dịch vụ đã từng gắn phòng; thêm màn thay đổi theo kỳ và lịch sử riêng.
+- Service thay đổi chạy transaction, chặn thiếu hóa đơn kỳ trước, chặn hóa đơn từ kỳ áp dụng trở đi, kiểm tra chỉ số kỳ cuối khi bỏ cách tính theo chỉ số và bắt chỉ số đầu mọi phòng khi chuyển sang theo chỉ số.
+- `HopDongDichVuRepository` resolve hình thức theo kỳ cho hóa đơn, trả phòng, chuyển phòng và nhập chỉ số hợp đồng.
+- Nhập chỉ số theo phòng resolve theo kỳ và lấy mốc chỉ số đầu chuyển đổi; chỉ số ngoài hợp đồng validate hình thức theo tháng của ngày ghi nhận.
+- Dashboard kiểm tra dữ liệu resolve hình thức theo kỳ thay vì đọc trạng thái hiện tại của `DichVu`.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore
+Build succeeded.
+1 Warning(s) NU1900 (môi trường không truy cập được NuGet vulnerability feed)
+0 Error(s)
+```
+
+Giới hạn cần ghi rõ khi bàn giao: Browser plugin có thể lỗi hạ tầng; ưu tiên schema/DB/service smoke và HTTP smoke nếu listener ổn định.
+
+---
+
 ### Phiên 2-5 - Phase 1 MVP
 
 Ngày: 23/06/2026

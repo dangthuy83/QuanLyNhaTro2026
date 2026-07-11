@@ -65,7 +65,7 @@ Nguyên tắc phân tầng:
 
 ## 3. Schema Hiện Hành
 
-Schema có 17 bảng:
+Schema có 19 bảng:
 
 | Bảng | Vai trò |
 |---|---|
@@ -86,6 +86,8 @@ Schema có 17 bảng:
 | `KhoanPhatSinhHopDong` | Khoản một lần gắn với hợp đồng như đền bù hư hỏng, mất chìa khóa, phụ thu |
 | `ThuChi` | Thu chi ngoài tiền phòng |
 | `LichSuThayDoiGia` | Lịch sử thay đổi giá |
+| `LichSuHinhThucDichVu` | Lịch sử hình thức tính dịch vụ theo kỳ sử dụng |
+| `ChiSoDauChuyenDoiDichVu` | Chỉ số đầu theo phòng khi chuyển từ cố định sang theo chỉ số |
 
 Các cột dễ nhầm:
 
@@ -159,6 +161,17 @@ Các cột dễ nhầm:
 - Thêm/bỏ dịch vụ giữa hợp đồng áp dụng từ một kỳ sử dụng; không sửa lại hóa đơn đã lập.
 - Hóa đơn, nhập chỉ số theo hợp đồng, trả phòng, chuyển phòng và dashboard kiểm tra dữ liệu phải lấy dịch vụ từ `HopDongDichVu` theo kỳ. Nhập chỉ số ngoài hợp đồng vẫn theo phòng và không tạo tiền hóa đơn.
 - Tắt `PhongDichVu.DangApDung` chỉ ảnh hưởng cấu hình cho hợp đồng mới; không tự dừng dịch vụ của hợp đồng đã đăng ký.
+
+### 4.4.4 Thay đổi hình thức dịch vụ theo kỳ
+
+- Dịch vụ chưa từng có dòng `PhongDichVu` được sửa trực tiếp `LoaiTinhPhi`/`CachTinhCoDinh`.
+- Dịch vụ đã gắn phòng chỉ được thay đổi qua `LichSuHinhThucDichVu`, với `KyApDung` là ngày đầu kỳ sử dụng và lý do bắt buộc.
+- Kỳ trước lần thay đổi đầu tiên dùng snapshot `LoaiTinhPhiCu`/`CachTinhCoDinhCu`; từ kỳ áp dụng dùng bản ghi mới gần nhất. Không dùng `LichSuThayDoiGia` cho nghiệp vụ này.
+- Chỉ ghi thay đổi khi mọi hợp đồng liên quan đã có hóa đơn kỳ liền trước và chưa có hóa đơn từ kỳ áp dụng trở đi.
+- Chuyển `TheoChiSo -> CoDinh` còn yêu cầu hóa đơn kỳ cuối theo chỉ số có `ChiTietHoaDon.ChiSoDienNuocId`.
+- Chuyển `CoDinh -> TheoChiSo` bắt buộc lưu `ChiSoDauChuyenDoiDichVu` cho toàn bộ phòng đã gắn dịch vụ; form nhập chỉ số kỳ chuyển đổi lấy đúng mốc này và không cho sửa tay.
+- Hóa đơn đã chốt không tính lại: `ChiTietHoaDon` tiếp tục giữ snapshot số lượng, đơn giá, thành tiền và chỉ số đã dùng.
+- Hóa đơn, chỉ số theo hợp đồng, chỉ số ngoài hợp đồng, trả/chuyển phòng và dashboard kiểm tra dữ liệu phải resolve hình thức bằng kỳ sử dụng/ngày ghi nhận.
 
 ### 4.5 Nợ kỳ trước
 

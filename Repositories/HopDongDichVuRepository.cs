@@ -32,12 +32,26 @@ public class HopDongDichVuRepository(IDbConnection db) : BaseRepository(db)
             ORDER BY dv.TenDichVu
             """;
 
-        return await conn.QueryAsync<PhongDichVu, DichVu, PhongDichVu>(
+        var rows = (await conn.QueryAsync<PhongDichVu, DichVu, PhongDichVu>(
             sql,
             (pdv, dv) => { pdv.DichVu = dv; return pdv; },
             new { HopDongId = hopDongId, Ky = ky },
             transaction: tx,
-            splitOn: "Id");
+            splitOn: "Id")).ToList();
+        foreach (var row in rows.Where(x => x.DichVu != null))
+        {
+            var effective = await conn.QueryFirstOrDefaultAsync<(string LoaiTinhPhiMoi, string CachTinhCoDinhMoi)>("""
+                SELECT LoaiTinhPhiMoi,CachTinhCoDinhMoi FROM LichSuHinhThucDichVu
+                WHERE DichVuId=@DichVuId AND KyApDung<=@Ky ORDER BY KyApDung DESC LIMIT 1
+                """, new { DichVuId=row.DichVuId, Ky=ky }, transaction:tx);
+            if (!string.IsNullOrEmpty(effective.LoaiTinhPhiMoi)) { row.DichVu!.LoaiTinhPhi=effective.LoaiTinhPhiMoi; row.DichVu.CachTinhCoDinh=effective.CachTinhCoDinhMoi; }
+            else
+            {
+                var first = await conn.QueryFirstOrDefaultAsync<(string LoaiTinhPhiCu,string CachTinhCoDinhCu)>("SELECT LoaiTinhPhiCu,CachTinhCoDinhCu FROM LichSuHinhThucDichVu WHERE DichVuId=@DichVuId ORDER BY KyApDung LIMIT 1", new { DichVuId=row.DichVuId }, transaction:tx);
+                if (!string.IsNullOrEmpty(first.LoaiTinhPhiCu)) { row.DichVu!.LoaiTinhPhi=first.LoaiTinhPhiCu; row.DichVu.CachTinhCoDinh=first.CachTinhCoDinhCu; }
+            }
+        }
+        return rows;
     }
 
     public async Task<HashSet<int>> GetPhongDichVuIdsByHopDongKyAsync(

@@ -8,6 +8,13 @@ Vai tro review: Solution Architect + Business Analyst cho ung dung quan ly nha t
 
 ## 1. Ket luan tong quan
 
+Da xu ly trong phien 46:
+
+- Tach `LichSuHinhThucDichVu` khoi lich su gia, resolve hinh thuc theo ky su dung.
+- Chan sua truc tiep sau khi dich vu da gan phong; thay doi co ky ap dung va ly do.
+- Them guard hoa don ky truoc/hoa don tu ky ap dung, guard chi so ky cuoi va chi so dau chuyen doi tung phong.
+- Phu cac luong hoa don, nhap chi so, tra/chuyen phong va kiem tra du lieu; hoa don cu giu snapshot.
+
 Du an dang di dung huong cho muc tieu thay Excel:
 
 - Da tach duoc cac nhom nghiep vu chinh: phong, khach thue, hop dong, chi so, hoa don, thanh toan, thu chi, chuyen phong, tra phong.

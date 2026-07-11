@@ -77,6 +77,42 @@ CREATE TABLE DichVu (
     CONSTRAINT CK_DichVu_CachTinhCoDinh CHECK (CachTinhCoDinh IN ('TheoPhong', 'TheoNguoi'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Lich su hinh thuc tinh cua dich vu theo ky su dung. KyApDung luon la ngay dau thang.
+-- Gia tri tren DichVu la baseline khi chua co lich su; moi ky resolve tu lich su gan nhat.
+CREATE TABLE LichSuHinhThucDichVu (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    DichVuId INT NOT NULL,
+    LoaiTinhPhiCu VARCHAR(20) NOT NULL,
+    CachTinhCoDinhCu VARCHAR(20) NOT NULL,
+    LoaiTinhPhiMoi VARCHAR(20) NOT NULL,
+    CachTinhCoDinhMoi VARCHAR(20) NOT NULL,
+    KyApDung DATE NOT NULL,
+    LyDo VARCHAR(500) NOT NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_LichSuHinhThuc_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
+    CONSTRAINT UQ_LichSuHinhThuc_DichVuKy UNIQUE (DichVuId, KyApDung),
+    CONSTRAINT CK_LichSuHinhThuc_Ky CHECK (DAY(KyApDung) = 1),
+    CONSTRAINT CK_LichSuHinhThuc_LoaiCu CHECK (LoaiTinhPhiCu IN ('CoDinh', 'TheoChiSo')),
+    CONSTRAINT CK_LichSuHinhThuc_LoaiMoi CHECK (LoaiTinhPhiMoi IN ('CoDinh', 'TheoChiSo')),
+    CONSTRAINT CK_LichSuHinhThuc_CachCu CHECK (CachTinhCoDinhCu IN ('TheoPhong', 'TheoNguoi')),
+    CONSTRAINT CK_LichSuHinhThuc_CachMoi CHECK (CachTinhCoDinhMoi IN ('TheoPhong', 'TheoNguoi'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_LichSuHinhThuc_DichVuKy
+    ON LichSuHinhThucDichVu(DichVuId, KyApDung);
+
+-- Chi so dau bat buoc khi dich vu chuyen tu CoDinh sang TheoChiSo.
+CREATE TABLE ChiSoDauChuyenDoiDichVu (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    LichSuHinhThucDichVuId INT NOT NULL,
+    PhongId INT NOT NULL,
+    ChiSoDau DECIMAL(10,2) NOT NULL,
+    CONSTRAINT FK_ChiSoDauChuyenDoi_LichSu FOREIGN KEY (LichSuHinhThucDichVuId) REFERENCES LichSuHinhThucDichVu(Id),
+    CONSTRAINT FK_ChiSoDauChuyenDoi_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
+    CONSTRAINT UQ_ChiSoDauChuyenDoi_LichSuPhong UNIQUE (LichSuHinhThucDichVuId, PhongId),
+    CONSTRAINT CK_ChiSoDauChuyenDoi_KhongAm CHECK (ChiSoDau >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ============================================================
 -- 5. PHONGDICHVU — Giá dịch vụ áp dụng riêng cho từng phòng
 -- ============================================================

@@ -20,13 +20,13 @@ public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
                 hd.NgayKetThuc,
                 COUNT(DISTINCT hdkt.KhachThueId) AS SoKhach,
                 COUNT(DISTINCT pdv.Id) AS SoDichVuDangApDung,
-                COUNT(DISTINCT CASE WHEN dv.LoaiTinhPhi = 'TheoChiSo' THEN pdv.Id END) AS SoDichVuTheoChiSo,
-                COUNT(DISTINCT CASE WHEN dv.LoaiTinhPhi = 'TheoChiSo' AND cs.Id IS NOT NULL THEN pdv.Id END) AS SoChiSoTheoChiSo,
-                COUNT(DISTINCT CASE WHEN dv.LoaiTinhPhi = 'CoDinh' AND dv.CachTinhCoDinh = 'TheoNguoi' THEN pdv.Id END) AS SoDichVuTheoNguoi,
+                COUNT(DISTINCT CASE WHEN COALESCE(ls.LoaiTinhPhiMoi,firstls.LoaiTinhPhiCu,dv.LoaiTinhPhi) = 'TheoChiSo' THEN pdv.Id END) AS SoDichVuTheoChiSo,
+                COUNT(DISTINCT CASE WHEN COALESCE(ls.LoaiTinhPhiMoi,firstls.LoaiTinhPhiCu,dv.LoaiTinhPhi) = 'TheoChiSo' AND cs.Id IS NOT NULL THEN pdv.Id END) AS SoChiSoTheoChiSo,
+                COUNT(DISTINCT CASE WHEN COALESCE(ls.LoaiTinhPhiMoi,firstls.LoaiTinhPhiCu,dv.LoaiTinhPhi) = 'CoDinh' AND COALESCE(ls.CachTinhCoDinhMoi,firstls.CachTinhCoDinhCu,dv.CachTinhCoDinh) = 'TheoNguoi' THEN pdv.Id END) AS SoDichVuTheoNguoi,
                 COUNT(DISTINCT CASE WHEN pdv.Id IS NOT NULL AND pdv.DonGia <= 0 THEN pdv.Id END) AS SoDichVuDonGiaKhongHopLe,
-                GROUP_CONCAT(DISTINCT CASE WHEN dv.LoaiTinhPhi = 'TheoChiSo' THEN dv.TenDichVu END ORDER BY dv.TenDichVu SEPARATOR ', ') AS DichVuTheoChiSo,
+                GROUP_CONCAT(DISTINCT CASE WHEN COALESCE(ls.LoaiTinhPhiMoi,firstls.LoaiTinhPhiCu,dv.LoaiTinhPhi) = 'TheoChiSo' THEN dv.TenDichVu END ORDER BY dv.TenDichVu SEPARATOR ', ') AS DichVuTheoChiSo,
                 GROUP_CONCAT(DISTINCT CASE WHEN pdv.Id IS NOT NULL AND pdv.DonGia <= 0 THEN dv.TenDichVu END ORDER BY dv.TenDichVu SEPARATOR ', ') AS DichVuDonGiaKhongHopLe,
-                GROUP_CONCAT(DISTINCT CASE WHEN dv.LoaiTinhPhi = 'CoDinh' AND dv.CachTinhCoDinh = 'TheoNguoi' THEN dv.TenDichVu END ORDER BY dv.TenDichVu SEPARATOR ', ') AS DichVuTheoNguoi
+                GROUP_CONCAT(DISTINCT CASE WHEN COALESCE(ls.LoaiTinhPhiMoi,firstls.LoaiTinhPhiCu,dv.LoaiTinhPhi) = 'CoDinh' AND COALESCE(ls.CachTinhCoDinhMoi,firstls.CachTinhCoDinhCu,dv.CachTinhCoDinh) = 'TheoNguoi' THEN dv.TenDichVu END ORDER BY dv.TenDichVu SEPARATOR ', ') AS DichVuTheoNguoi
             FROM HopDong hd
             INNER JOIN Phong p ON p.Id = hd.PhongId
             INNER JOIN Nha n ON n.Id = p.NhaId
@@ -39,6 +39,8 @@ public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
             LEFT JOIN PhongDichVu pdv
                 ON pdv.Id = hdv.PhongDichVuId
             LEFT JOIN DichVu dv ON dv.Id = pdv.DichVuId
+            LEFT JOIN LichSuHinhThucDichVu ls ON ls.Id=(SELECT x.Id FROM LichSuHinhThucDichVu x WHERE x.DichVuId=dv.Id AND x.KyApDung<=@Ky ORDER BY x.KyApDung DESC LIMIT 1)
+            LEFT JOIN LichSuHinhThucDichVu firstls ON firstls.Id=(SELECT x.Id FROM LichSuHinhThucDichVu x WHERE x.DichVuId=dv.Id ORDER BY x.KyApDung LIMIT 1)
             LEFT JOIN ChiSoDienNuoc cs
                 ON cs.PhongId = p.Id
                AND cs.DichVuId = pdv.DichVuId

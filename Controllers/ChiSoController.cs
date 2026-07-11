@@ -12,7 +12,8 @@ public class ChiSoController(
     PhongRepository phongRepo,
     PhongDichVuRepository phongDichVuRepo,
     HopDongDichVuRepository hopDongDichVuRepo,
-    ChiSoNgoaiHopDongRepository chiSoNgoaiHopDongRepo) : Controller
+    ChiSoNgoaiHopDongRepository chiSoNgoaiHopDongRepo,
+    LichSuHinhThucDichVuRepository lichSuHinhThucRepo) : Controller
 {
     public async Task<IActionResult> Index(int? thang, int? nam)
     {
@@ -255,7 +256,7 @@ public class ChiSoController(
     {
         var dichVuNguon = hopDongId.HasValue
             ? await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(hopDongId.Value, thang, nam)
-            : await phongDichVuRepo.GetByPhongAsync(phongId);
+            : await phongDichVuRepo.GetByPhongKyAsync(phongId, thang, nam);
         var dichVuTheoChiSo = dichVuNguon
             .Where(pdv => pdv.DichVu?.LoaiTinhPhi == "TheoChiSo")
             .Select(pdv => pdv.DichVu!)
@@ -404,7 +405,7 @@ public class ChiSoController(
             .ToDictionary(cs => cs.Id);
         var dichVuNguon = hopDongId.HasValue
             ? await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(hopDongId.Value, thang, nam)
-            : await phongDichVuRepo.GetByPhongAsync(phongId);
+            : await phongDichVuRepo.GetByPhongKyAsync(phongId, thang, nam);
         var dichVuTheoChiSoIds = dichVuNguon
             .Where(pdv => pdv.DichVu?.LoaiTinhPhi == "TheoChiSo")
             .Select(pdv => pdv.DichVuId)
@@ -527,6 +528,10 @@ public class ChiSoController(
     {
         if (current != null)
             return new ChiSoDauInfo(current.ChiSoDau, false, "Đã nhập trong kỳ này");
+
+        var chiSoChuyenDoi = await lichSuHinhThucRepo.GetChiSoDauChuyenDoiAsync(dichVuId, phongId, thang, nam);
+        if (chiSoChuyenDoi.HasValue)
+            return new ChiSoDauInfo(chiSoChuyenDoi.Value, false, $"Chỉ số đầu chuyển đổi kỳ {thang}/{nam}");
 
         if (hopDongId.HasValue)
         {
