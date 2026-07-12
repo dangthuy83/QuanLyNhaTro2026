@@ -106,7 +106,7 @@ else
                                 <td>
                                     <input type="date" name="Rows[@i].NgayDoc"
                                            class="form-control form-control-sm"
-                                           value="@((row.NgayDoc ?? DateTime.Today).ToString("yyyy-MM-dd"))" />
+                                           value="@(row.NgayDoc?.ToString("yyyy-MM-dd"))" required />
                                 </td>
                                 <td class="text-end">
                                     @if (row.ChoNhapChiSoDau)

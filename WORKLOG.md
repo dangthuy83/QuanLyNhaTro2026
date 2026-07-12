@@ -10,8 +10,8 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 và REVIEW-010/011 đã triển khai; REVIEW-008/009 chưa làm |
-| Build | Phiên 55: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 và REVIEW-009/010/011 đã triển khai; REVIEW-008 chưa làm |
+| Build | Phiên 56: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
 | Database | Phiên 53 schema smoke pass 19 bảng, 77 constraint, 7 dịch vụ mẫu; REVIEW-006/007 concurrency smoke pass và DB tạm đã drop. Dry-run DB thật sạch, apply-once mới đã tạo 2 CHECK + 1 index. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006/007/010/011 đã xong; REVIEW-008/009 và REVIEW-012 đến REVIEW-016 còn lại | Cao |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006/007/009/010/011 đã xong; REVIEW-008 và REVIEW-012 đến REVIEW-016 còn lại | Cao |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,28 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 56 - REVIEW-009: atomic batch và khóa chỉ số đã chốt
+
+Đã triển khai thay đổi hẹp cho chỉ số điện/nước:
+
+- Thêm `ChiSoService.LuuBatchAsync` bọc toàn bộ insert/update trong một MySQL transaction; bất kỳ validation/unique/DB error nào đều rollback toàn batch.
+- Update khóa bản gốc `ChiSoDienNuoc FOR UPDATE`, giữ nguyên scope phòng, hợp đồng, dịch vụ và kỳ; không tin các hidden field từ form.
+- `NgayDoc` là bắt buộc, phải thuộc đúng `Thang/Nam`; chỉ số có `HopDongId` còn phải nằm trong `[NgayBatDau, NgayKetThuc]` và đúng phòng hợp đồng.
+- Update/delete khóa và kiểm tra `ChiTietHoaDon`; chỉ số đã được hóa đơn dùng bị chặn. Phase 1 dùng đường xóa/reissue hóa đơn hợp lệ trước, chưa tạo correction record.
+- Controller nhập đơn lẻ, theo phòng và hàng loạt đều gọi service chung. Form mặc định ngày đọc theo cuối kỳ, được clamp theo ngày bắt đầu/kết thúc hợp đồng; batch chỉ hiển thị hợp đồng giao với kỳ đang nhập.
+- Repository bổ sung overload insert/update/delete nhận connection + transaction; đường nghiệp vụ mới không ghi từng dòng ngoài transaction.
+
+Kiểm tra thực tế trên database tạm:
+
+- Dòng thứ hai vi phạm unique: cả hai dòng rollback, kỳ test còn 0 bản ghi.
+- Chỉ số đã dùng trên hóa đơn: update/delete đều bị chặn và số liệu giữ nguyên.
+- `NgayDoc` ngoài kỳ hoặc ngoài hiệu lực hợp đồng bị chặn.
+- Chỉ số chưa dùng được update hợp lệ; sửa hidden scope phòng bị chặn.
+- `REVIEW_009_SMOKE_PASS`; database tạm đã drop trong `finally`.
+- Không thay đổi schema, không có migration và không đụng database vận hành.
+
+Phạm vi giữ nguyên: chưa làm REVIEW-008 hoặc correction record; không mở rộng chỉ số ngoài hợp đồng, UI diện rộng, Syncfusion, nhắn tin hay auth/multi-user.
 
 ### Phiên 55 - REVIEW-011: hoàn tác an toàn khi xóa hóa đơn
 

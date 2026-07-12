@@ -11,6 +11,7 @@
     var choNhapChiSoDauTheoDichVu = ViewBag.ChoNhapChiSoDauTheoDichVu as Dictionary<int, bool> ?? [];
     var nguonChiSoDauTheoDichVu = ViewBag.NguonChiSoDauTheoDichVu as Dictionary<int, string> ?? [];
     var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var ngayDocMacDinh = new DateTime(nam, thang, DateTime.DaysInMonth(nam, thang));
     var cancelUrl = returnHopDongId.HasValue
         ? Url.Action("Create", "ChuyenPhong", new { hopDongId = returnHopDongId.Value })
         : Url.Action("Index", "ChiSo", new { thang, nam });
@@ -63,7 +64,7 @@ else
                     var nguonChiSoDau = nguonChiSoDauTheoDichVu.TryGetValue(dv.Id, out var nguon) ? nguon : "";
                     var loaiGhiNhan = cs?.LoaiGhiNhan ?? QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong;
                     var isReset = loaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiReset;
-                    var ngayDoc = cs?.NgayDoc ?? DateTime.Today;
+                    var ngayDoc = cs?.NgayDoc ?? ngayDocMacDinh;
                     <input type="hidden" name="dichVuIds" value="@dv.Id" />
                     <input type="hidden" name="chiSoIds" value="@(cs?.Id ?? 0)" />
 
@@ -112,7 +113,7 @@ else
                                 <label class="form-label small text-muted">Ngày đọc</label>
                                 <input type="date" name="ngayDocs"
                                        class="form-control form-control-sm"
-                                       value="@ngayDoc.ToString("yyyy-MM-dd")" />
+                                       value="@ngayDoc.ToString("yyyy-MM-dd")" required />
                             </div>
                         </div>
 

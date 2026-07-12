@@ -13,7 +13,8 @@ public class ChiSoController(
     PhongDichVuRepository phongDichVuRepo,
     HopDongDichVuRepository hopDongDichVuRepo,
     ChiSoNgoaiHopDongRepository chiSoNgoaiHopDongRepo,
-    LichSuHinhThucDichVuRepository lichSuHinhThucRepo) : Controller
+    LichSuHinhThucDichVuRepository lichSuHinhThucRepo,
+    ChiSoService chiSoService) : Controller
 {
     public async Task<IActionResult> Index(int? thang, int? nam)
     {
@@ -242,7 +243,15 @@ public class ChiSoController(
             return View(model);
         }
 
-        await SaveChiSoItemsAsync(allItems);
+        try
+        {
+            await SaveChiSoItemsAsync(allItems);
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = "Khong the luu chi so. " + ex.Message;
+            return View(model);
+        }
         TempData["Success"] = $"Da luu {allItems.Count} dong chi so ky {model.Thang}/{model.Nam}.";
         return RedirectToAction(nameof(Index), new { thang = model.Thang, nam = model.Nam });
     }
@@ -291,8 +300,12 @@ public class ChiSoController(
 
     private async Task<ChiSoHangLoatViewModel> BuildNhapHangLoatViewModelAsync(int thang, int nam)
     {
+        var kyBatDau = new DateTime(nam, thang, 1);
+        var kyKetThuc = new DateTime(nam, thang, DateTime.DaysInMonth(nam, thang));
         var hopDongs = (await hopDongRepo.GetAllAsync())
             .Where(hd => hd.TrangThai == "DangHieuLuc")
+            .Where(hd => hd.NgayBatDau.Date <= kyKetThuc &&
+                         (!hd.NgayKetThuc.HasValue || hd.NgayKetThuc.Value.Date >= kyBatDau))
             .OrderBy(hd => hd.Phong?.TenPhong)
             .ToList();
 
@@ -322,7 +335,7 @@ public class ChiSoController(
                     ChiSoDau = chiSoDau,
                     NguonChiSoDau = nguonChiSoDau,
                     ChiSoCuoi = current?.ChiSoCuoi ?? chiSoDau,
-                    NgayDoc = current?.NgayDoc ?? DateTime.Today,
+                    NgayDoc = current?.NgayDoc ?? ResolveNgayDocMacDinh(thang, nam, hopDong),
                     ChoNhapChiSoDau = choNhapChiSoDau,
                     LoaiGhiNhan = loaiGhiNhan,
                     ChiSoTruocReset = current?.ChiSoTruocReset,
@@ -379,7 +392,14 @@ public class ChiSoController(
             return result.Errors;
         }
 
-        await SaveChiSoItemsAsync(result.Items);
+        try
+        {
+            await SaveChiSoItemsAsync(result.Items);
+        }
+        catch (InvalidOperationException ex)
+        {
+            result.Errors.Add(ex.Message);
+        }
         return result.Errors;
     }
 
@@ -462,7 +482,7 @@ public class ChiSoController(
                 ChiSoTruocReset = loaiGhiNhan == ChiSoDienNuoc.LoaiReset ? chiSoTruocReset : null,
                 ChiSoSauReset = loaiGhiNhan == ChiSoDienNuoc.LoaiReset ? chiSoSauReset : null,
                 LyDoDieuChinh = loaiGhiNhan == ChiSoDienNuoc.LoaiReset ? lyDoDieuChinh : null,
-                NgayDoc = ngayDoc?.Date ?? DateTime.Today
+                NgayDoc = ngayDoc?.Date
             };
 
             items.Add(new ChiSoNhapItem(chiSo));
@@ -502,18 +522,16 @@ public class ChiSoController(
     }
 
     private async Task SaveChiSoItemsAsync(IEnumerable<ChiSoNhapItem> items)
+        => await chiSoService.LuuBatchAsync(items.Select(x => x.ChiSo));
+
+    private static DateTime ResolveNgayDocMacDinh(int thang, int nam, HopDong hopDong)
     {
-        foreach (var item in items)
-        {
-            if (item.ChiSo.Id > 0)
-            {
-                await chiSoRepo.UpdateAsync(item.ChiSo);
-            }
-            else
-            {
-                await chiSoRepo.InsertAsync(item.ChiSo);
-            }
-        }
+        var ngay = new DateTime(nam, thang, DateTime.DaysInMonth(nam, thang));
+        if (hopDong.NgayKetThuc.HasValue && hopDong.NgayKetThuc.Value.Date < ngay)
+            ngay = hopDong.NgayKetThuc.Value.Date;
+        if (hopDong.NgayBatDau.Date > ngay)
+            ngay = hopDong.NgayBatDau.Date;
+        return ngay;
     }
 
     private async Task<ChiSoDauInfo> ResolveChiSoDauAsync(

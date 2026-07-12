@@ -169,6 +169,8 @@ Các cột dễ nhầm:
 - Không dùng số lượng cố định từ `PhongDichVu`.
 - `ChiTietHoaDon.ChiSoDienNuocId` phải được lưu khi dòng dịch vụ dùng chỉ số.
 - Khi preview/chốt hóa đơn hàng loạt, thiếu chỉ số của dịch vụ `TheoChiSo` là lỗi chặn chốt hóa đơn để tránh bỏ sót tiền dịch vụ.
+- Lưu nhiều chỉ số trong một lần nhập là một batch atomic: một dòng lỗi thì rollback toàn batch. `NgayDoc` bắt buộc thuộc đúng tháng/năm và, với chỉ số có `HopDongId`, phải nằm trong khoảng hiệu lực hợp đồng.
+- Chỉ số đã được `ChiTietHoaDon.ChiSoDienNuocId` tham chiếu không được sửa/xóa trực tiếp. Phase 1 yêu cầu xóa/reissue hóa đơn hợp lệ trước; chưa triển khai correction record riêng.
 
 ### 4.4.1 Đơn giá mặc định của dịch vụ
 
@@ -374,6 +376,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 - REVIEW-006/007: chống chồng khoảng hợp đồng bằng khóa dòng phòng + overlap query, trạng thái `ChoHieuLuc`, kích hoạt đến hạn có guard, và khóa sửa lịch sử hợp đồng sau phát sinh dữ liệu.
 - REVIEW-010: chuyển phòng khóa/recheck hợp đồng và hai phòng trong transaction, đưa khoản phát sinh đến ngày chuyển vào hóa đơn cũ, hỗ trợ chuyển cuối tháng không sinh hóa đơn phòng mới ở kỳ cũ.
 - REVIEW-011: xóa hóa đơn chưa settlement dưới khóa transaction, trả khoản phát sinh về `ChuaXuLy`, tháo liên kết hóa đơn ghép và chặn mọi payment/ledger cọc/nợ kết chuyển.
+- REVIEW-009: lưu chỉ số qua `ChiSoService` transaction toàn batch, khóa bản gốc/scope, validate ngày đọc và chặn sửa/xóa chỉ số đã dùng trên hóa đơn.
 
 - Core MVC: phòng, khách thuê, hợp đồng, dịch vụ, chỉ số, hóa đơn.
 - Dashboard.

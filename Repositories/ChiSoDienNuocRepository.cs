@@ -153,6 +153,20 @@ public class ChiSoDienNuocRepository(IDbConnection db) : BaseRepository(db)
         return await _db.ExecuteScalarAsync<int>(sql, cs);
     }
 
+    public async Task<int> InsertAsync(IDbConnection conn, IDbTransaction tx, ChiSoDienNuoc cs)
+    {
+        const string sql = """
+            INSERT INTO ChiSoDienNuoc
+                (HopDongId, PhongId, DichVuId, Thang, Nam, ChiSoDau, ChiSoCuoi,
+                 LoaiGhiNhan, ChiSoTruocReset, ChiSoSauReset, LyDoDieuChinh, NgayDoc, GhiChu)
+            VALUES
+                (@HopDongId, @PhongId, @DichVuId, @Thang, @Nam, @ChiSoDau, @ChiSoCuoi,
+                 @LoaiGhiNhan, @ChiSoTruocReset, @ChiSoSauReset, @LyDoDieuChinh, @NgayDoc, @GhiChu);
+            SELECT LAST_INSERT_ID();
+            """;
+        return await conn.ExecuteScalarAsync<int>(sql, cs, transaction: tx);
+    }
+
     public async Task UpdateAsync(ChiSoDienNuoc cs)
     {
         const string sql = """
@@ -171,6 +185,27 @@ public class ChiSoDienNuocRepository(IDbConnection db) : BaseRepository(db)
         await _db.ExecuteAsync(sql, cs);
     }
 
+    public async Task UpdateAsync(IDbConnection conn, IDbTransaction tx, ChiSoDienNuoc cs)
+    {
+        const string sql = """
+            UPDATE ChiSoDienNuoc SET
+                ChiSoDau = @ChiSoDau,
+                ChiSoCuoi = @ChiSoCuoi,
+                LoaiGhiNhan = @LoaiGhiNhan,
+                ChiSoTruocReset = @ChiSoTruocReset,
+                ChiSoSauReset = @ChiSoSauReset,
+                LyDoDieuChinh = @LyDoDieuChinh,
+                NgayDoc = @NgayDoc,
+                GhiChu = @GhiChu
+            WHERE Id = @Id
+            """;
+        await conn.ExecuteAsync(sql, cs, transaction: tx);
+    }
+
     public async Task DeleteAsync(int id)
         => await _db.ExecuteAsync("DELETE FROM ChiSoDienNuoc WHERE Id = @Id", new { Id = id });
+
+    public async Task DeleteAsync(IDbConnection conn, IDbTransaction tx, int id)
+        => await conn.ExecuteAsync(
+            "DELETE FROM ChiSoDienNuoc WHERE Id = @Id", new { Id = id }, transaction: tx);
 }
