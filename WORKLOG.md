@@ -10,8 +10,8 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 đã triển khai; REVIEW-008/009/010/011 chưa làm |
-| Build | Phiên 53: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 và REVIEW-010 đã triển khai; REVIEW-008/009/011 chưa làm |
+| Build | Phiên 54: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
 | Database | Phiên 53 schema smoke pass 19 bảng, 77 constraint, 7 dịch vụ mẫu; REVIEW-006/007 concurrency smoke pass và DB tạm đã drop. Dry-run DB thật sạch, apply-once mới đã tạo 2 CHECK + 1 index. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
@@ -22,7 +22,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
-| 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002 đã xong; REVIEW-010 chưa triển khai | Critical |
+| 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
 | 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006/007 đã xong; REVIEW-008 đến REVIEW-016 còn lại | Cao |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
@@ -57,6 +57,26 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 54 - REVIEW-010: hoàn thiện chuyển phòng
+
+Đã triển khai chính sách chuyển phòng được duyệt:
+
+- Giữ guard từ REVIEW-006: khóa lại hợp đồng cũ và hai dòng phòng theo thứ tự, kiểm tra overlap phòng đích trong cùng transaction.
+- Khoản phát sinh `ChuaXuLy` đến hết `NgayChuyenDi` được khóa, cộng vào `HoaDon.TongTienPhatSinh`/`TongCong` của hợp đồng cũ và chuyển `DaDuaVaoHoaDon` với `HoaDonId` của hóa đơn cũ. Khoản phát sinh sau ngày chuyển không bị lấy nhầm.
+- Chuyển giữa tháng tiếp tục sinh hai hóa đơn ghép và kết chuyển nợ cũ sang hóa đơn hợp đồng mới.
+- Chuyển ngày cuối tháng sinh duy nhất hóa đơn phòng cũ; dịch vụ cố định của tháng cũ được tính trên hóa đơn này để không bỏ sót tiền. Hợp đồng mới bắt đầu ngày đầu tháng sau, không có hóa đơn 0 ngày cho kỳ cũ. Nợ cũ chưa settlement tiếp tục được hóa đơn đầu tiên của hợp đồng mới mang sang theo `HopDongTruocId`.
+- Hợp đồng mới dùng `ChoHieuLuc` nếu ngày bắt đầu còn ở tương lai và chưa đổi phòng đích sang `DangThue`; nếu đã đến ngày thì dùng `DangHieuLuc`.
+- View chuyển phòng giải thích rõ scope khoản phát sinh và nhánh cuối tháng.
+
+Kiểm tra thực tế:
+
+- `dotnet build --no-restore`: pass, 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed.
+- Service smoke database tạm pass: chuyển giữa tháng tạo hai hóa đơn ghép và gắn khoản phát sinh đúng hóa đơn cũ; khoản sau ngày chuyển giữ `ChuaXuLy`; chuyển cuối tháng chỉ tạo hóa đơn cũ và hợp đồng mới bắt đầu đầu tháng sau.
+- Guard/rollback smoke pass: phòng đích đã chiếm bị chặn và hợp đồng nguồn giữ nguyên; hai request đồng thời cùng chuyển vào một phòng chỉ một request thành công.
+- Database tạm đã drop trong `finally`. REVIEW-010 không thay đổi schema nên không có migration mới và không đụng database vận hành.
+
+Phạm vi giữ nguyên: chưa làm REVIEW-008/009/011; không mở rộng UI diện rộng, Syncfusion, nhắn tin hoặc auth/multi-user.
 
 ### Phiên 53 - REVIEW-006/007: chống chồng kỳ và khóa sửa lịch sử hợp đồng
 

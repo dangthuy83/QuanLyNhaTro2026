@@ -13,10 +13,11 @@ public class ChuyenPhongService(
     PhongDichVuRepository phongDvRepo,
     HopDongDichVuRepository hopDongDichVuRepo,
     LichSuThayDoiGiaRepository lichSuRepo,
+    KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     GiaoDichCocService giaoDichCocService,
     CongNoSettlementService congNoSettlementService)
 {
-    public async Task<(int HopDongMoiId, int HoaDonCuId, int HoaDonMoiId)> ThucHienAsync(
+    public async Task<(int HopDongMoiId, int HoaDonCuId, int? HoaDonMoiId)> ThucHienAsync(
         ChuyenPhongViewModel vm)
     {
         var hdCu = await hopDongRepo.GetByIdAsync(vm.HopDongCuId)
@@ -33,16 +34,19 @@ public class ChuyenPhongService(
         int soNgayTrongThang = BillingPeriodCalculator.GetDaysInMonth(thang, nam);
         int soNgayOCu = BillingPeriodCalculator.CountOccupiedDays(thang, nam, hdCu.NgayBatDau, vm.NgayChuyenDi);
         int soNgayOMoi = BillingPeriodCalculator.CountOccupiedDays(thang, nam, vm.NgayBatDauMoi, null);
+        bool chuyenCuoiThang = vm.NgayChuyenDi.Day == soNgayTrongThang;
 
         if (soNgayOCu <= 0)
             throw new InvalidOperationException("Hop dong cu khong co ngay o trong ky chuyen phong.");
 
-        if (soNgayOMoi <= 0)
-            throw new InvalidOperationException("Ngay chuyen phong la ngay cuoi thang; phong moi khong phat sinh ngay o trong ky nay.");
+        if (soNgayOMoi <= 0 && !chuyenCuoiThang)
+            throw new InvalidOperationException("Hop dong moi khong co ngay o hop le trong ky chuyen phong.");
 
         decimal giaPhongCu = await LayGiaPhongAsync(hdCu, thang, nam);
         decimal tienPhongCu = BillingPeriodCalculator.CalculateRoomCharge(giaPhongCu, soNgayOCu, soNgayTrongThang);
-        decimal tienPhongMoi = BillingPeriodCalculator.CalculateRoomCharge(vm.TienThueMoi, soNgayOMoi, soNgayTrongThang);
+        decimal tienPhongMoi = chuyenCuoiThang
+            ? 0
+            : BillingPeriodCalculator.CalculateRoomCharge(vm.TienThueMoi, soNgayOMoi, soNgayTrongThang);
 
         var dvCu = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
             vm.HopDongCuId, thang, nam)).ToList();
@@ -91,13 +95,16 @@ public class ChuyenPhongService(
                 "UPDATE Phong SET TrangThai='Trong' WHERE Id=@Id",
                 new { Id = hdCu.PhongId }, tx);
 
+            var trangThaiHopDongMoi = vm.NgayBatDauMoi.Date > DateTime.Today
+                ? "ChoHieuLuc"
+                : "DangHieuLuc";
             var hdMoiId = await conn.ExecuteScalarAsync<int>("""
                 INSERT INTO HopDong
                     (PhongId, NgayBatDau, TienThueThoaThuan, TienCoc,
                      TrangThai, HopDongTruocId, DaXuLyChenhLechCoc, GhiChu, NgayTao)
                 VALUES
                     (@PhongId, @NgayBatDau, @TienThue, @TienCoc,
-                     'DangHieuLuc', @HopDongTruocId,
+                     @TrangThai, @HopDongTruocId,
                      @CanXuLyCoc, @GhiChu, NOW());
                 SELECT LAST_INSERT_ID();
                 """,
@@ -107,6 +114,7 @@ public class ChuyenPhongService(
                     NgayBatDau = vm.NgayBatDauMoi,
                     TienThue = vm.TienThueMoi,
                     TienCoc = vm.TienCocMoi,
+                    TrangThai = trangThaiHopDongMoi,
                     HopDongTruocId = vm.HopDongCuId,
                     CanXuLyCoc = vm.TienCocMoi != hdCu.TienCoc,
                     GhiChu = $"Chuyen tu {phongCu.TenPhong} ngay {vm.NgayChuyenDi:dd/MM/yyyy}"
@@ -130,23 +138,32 @@ public class ChuyenPhongService(
             await hopDongDichVuRepo.InsertManyAsync(
                 conn, tx, hdMoiId, selectedIds, vm.NgayBatDauMoi);
 
-            await conn.ExecuteAsync(
-                "UPDATE Phong SET TrangThai='DangThue' WHERE Id=@Id",
-                new { Id = vm.PhongMoiId }, tx);
+            if (trangThaiHopDongMoi == "DangHieuLuc")
+            {
+                await conn.ExecuteAsync(
+                    "UPDATE Phong SET TrangThai='DangThue' WHERE Id=@Id",
+                    new { Id = vm.PhongMoiId }, tx);
+            }
 
+            var dichVuTinhChoPhongCu = chuyenCuoiThang
+                ? dvCu
+                : dvCu.Where(d => d.DichVu?.LoaiTinhPhi == "TheoChiSo");
             var chiTietDvCu = await TinhChiTietDichVuAsync(
-                conn, tx, hdCu.PhongId, vm.HopDongCuId, dvCu.Where(d => d.DichVu?.LoaiTinhPhi == "TheoChiSo"), thang, nam);
+                conn, tx, hdCu.PhongId, vm.HopDongCuId, dichVuTinhChoPhongCu, thang, nam);
             decimal tongDvCu = chiTietDvCu.Sum(d => d.ThanhTien);
-            decimal tongCongCu = tienPhongCu + tongDvCu;
+            var khoanPhatSinhCu = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(
+                conn, tx, vm.HopDongCuId, vm.NgayChuyenDi);
+            decimal tongPhatSinhCu = khoanPhatSinhCu.Sum(x => x.SoTienConLai);
+            decimal tongCongCu = tienPhongCu + tongDvCu + tongPhatSinhCu;
 
             var hdCuId = await conn.ExecuteScalarAsync<int>("""
                 INSERT INTO HoaDon
                     (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
-                     TongCong, SoTienDaThu, TrangThaiThanhToan,
+                     TongTienPhatSinh, TongCong, SoTienDaThu, TrangThaiThanhToan,
                      SoNgayO, SoNgayTrongThang, TienNoKyTruoc)
                 VALUES
                     (@HopDongId, @Thang, @Nam, NOW(), @TienPhong, @TongDV,
-                     @TongCong, 0, 'ChuaThu',
+                     @TongTienPhatSinh, @TongCong, 0, 'ChuaThu',
                      @SoNgayO, @SoNgayTrongThang, 0);
                 SELECT LAST_INSERT_ID();
                 """,
@@ -157,62 +174,69 @@ public class ChuyenPhongService(
                     Nam = nam,
                     TienPhong = tienPhongCu,
                     TongDV = tongDvCu,
+                    TongTienPhatSinh = tongPhatSinhCu,
                     TongCong = tongCongCu,
                     SoNgayO = soNgayOCu,
                     SoNgayTrongThang = soNgayTrongThang
                 }, tx);
 
             await InsertChiTietAsync(conn, tx, hdCuId, chiTietDvCu);
+            await khoanPhatSinhRepo.GanVaoHoaDonAsync(
+                conn, tx, khoanPhatSinhCu.Select(x => x.Id), hdCuId);
 
-            var chiTietDvMoi = await TinhChiTietDichVuAsync(conn, tx, vm.PhongMoiId, hdMoiId, dvMoi, thang, nam);
-            decimal tongDvMoi = chiTietDvMoi.Sum(d => d.ThanhTien);
-            decimal tongCongMoi = tienPhongMoi + tongDvMoi + noXuyen;
-
-            var hdMoiHdId = await conn.ExecuteScalarAsync<int>("""
-                INSERT INTO HoaDon
-                    (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
-                     TongCong, SoTienDaThu, TrangThaiThanhToan,
-                     SoNgayO, SoNgayTrongThang, TienNoKyTruoc)
-                VALUES
-                    (@HopDongId, @Thang, @Nam, NOW(), @TienPhong, @TongDV,
-                     @TongCong, 0, 'ChuaThu',
-                     @SoNgayO, @SoNgayTrongThang, @NoXuyen);
-                SELECT LAST_INSERT_ID();
-                """,
-                new
-                {
-                    HopDongId = hdMoiId,
-                    Thang = thang,
-                    Nam = nam,
-                    TienPhong = tienPhongMoi,
-                    TongDV = tongDvMoi,
-                    TongCong = tongCongMoi,
-                    NoXuyen = noXuyen,
-                    SoNgayO = soNgayOMoi,
-                    SoNgayTrongThang = soNgayTrongThang
-                }, tx);
-
-            await InsertChiTietAsync(conn, tx, hdMoiHdId, chiTietDvMoi);
-
-            await conn.ExecuteAsync(
-                "UPDATE HoaDon SET HoaDonGhepId=@Ghep WHERE Id=@Id",
-                new { Ghep = hdMoiHdId, Id = hdCuId }, tx);
-
-            await conn.ExecuteAsync(
-                "UPDATE HoaDon SET HoaDonGhepId=@Ghep WHERE Id=@Id",
-                new { Ghep = hdCuId, Id = hdMoiHdId }, tx);
-
-            if (noXuyen > 0)
+            int? hdMoiHdId = null;
+            if (!chuyenCuoiThang)
             {
-                await congNoSettlementService.ThanhToanNoAsync(
-                    conn,
-                    tx,
-                    vm.HopDongCuId,
-                    noXuyen,
-                    vm.NgayChuyenDi,
-                    "KetChuyenNo",
-                    $"Ket chuyen no sang hop dong #{hdMoiId}",
-                    [hdCuId]);
+                var chiTietDvMoi = await TinhChiTietDichVuAsync(conn, tx, vm.PhongMoiId, hdMoiId, dvMoi, thang, nam);
+                decimal tongDvMoi = chiTietDvMoi.Sum(d => d.ThanhTien);
+                decimal tongCongMoi = tienPhongMoi + tongDvMoi + noXuyen;
+
+                hdMoiHdId = await conn.ExecuteScalarAsync<int>("""
+                    INSERT INTO HoaDon
+                        (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
+                         TongCong, SoTienDaThu, TrangThaiThanhToan,
+                         SoNgayO, SoNgayTrongThang, TienNoKyTruoc)
+                    VALUES
+                        (@HopDongId, @Thang, @Nam, NOW(), @TienPhong, @TongDV,
+                         @TongCong, 0, 'ChuaThu',
+                         @SoNgayO, @SoNgayTrongThang, @NoXuyen);
+                    SELECT LAST_INSERT_ID();
+                    """,
+                    new
+                    {
+                        HopDongId = hdMoiId,
+                        Thang = thang,
+                        Nam = nam,
+                        TienPhong = tienPhongMoi,
+                        TongDV = tongDvMoi,
+                        TongCong = tongCongMoi,
+                        NoXuyen = noXuyen,
+                        SoNgayO = soNgayOMoi,
+                        SoNgayTrongThang = soNgayTrongThang
+                    }, tx);
+
+                await InsertChiTietAsync(conn, tx, hdMoiHdId.Value, chiTietDvMoi);
+
+                await conn.ExecuteAsync(
+                    "UPDATE HoaDon SET HoaDonGhepId=@Ghep WHERE Id=@Id",
+                    new { Ghep = hdMoiHdId, Id = hdCuId }, tx);
+
+                await conn.ExecuteAsync(
+                    "UPDATE HoaDon SET HoaDonGhepId=@Ghep WHERE Id=@Id",
+                    new { Ghep = hdCuId, Id = hdMoiHdId }, tx);
+
+                if (noXuyen > 0)
+                {
+                    await congNoSettlementService.ThanhToanNoAsync(
+                        conn,
+                        tx,
+                        vm.HopDongCuId,
+                        noXuyen,
+                        vm.NgayChuyenDi,
+                        "KetChuyenNo",
+                        $"Ket chuyen no sang hop dong #{hdMoiId}",
+                        [hdCuId]);
+                }
             }
 
             await giaoDichCocService.ChuyenCocSangHopDongMoiAsync(

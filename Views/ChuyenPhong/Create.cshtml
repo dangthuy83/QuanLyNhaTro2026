@@ -7,7 +7,7 @@
 }
 
 <h4>Chuyển phòng - <span class="text-primary">@Model.TenPhongCu</span></h4>
-<p class="text-muted">Tự động sinh 2 hóa đơn tháng chuyển và tạo hợp đồng mới.</p>
+<p class="text-muted">Tạo hợp đồng mới và quyết toán phòng cũ. Nếu chuyển giữa tháng, hệ thống sinh 2 hóa đơn ghép; nếu chuyển ngày cuối tháng, chỉ sinh hóa đơn phòng cũ.</p>
 
 @if (TempData["Success"] != null)
 {
@@ -26,6 +26,7 @@
                 <label class="form-label">Ngày chuyển đi <span class="text-danger">*</span></label>
                 <input asp-for="NgayChuyenDi" type="date" class="form-control" />
                 <div class="form-text">Ngày cuối ở phòng cũ. Phòng mới tính từ ngày hôm sau.</div>
+                <div class="form-text">Khoản phát sinh đến hết ngày chuyển được đưa vào hóa đơn phòng cũ.</div>
             </div>
 
             <div class="mb-3">
@@ -74,8 +75,9 @@
 
             <div class="alert alert-info py-2 small">
                 <i class="bi bi-info-circle"></i>
-                DV <strong>Cố định</strong> chỉ tính ở hóa đơn phòng mới.
+                DV <strong>Cố định</strong> tính ở hóa đơn phòng mới khi chuyển giữa tháng; nếu chuyển cuối tháng thì tính ở hóa đơn phòng cũ.
                 DV <strong>Theo chỉ số</strong> cần có chỉ số phòng cũ và phòng mới trong kỳ chuyển.
+                Chuyển ngày cuối tháng không yêu cầu chỉ số/hóa đơn phòng mới ở tháng cũ.
             </div>
 
             <div class="d-flex gap-2">
