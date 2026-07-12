@@ -31,6 +31,7 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 
 - `Hủy` chỉ dùng trước ngày bắt đầu và khi hợp đồng chưa có hóa đơn, chỉ số gắn hợp đồng, giao dịch cọc, thanh toán hoặc khoản phát sinh. Hợp đồng đã đến ngày bắt đầu phải đi qua flow `Trả phòng`; không có đường `Kết thúc` trực tiếp bỏ qua quyết toán.
 - `HopDong.TienThueThoaThuan` là giá gốc riêng của hợp đồng. Thay đổi giá thuê giữa hợp đồng được lưu theo scope `HopDong`; `Phong.GiaThueMacDinh` chỉ là giá gợi ý cho hợp đồng mới và không mang lịch sử giá hợp đồng cũ sang hợp đồng mới.
+  - Triển khai REVIEW-003 dùng `LichSuThayDoiGia.LoaiDoiTuong = 'HopDong'`, `DoiTuongId = HopDong.Id`. Sửa thông tin hợp đồng không đổi giá gốc; tăng/giảm giá giữa kỳ phải đi qua màn lịch sử giá thuê của hợp đồng.
 - Nếu kỳ trả phòng chưa có hóa đơn thì luôn preview/tạo hóa đơn kỳ cuối, kể cả trả đúng ngày cuối tháng. Nếu đã có hóa đơn đủ tháng nhưng trả giữa tháng và số ngày không khớp, phải xóa/hủy rồi lập lại đúng trước khi trả phòng; Phase 1 chưa dùng credit note.
 - Hóa đơn chưa có thanh toán/settlement được phép xóa vật lý trong transaction; khoản phát sinh phải được trả về `ChuaXuLy` và liên kết hóa đơn ghép phải được tháo an toàn. Hóa đơn đã có thanh toán, `KetChuyenNo`, `TruCoc` hoặc đang mang `TienNoKyTruoc` không được xóa.
 - Phase 1 không cho thu vượt số còn phải trả của hóa đơn. Tiền ứng trước sau này phải có ledger/số dư riêng, không biểu diễn bằng `HoaDon.SoTienDaThu > TongCong`.

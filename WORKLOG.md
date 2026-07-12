@@ -10,12 +10,12 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Sau review toàn diện phiên 49: chưa sẵn sàng nhập dữ liệu thật; đề xuất Phase 1 xử lý lỗi Critical/High trước |
-| Build | Phiên 49: `dotnet build --no-restore` pass 0 warning, 0 error trước restore harness; `dotnet test --no-restore -p:NuGetAudit=false` mã 0 nhưng repo không có test tự động đáng kể |
+| Giai đoạn | Phase 1: REVIEW-001/002/003 đã triển khai; tiếp theo vẫn là REVIEW-004/005 theo phạm vi đã duyệt |
+| Build | Phiên 51: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Chưa có dữ liệu vận hành thật. Phiên 49 tạo database tạm từ `Database/schema.sql` và smoke pass 19 bảng, 74 constraint, 7 dịch vụ mẫu; database tạm đã xóa. Chỉ chạy file trực tiếp trong `Database/updates/` cho DB hiện tại, không chạy archive trên baseline mới. |
+| Database | Phiên 51 schema smoke pass 19 bảng, 74 constraint, 7 dịch vụ mẫu; migration và service smoke REVIEW-003 pass trên database tạm rồi đã drop. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
-| Quyết định quan trọng | Giữ nguyên các quyết định đã chốt. Phiên 49 không chốt thêm nghiệp vụ; các câu hỏi về Hủy/Trả phòng, scope lịch sử giá thuê, nhân khẩu theo kỳ, trả dư và ngày đến hạn đã đưa vào `DECISIONS.md` mục Chưa Chốt. |
+| Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
 ### Việc cần làm tiếp
 
@@ -23,7 +23,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 |---|---|---|---|
 | 0 | Duyệt Phase 1 của review phiên 49 | Xem `PROJECT_REVIEW.md` mục 0; chưa triển khai fix hàng loạt trước khi user duyệt | Critical |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | `REVIEW-001`, `REVIEW-002`, `REVIEW-010` | Critical |
-| 0.2 | Sửa scope lịch sử giá thuê và lock thanh toán/cọc | `REVIEW-003`, `REVIEW-004`, `REVIEW-005` | Critical |
+| 0.2 | Lock thanh toán/cọc | REVIEW-003 đã xong; còn `REVIEW-004`, `REVIEW-005` | Critical |
 | 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | `REVIEW-006` đến `REVIEW-016` | Cao |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
@@ -57,6 +57,31 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 51 - REVIEW-003: lịch sử giá thuê theo hợp đồng
+
+Ngày: 12/07/2026
+
+Đã triển khai:
+
+- Đổi mọi đường tính tiền phòng trong `HoaDonService`, `TraPhongService` và `ChuyenPhongService` sang tra `LichSuThayDoiGia` bằng `LoaiDoiTuong='HopDong'` + `HopDongId`.
+- `GiaService` quản lý thay đổi giá thuê theo hợp đồng và không còn cập nhật `Phong.GiaThueMacDinh`; giá gốc `HopDong.TienThueThoaThuan` được giữ nguyên khi sửa thông tin hợp đồng.
+- Chuyển nút thay đổi giá thuê từ chi tiết phòng sang chi tiết hợp đồng; form sửa hợp đồng hiển thị giá gốc chỉ đọc.
+- Cập nhật `Database/schema.sql` và thêm apply-once `Database/updates/20260712_contract_scoped_rent_history.sql`. Script ánh xạ lịch sử `Phong` sang hợp đồng hiệu lực tại kỳ áp dụng, rồi giữ dòng nguồn dưới nhãn `PhongLegacy` để audit nhưng không tính tiền.
+- Thêm `appsettings.example.json` chỉ chứa placeholder, không đưa thông tin kết nối thật vào Git. `appsettings.json` và `appsettings.Development.json` tiếp tục không được track.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore: Build succeeded, 0 errors (NU1900 do sandbox).
+SCHEMA_SMOKE_PASS Tables=19;Constraints=74;SeedServices=7
+MIGRATION_SMOKE OldContractRows=1;NewContractRows=0;LegacyRows=1
+SERVICE_SMOKE OldContractHistory=2500000;NewContractAgreed=3000000;PreviewRent=3000000;InvoiceRent=3000000
+REVIEW003_SMOKE_PASS
+TEMP_DATABASE_DROPPED
+```
+
+Phạm vi giữ nguyên: chưa làm REVIEW-004/005/008/011; không mở rộng Syncfusion, nhắn tin, auth/multi-user hoặc refactor UI diện rộng.
 
 ### Phiên 50 - Chốt nghiệp vụ Critical và triển khai nhóm Phase 1 đầu tiên
 

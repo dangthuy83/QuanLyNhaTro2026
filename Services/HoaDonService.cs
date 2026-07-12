@@ -160,7 +160,7 @@ public class HoaDonService(
             result.SoNgayO = soNgayTinhTien;
             result.SoNgayTrongThang = soNgayTrongThangTinhTien;
 
-            var giaPhong = await LayGiaApDungAsync("Phong", hopDong.PhongId, thang, nam, hopDong.TienThueThoaThuan);
+            var giaPhong = await LayGiaApDungAsync("HopDong", hopDong.Id, thang, nam, hopDong.TienThueThoaThuan);
             result.TienPhong = soNgayTinhTien.HasValue && soNgayTrongThangTinhTien.HasValue
                 ? BillingPeriodCalculator.CalculateRoomCharge(giaPhong, soNgayTinhTien.Value, soNgayTrongThangTinhTien.Value)
                 : giaPhong;

@@ -14,7 +14,11 @@
     <h5 class="mb-0">Hợp đồng — @Model.Phong?.TenPhong</h5>
     @if (dangHieuLuc)
     {
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-auto me-1">
+        <a asp-controller="Gia" asp-action="HopDong" asp-route-hopDongId="@Model.Id"
+           class="btn btn-sm btn-outline-warning ms-auto">
+            <i class="bi bi-tag me-1"></i>Thay đổi giá thuê
+        </a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary me-1">
             <i class="bi bi-pencil me-1"></i>Sửa
         </a>
     }

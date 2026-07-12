@@ -101,10 +101,6 @@ public class PhongService(
                     transaction: tx);
             }
             await conn.ExecuteAsync(
-                "DELETE FROM LichSuThayDoiGia WHERE LoaiDoiTuong = 'Phong' AND DoiTuongId = @PhongId",
-                new { PhongId = phongId },
-                transaction: tx);
-            await conn.ExecuteAsync(
                 "DELETE FROM PhongDichVu WHERE PhongId = @PhongId",
                 new { PhongId = phongId },
                 transaction: tx);

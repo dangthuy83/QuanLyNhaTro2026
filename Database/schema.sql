@@ -459,8 +459,8 @@ CREATE TABLE ThuChi (
 -- ============================================================
 CREATE TABLE LichSuThayDoiGia (
     Id INT AUTO_INCREMENT PRIMARY KEY,
-    LoaiDoiTuong VARCHAR(30) NOT NULL,   -- HopDong | PhongDichVu
-    DoiTuongId INT NOT NULL,             -- Id của HopDong hoặc PhongDichVu tương ứng
+    LoaiDoiTuong VARCHAR(30) NOT NULL,   -- HopDong | DichVu (DichVu dùng Id của PhongDichVu)
+    DoiTuongId INT NOT NULL,             -- HopDongId hoặc PhongDichVuId tương ứng
     GiaCu DECIMAL(12,2) NOT NULL,
     GiaMoi DECIMAL(12,2) NOT NULL,
     ThangApDung TINYINT NOT NULL,

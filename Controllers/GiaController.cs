@@ -7,27 +7,29 @@ namespace QuanLyNhaTro.Controllers;
 
 public class GiaController(
     LichSuThayDoiGiaRepository lichSuRepo,
-    PhongRepository phongRepo,
+    HopDongRepository hopDongRepo,
     PhongDichVuRepository phongDvRepo,
     GiaService giaService) : Controller
 {
-    // GET /Gia/Phong?phongId=3
-    public async Task<IActionResult> Phong(int phongId)
+    // GET /Gia/HopDong?hopDongId=3
+    public async Task<IActionResult> HopDong(int hopDongId)
     {
-        var phong = await phongRepo.GetByIdAsync(phongId);
-        if (phong == null) return NotFound();
+        var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
+        if (hopDong == null) return NotFound();
 
         var now = DateTime.Today;
+        var giaApDung = await lichSuRepo.GetGiaTriApDungAsync(
+            "HopDong", hopDongId, now.Month, now.Year) ?? hopDong.TienThueThoaThuan;
         return View("ThayDoiGia", new ThayDoiGiaViewModel
         {
-            LoaiDoiTuong = "Phong",
-            DoiTuongId   = phongId,
-            TenDoiTuong  = phong.TenPhong,
-            GiaHienTai   = phong.GiaThueMacDinh,
-            GiaMoi       = phong.GiaThueMacDinh,
+            LoaiDoiTuong = "HopDong",
+            DoiTuongId   = hopDongId,
+            TenDoiTuong  = $"Hợp đồng #{hopDongId} — {hopDong.Phong?.TenPhong}",
+            GiaHienTai   = giaApDung,
+            GiaMoi       = giaApDung,
             ThangApDung  = now.Month == 12 ? 1 : now.Month + 1,
             NamApDung    = now.Month == 12 ? now.Year + 1 : now.Year,
-            LichSu       = await lichSuRepo.GetByDoiTuongAsync("Phong", phongId)
+            LichSu       = await lichSuRepo.GetByDoiTuongAsync("HopDong", hopDongId)
         });
     }
 
@@ -73,8 +75,8 @@ public class GiaController(
 
         TempData["Success"] = $"Đã lưu. Hiệu lực từ T{vm.ThangApDung}/{vm.NamApDung}.";
 
-        return vm.LoaiDoiTuong == "Phong"
-            ? RedirectToAction("Details", "Phong", new { id = vm.DoiTuongId })
+        return vm.LoaiDoiTuong == "HopDong"
+            ? RedirectToAction("Details", "HopDong", new { id = vm.DoiTuongId })
             : RedirectToAction("DichVu", new { phongDichVuId = vm.DoiTuongId });
     }
 
@@ -83,8 +85,8 @@ public class GiaController(
     {
         await giaService.XoaThayDoiAsync(id);
         TempData["Success"] = "Đã xóa bản ghi thay đổi giá.";
-        return loai == "Phong"
-            ? RedirectToAction("Phong", new { phongId = doiTuongId })
+        return loai == "HopDong"
+            ? RedirectToAction("HopDong", new { hopDongId = doiTuongId })
             : RedirectToAction("DichVu", new { phongDichVuId = doiTuongId });
     }
 }

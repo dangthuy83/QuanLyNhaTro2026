@@ -12,7 +12,7 @@ public class GiaService(
 {
     public async Task LuuThayDoiAsync(ThayDoiGiaViewModel vm)
     {
-        if (vm.LoaiDoiTuong is not ("Phong" or "DichVu"))
+        if (vm.LoaiDoiTuong is not ("HopDong" or "DichVu"))
             throw new InvalidOperationException("Loai doi tuong gia khong hop le.");
 
         var ky = new DateTime(vm.NamApDung, vm.ThangApDung, 1);
@@ -95,14 +95,7 @@ public class GiaService(
                 """,
                 new { vm.LoaiDoiTuong, vm.DoiTuongId },
                 transaction: tx);
-            if (vm.LoaiDoiTuong == "Phong")
-            {
-                await conn.ExecuteAsync(
-                    "UPDATE Phong SET GiaThueMacDinh = @Gia WHERE Id = @Id",
-                    new { Gia = giaMoiNhat, Id = vm.DoiTuongId },
-                    transaction: tx);
-            }
-            else
+            if (vm.LoaiDoiTuong == "DichVu")
             {
                 await conn.ExecuteAsync(
                     "UPDATE PhongDichVu SET DonGia = @Gia WHERE Id = @Id",
@@ -170,14 +163,14 @@ public class GiaService(
                 """,
                 new { item.LoaiDoiTuong, item.DoiTuongId },
                 transaction: tx);
-            var currentPrice = latest ?? item.GiaCu;
-            var updateSql = item.LoaiDoiTuong == "Phong"
-                ? "UPDATE Phong SET GiaThueMacDinh = @Gia WHERE Id = @Id"
-                : "UPDATE PhongDichVu SET DonGia = @Gia WHERE Id = @Id";
-            await conn.ExecuteAsync(
-                updateSql,
-                new { Gia = currentPrice, Id = item.DoiTuongId },
-                transaction: tx);
+            if (item.LoaiDoiTuong == "DichVu")
+            {
+                var currentPrice = latest ?? item.GiaCu;
+                await conn.ExecuteAsync(
+                    "UPDATE PhongDichVu SET DonGia = @Gia WHERE Id = @Id",
+                    new { Gia = currentPrice, Id = item.DoiTuongId },
+                    transaction: tx);
+            }
 
             await tx.CommitAsync();
         }
@@ -189,9 +182,9 @@ public class GiaService(
     }
 
     private async Task<decimal> GetGiaGocAsync(string loaiDoiTuong, int doiTuongId)
-        => loaiDoiTuong == "Phong"
+        => loaiDoiTuong == "HopDong"
             ? await db.ExecuteScalarAsync<decimal>(
-                "SELECT GiaThueMacDinh FROM Phong WHERE Id = @Id", new { Id = doiTuongId })
+                "SELECT TienThueThoaThuan FROM HopDong WHERE Id = @Id", new { Id = doiTuongId })
             : await db.ExecuteScalarAsync<decimal>(
                 "SELECT DonGia FROM PhongDichVu WHERE Id = @Id", new { Id = doiTuongId });
 }

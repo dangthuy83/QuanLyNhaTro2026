@@ -361,7 +361,7 @@ public class TraPhongService(
 
     private async Task<decimal> LayGiaPhongAsync(HopDong hd, int thang, int nam)
     {
-        var gia = await lichSuRepo.GetGiaTriApDungAsync("Phong", hd.PhongId, thang, nam);
+        var gia = await lichSuRepo.GetGiaTriApDungAsync("HopDong", hd.Id, thang, nam);
         return gia ?? hd.TienThueThoaThuan;
     }
 

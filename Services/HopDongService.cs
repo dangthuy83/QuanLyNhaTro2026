@@ -198,6 +198,13 @@ public class HopDongService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
+            var giaGoc = await conn.ExecuteScalarAsync<decimal?>(
+                "SELECT TienThueThoaThuan FROM HopDong WHERE Id = @Id FOR UPDATE",
+                new { hopDong.Id },
+                transaction: tx)
+                ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+            hopDong.TienThueThoaThuan = giaGoc;
+
             await hopDongRepo.UpdateAsync(conn, tx, hopDong);
             await hdKhachRepo.DeleteByHopDongAsync(conn, tx, hopDong.Id);
             await CapNhatKhachThueAsync(conn, tx, hopDong.Id, khachThueIds, khachChinhId);

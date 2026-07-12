@@ -4,7 +4,7 @@ namespace QuanLyNhaTro.Models;
 
 public class ThayDoiGiaViewModel
 {
-    public string LoaiDoiTuong { get; set; } = "Phong"; // Phong | DichVu
+    public string LoaiDoiTuong { get; set; } = "HopDong"; // HopDong | DichVu
     public int DoiTuongId { get; set; }
     public string TenDoiTuong { get; set; } = "";
     public decimal GiaHienTai { get; set; }
