@@ -23,6 +23,7 @@ public class CongNoSettlementService
             WHERE HopDongId = @HopDongId
               AND TongCong > SoTienDaThu
             ORDER BY Nam, Thang, Id
+            FOR UPDATE
             """;
 
         var hoaDons = (await conn.QueryAsync<HoaDonNoTam>(
@@ -72,6 +73,7 @@ public class CongNoSettlementService
             FROM HoaDon
             WHERE Id = @HoaDonId
             LIMIT 1
+            FOR UPDATE
             """,
             new { HoaDonId = hoaDonId },
             tx);

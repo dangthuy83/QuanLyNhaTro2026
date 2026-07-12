@@ -10,6 +10,15 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
         => await _db.QueryFirstOrDefaultAsync<HoaDon>(
             "SELECT * FROM HoaDon WHERE Id = @Id", new { Id = id });
 
+    public async Task<HoaDon?> GetByIdForUpdateAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int id)
+        => await conn.QueryFirstOrDefaultAsync<HoaDon>(
+            "SELECT * FROM HoaDon WHERE Id = @Id FOR UPDATE",
+            new { Id = id },
+            transaction: tx);
+
     public async Task<HoaDon?> GetByIdAsync(IDbConnection conn, IDbTransaction tx, int id)
         => await conn.QueryFirstOrDefaultAsync<HoaDon>(
             "SELECT * FROM HoaDon WHERE Id = @Id",

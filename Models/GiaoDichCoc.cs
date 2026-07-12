@@ -9,6 +9,7 @@ public class GiaoDichCoc
     public decimal SoDuSauGiaoDich { get; set; }
     public DateTime NgayGiaoDich { get; set; } = DateTime.Today;
     public int? HoaDonId { get; set; }
+    public string? PhuongThuc { get; set; }
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
 

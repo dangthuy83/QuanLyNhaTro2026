@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 1: REVIEW-001/002/003 đã triển khai; tiếp theo vẫn là REVIEW-004/005 theo phạm vi đã duyệt |
-| Build | Phiên 51: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-005 đã triển khai; bước tiếp theo là REVIEW-006/007 theo phạm vi High |
+| Build | Phiên 52: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 51 schema smoke pass 19 bảng, 74 constraint, 7 dịch vụ mẫu; migration và service smoke REVIEW-003 pass trên database tạm rồi đã drop. |
+| Database | Phiên 52 schema smoke pass 19 bảng, 75 constraint, 7 dịch vụ mẫu; migration và concurrency smoke REVIEW-004/005 pass trên database tạm rồi đã drop. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -23,7 +23,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 |---|---|---|---|
 | 0 | Duyệt Phase 1 của review phiên 49 | Xem `PROJECT_REVIEW.md` mục 0; chưa triển khai fix hàng loạt trước khi user duyệt | Critical |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | `REVIEW-001`, `REVIEW-002`, `REVIEW-010` | Critical |
-| 0.2 | Lock thanh toán/cọc | REVIEW-003 đã xong; còn `REVIEW-004`, `REVIEW-005` | Critical |
+| 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
 | 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | `REVIEW-006` đến `REVIEW-016` | Cao |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
@@ -57,6 +57,35 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 52 - REVIEW-004/005: khóa thanh toán và ledger cọc
+
+Ngày: 12/07/2026
+
+Đã triển khai:
+
+- `HoaDonService.ThuTienAsync` mở transaction trước khi đọc hóa đơn và dùng `SELECT ... FOR UPDATE`; kiểm tra số còn lại dựa trên bản ghi đã khóa.
+- `CongNoSettlementService` khóa toàn bộ hóa đơn được phân bổ theo thứ tự kỳ/ID, kể cả đường thanh toán một hóa đơn từ cọc.
+- Mọi delta ledger cọc khóa dòng `HopDong` trước khi đọc tổng số dư, ngăn hai request cùng tiêu thụ một số dư.
+- Giao dịch cọc thủ công chỉ cho `ThuThemCoc`, `HoanCoc`, `TruNo`; chặn ngày trước khi hợp đồng bắt đầu hoặc sau hiện tại; `DieuChinh` chỉ còn cho flow nội bộ.
+- Thu/hoàn cọc thủ công và xử lý chênh lệch chuyển phòng lưu `PhuongThuc = TienMat/ChuyenKhoan`. `TruNo` bắt buộc chọn hóa đơn còn nợ cùng hợp đồng.
+- UI ledger thay input ID hóa đơn tự do bằng dropdown hóa đơn còn nợ cùng hợp đồng; thêm phương thức và hiển thị phương thức trong lịch sử.
+- Cập nhật `Database/schema.sql`, thêm apply-once `Database/updates/20260712_deposit_payment_method.sql` và cập nhật README.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore: Build succeeded, 0 errors (NU1900 do sandbox).
+SCHEMA_SMOKE_PASS Tables=19;Constraints=75;SeedServices=7
+MIGRATION_SMOKE PhuongThucColumns=1
+PAYMENT_CONCURRENCY Results=OK|Hoa don da thu du.;Rows=1;Sum=100;InvoicePaid=100
+DEPOSIT_CONCURRENCY một request OK, một request bị chặn; Balance=0;NegativeSnapshots=0
+DEPOSIT_GUARDS hóa đơn khác hợp đồng bị chặn; DieuChinh thủ công bị chặn
+REVIEW004005_SMOKE_PASS
+TEMP_DATABASE_DROPPED
+```
+
+Phạm vi giữ nguyên: chưa làm REVIEW-006/007/008/011; không mở rộng UI diện rộng, nhắn tin, auth/multi-user hoặc Syncfusion.
 
 ### Phiên 51 - REVIEW-003: lịch sử giá thuê theo hợp đồng
 

@@ -63,6 +63,13 @@
                     <input name="ghiChu" class="form-control form-control-sm"
                            value="Xử lý chênh lệch cọc chuyển phòng" />
                 </div>
+                <div>
+                    <label class="form-label small mb-1">Phương thức</label>
+                    <select name="phuongThuc" class="form-select form-select-sm" required>
+                        <option value="TienMat">Tiền mặt</option>
+                        <option value="ChuyenKhoan">Chuyển khoản</option>
+                    </select>
+                </div>
                 <button class="btn btn-warning btn-sm">
                     Xử lý chênh lệch
                 </button>
@@ -96,6 +103,7 @@ else if (Model.LaHopDongChuyenPhong)
                                     <th>Loại</th>
                                     <th class="text-end">Phát sinh</th>
                                     <th class="text-end">Số dư sau</th>
+                                    <th>Phương thức</th>
                                     <th>Hóa đơn</th>
                                     <th>Ghi chú</th>
                                 </tr>
@@ -110,6 +118,7 @@ else if (Model.LaHopDongChuyenPhong)
                                             @FormatDelta(gd.SoTien)
                                         </td>
                                         <td class="text-end">@gd.SoDuSauGiaoDich.ToString("N0")</td>
+                                        <td>@PhuongThucHienThi(gd.PhuongThuc)</td>
                                         <td>
                                             @if (gd.HoaDonId.HasValue)
                                             {
@@ -141,17 +150,16 @@ else if (Model.LaHopDongChuyenPhong)
 
                     <div class="mb-3">
                         <label class="form-label">Loại giao dịch</label>
-                        <select name="loaiGiaoDich" class="form-select">
+                        <select name="loaiGiaoDich" id="loaiGiaoDich" class="form-select">
                             <option value="ThuThemCoc">Thu thêm cọc</option>
                             <option value="HoanCoc">Hoàn cọc</option>
                             <option value="TruNo">Trừ nợ</option>
-                            <option value="DieuChinh">Điều chỉnh</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Số tiền</label>
                         <input name="soTien" type="number" step="10000" class="form-control" required />
-                        <div class="form-text">Điều chỉnh cho phép nhập số âm nếu cần giảm số dư.</div>
+                        <div class="form-text">Nhập số dương; hệ thống tự xác định chiều tăng/giảm.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ngày giao dịch</label>
@@ -159,8 +167,22 @@ else if (Model.LaHopDongChuyenPhong)
                                value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hóa đơn liên quan</label>
-                        <input name="hoaDonId" type="number" min="1" class="form-control" />
+                        <label class="form-label">Phương thức thu/hoàn</label>
+                        <select name="phuongThuc" id="phuongThuc" class="form-select">
+                            <option value="">-- Chọn phương thức --</option>
+                            <option value="TienMat">Tiền mặt</option>
+                            <option value="ChuyenKhoan">Chuyển khoản</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hóa đơn cần trừ nợ</label>
+                        <select name="hoaDonId" id="hoaDonId" class="form-select" disabled>
+                            <option value="">-- Chọn hóa đơn --</option>
+                            @foreach (var hoaDon in Model.HoaDonConNo)
+                            {
+                                <option value="@hoaDon.Id">#@hoaDon.Id - T@(hoaDon.Thang)/@hoaDon.Nam - còn @((hoaDon.TongCong - hoaDon.SoTienDaThu).ToString("N0")) đ</option>
+                            }
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ghi chú</label>
@@ -173,6 +195,25 @@ else if (Model.LaHopDongChuyenPhong)
     </div>
 </div>
 
+<script>
+    (() => {
+        const loai = document.getElementById('loaiGiaoDich');
+        const phuongThuc = document.getElementById('phuongThuc');
+        const hoaDon = document.getElementById('hoaDonId');
+        const sync = () => {
+            const truNo = loai.value === 'TruNo';
+            hoaDon.disabled = !truNo;
+            hoaDon.required = truNo;
+            if (!truNo) hoaDon.value = '';
+            phuongThuc.disabled = truNo;
+            phuongThuc.required = !truNo;
+            if (truNo) phuongThuc.value = '';
+        };
+        loai.addEventListener('change', sync);
+        sync();
+    })();
+</script>
+
 @functions {
     private static string LoaiGiaoDichHienThi(string? loaiGiaoDich) => loaiGiaoDich switch
     {
@@ -181,5 +222,12 @@ else if (Model.LaHopDongChuyenPhong)
         "TruNo" => "Trừ nợ",
         "DieuChinh" => "Điều chỉnh",
         _ => loaiGiaoDich ?? string.Empty
+    };
+
+    private static string PhuongThucHienThi(string? phuongThuc) => phuongThuc switch
+    {
+        "TienMat" => "Tiền mặt",
+        "ChuyenKhoan" => "Chuyển khoản",
+        _ => "-"
     };
 }

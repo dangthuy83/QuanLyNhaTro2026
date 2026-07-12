@@ -38,10 +38,10 @@ public class GiaoDichCocRepository(IDbConnection db) : BaseRepository(db)
         const string sql = """
             INSERT INTO GiaoDichCoc
                 (HopDongId, LoaiGiaoDich, SoTien, SoDuSauGiaoDich,
-                 NgayGiaoDich, HoaDonId, GhiChu, NgayTao)
+                 NgayGiaoDich, HoaDonId, PhuongThuc, GhiChu, NgayTao)
             VALUES
                 (@HopDongId, @LoaiGiaoDich, @SoTien, @SoDuSauGiaoDich,
-                 @NgayGiaoDich, @HoaDonId, @GhiChu, NOW());
+                 @NgayGiaoDich, @HoaDonId, @PhuongThuc, @GhiChu, NOW());
             SELECT LAST_INSERT_ID();
             """;
 

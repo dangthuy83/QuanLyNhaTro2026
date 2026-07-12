@@ -8,4 +8,5 @@ public class GiaoDichCocViewModel
     public bool LaHopDongChuyenPhong => HopDong.HopDongTruocId.HasValue;
     public bool CanXuLyChenhLechCoc => LaHopDongChuyenPhong && !HopDong.DaXuLyChenhLechCoc;
     public IEnumerable<GiaoDichCoc> GiaoDich { get; set; } = [];
+    public IEnumerable<HoaDon> HoaDonConNo { get; set; } = [];
 }

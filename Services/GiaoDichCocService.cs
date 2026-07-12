@@ -28,6 +28,7 @@ public class GiaoDichCocService(
         decimal soTien,
         DateTime ngayGiaoDich,
         int? hoaDonId,
+        string? phuongThuc,
         string? ghiChu)
     {
         var conn = (MySqlConnection)db;
@@ -40,10 +41,25 @@ public class GiaoDichCocService(
             var hopDong = await LoadHopDongAsync(conn, tx, hopDongId)
                 ?? throw new InvalidOperationException("Khong tim thay hop dong.");
 
+            ValidateGiaoDichThuCong(
+                hopDong, loaiGiaoDich, ngayGiaoDich, hoaDonId, phuongThuc);
+
+            if (loaiGiaoDich == "TruNo")
+            {
+                var hoaDonHopDongId = await conn.ExecuteScalarAsync<int?>(
+                    "SELECT HopDongId FROM HoaDon WHERE Id = @HoaDonId",
+                    new { HoaDonId = hoaDonId!.Value },
+                    transaction: tx);
+                if (hoaDonHopDongId != hopDongId)
+                    throw new InvalidOperationException("Hoa don tru no phai thuoc cung hop dong.");
+            }
+
             await EnsureOpeningBalanceAsync(conn, tx, hopDong);
 
             decimal delta = NormalizeDelta(loaiGiaoDich, soTien);
-            await InsertDeltaAsync(conn, tx, hopDongId, loaiGiaoDich, delta, ngayGiaoDich, hoaDonId, ghiChu);
+            await InsertDeltaAsync(
+                conn, tx, hopDongId, loaiGiaoDich, delta, ngayGiaoDich,
+                hoaDonId, phuongThuc, ghiChu);
 
             if (loaiGiaoDich == "TruNo")
             {
@@ -84,6 +100,7 @@ public class GiaoDichCocService(
     public async Task<KetQuaXuLyChenhLechCoc> XuLyChenhLechChuyenPhongAsync(
         int hopDongId,
         DateTime ngayGiaoDich,
+        string phuongThuc,
         string? ghiChu)
     {
         var conn = (MySqlConnection)db;
@@ -98,6 +115,11 @@ public class GiaoDichCocService(
 
             if (hopDong.HopDongTruocId == null)
                 throw new InvalidOperationException("Chi xu ly chenh lech coc cho hop dong sinh tu chuyen phong.");
+
+            if (ngayGiaoDich.Date < hopDong.NgayBatDau.Date || ngayGiaoDich.Date > DateTime.Today)
+                throw new InvalidOperationException("Ngay giao dich phai tu ngay bat dau hop dong den ngay hien tai.");
+            if (phuongThuc is not ("TienMat" or "ChuyenKhoan"))
+                throw new InvalidOperationException("Xu ly chenh lech coc phai chon TienMat hoac ChuyenKhoan.");
 
             bool coLedger = await giaoDichCocRepo.HasAnyAsync(conn, tx, hopDongId);
             decimal soDuTruoc = coLedger
@@ -117,6 +139,7 @@ public class GiaoDichCocService(
                     chenhLech,
                     ngayGiaoDich,
                     null,
+                    phuongThuc,
                     $"Xu ly chenh lech coc chuyen phong. {ghiChu}".Trim());
             }
             else if (chenhLech < 0)
@@ -130,6 +153,7 @@ public class GiaoDichCocService(
                     chenhLech,
                     ngayGiaoDich,
                     null,
+                    phuongThuc,
                     $"Xu ly chenh lech coc chuyen phong. {ghiChu}".Trim());
             }
 
@@ -169,7 +193,7 @@ public class GiaoDichCocService(
     {
         if (soTien <= 0) return;
 
-        await InsertDeltaAsync(conn, tx, hopDongId, "ThuCoc", soTien, ngayGiaoDich, null, ghiChu);
+        await InsertDeltaAsync(conn, tx, hopDongId, "ThuCoc", soTien, ngayGiaoDich, null, null, ghiChu);
     }
 
     public async Task ChuyenCocSangHopDongMoiAsync(
@@ -193,6 +217,7 @@ public class GiaoDichCocService(
                 -soDuCu,
                 ngayGiaoDich,
                 null,
+                null,
                 $"Chuyen coc sang hop dong #{hopDongMoiId}");
 
             await InsertDeltaAsync(
@@ -202,6 +227,7 @@ public class GiaoDichCocService(
                 "DieuChinh",
                 soDuCu,
                 ngayGiaoDich,
+                null,
                 null,
                 $"Nhan coc tu hop dong #{hopDongCu.Id}");
         }
@@ -236,6 +262,7 @@ public class GiaoDichCocService(
                 -soTienTruNo,
                 ngayGiaoDich,
                 hoaDonId,
+                null,
                 $"Tru no vao coc khi tra phong. {ghiChu}".Trim());
         }
 
@@ -251,6 +278,7 @@ public class GiaoDichCocService(
                 "HoanCoc",
                 -soTienHoanCoc,
                 ngayGiaoDich,
+                null,
                 null,
                 $"Hoan coc khi tra phong. {ghiChu}".Trim());
         }
@@ -275,6 +303,7 @@ public class GiaoDichCocService(
             hopDong.TienCoc,
             hopDong.NgayBatDau,
             null,
+            null,
             "Khoi tao ledger tu HopDong.TienCoc");
     }
 
@@ -286,9 +315,17 @@ public class GiaoDichCocService(
         decimal delta,
         DateTime ngayGiaoDich,
         int? hoaDonId,
+        string? phuongThuc,
         string? ghiChu)
     {
         if (delta == 0) return;
+
+        var hopDongTonTai = await conn.ExecuteScalarAsync<int?>(
+            "SELECT Id FROM HopDong WHERE Id = @HopDongId FOR UPDATE",
+            new { HopDongId = hopDongId },
+            transaction: tx);
+        if (!hopDongTonTai.HasValue)
+            throw new InvalidOperationException("Khong tim thay hop dong.");
 
         decimal soDuHienTai = await giaoDichCocRepo.GetSoDuAsync(conn, tx, hopDongId);
         decimal soDuMoi = soDuHienTai + delta;
@@ -303,6 +340,7 @@ public class GiaoDichCocService(
             SoDuSauGiaoDich = soDuMoi,
             NgayGiaoDich = ngayGiaoDich,
             HoaDonId = hoaDonId,
+            PhuongThuc = phuongThuc,
             GhiChu = ghiChu
         });
     }
@@ -334,9 +372,38 @@ public class GiaoDichCocService(
         };
     }
 
+    private static void ValidateGiaoDichThuCong(
+        HopDong hopDong,
+        string loaiGiaoDich,
+        DateTime ngayGiaoDich,
+        int? hoaDonId,
+        string? phuongThuc)
+    {
+        if (loaiGiaoDich is not ("ThuThemCoc" or "HoanCoc" or "TruNo"))
+            throw new InvalidOperationException("Loai giao dich nay chi duoc tao boi flow noi bo.");
+
+        if (ngayGiaoDich.Date < hopDong.NgayBatDau.Date || ngayGiaoDich.Date > DateTime.Today)
+            throw new InvalidOperationException("Ngay giao dich phai tu ngay bat dau hop dong den ngay hien tai.");
+
+        if (loaiGiaoDich == "TruNo")
+        {
+            if (!hoaDonId.HasValue)
+                throw new InvalidOperationException("Tru no bat buoc chon hoa don cung hop dong.");
+            if (phuongThuc != null)
+                throw new InvalidOperationException("Tru no tu coc khong dung phuong thuc thu/hoan tien.");
+        }
+        else
+        {
+            if (hoaDonId.HasValue)
+                throw new InvalidOperationException("Chi giao dich TruNo moi duoc lien ket hoa don.");
+            if (phuongThuc is not ("TienMat" or "ChuyenKhoan"))
+                throw new InvalidOperationException("Thu/hoan coc phai chon TienMat hoac ChuyenKhoan.");
+        }
+    }
+
     private static async Task<HopDong?> LoadHopDongAsync(MySqlConnection conn, MySqlTransaction tx, int hopDongId)
         => await conn.QueryFirstOrDefaultAsync<HopDong>(
-            "SELECT * FROM HopDong WHERE Id = @Id",
+            "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
             new { Id = hopDongId },
             tx);
 }

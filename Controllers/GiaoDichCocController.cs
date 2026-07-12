@@ -7,6 +7,7 @@ namespace QuanLyNhaTro.Controllers;
 
 public class GiaoDichCocController(
     HopDongRepository hopDongRepo,
+    HoaDonRepository hoaDonRepo,
     GiaoDichCocRepository giaoDichCocRepo,
     GiaoDichCocService giaoDichCocService) : Controller
 {
@@ -17,11 +18,18 @@ public class GiaoDichCocController(
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
         if (hopDong == null) return NotFound();
 
+        var hoaDonConNo = (await hoaDonRepo.GetByHopDongAsync(hopDongId))
+            .Where(x => x.TongCong > x.SoTienDaThu)
+            .OrderBy(x => x.Nam)
+            .ThenBy(x => x.Thang)
+            .ToList();
+
         return View(new GiaoDichCocViewModel
         {
             HopDong = hopDong,
             SoDuCoc = await giaoDichCocService.GetSoDuHienTaiAsync(hopDongId),
-            GiaoDich = await giaoDichCocRepo.GetByHopDongAsync(hopDongId)
+            GiaoDich = await giaoDichCocRepo.GetByHopDongAsync(hopDongId),
+            HoaDonConNo = hoaDonConNo
         });
     }
 
@@ -32,6 +40,7 @@ public class GiaoDichCocController(
         decimal soTien,
         DateTime ngayGiaoDich,
         int? hoaDonId,
+        string? phuongThuc,
         string? ghiChu)
     {
         try
@@ -42,6 +51,7 @@ public class GiaoDichCocController(
                 soTien,
                 ngayGiaoDich,
                 hoaDonId,
+                phuongThuc,
                 ghiChu);
 
             TempData["Success"] = "Da ghi nhan giao dich coc.";
@@ -58,6 +68,7 @@ public class GiaoDichCocController(
     public async Task<IActionResult> XuLyChenhLech(
         int hopDongId,
         DateTime ngayGiaoDich,
+        string phuongThuc,
         string? ghiChu)
     {
         try
@@ -65,6 +76,7 @@ public class GiaoDichCocController(
             var result = await giaoDichCocService.XuLyChenhLechChuyenPhongAsync(
                 hopDongId,
                 ngayGiaoDich,
+                phuongThuc,
                 ghiChu);
 
             TempData["Success"] = result.LoaiGiaoDich == null

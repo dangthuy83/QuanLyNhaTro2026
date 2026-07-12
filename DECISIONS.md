@@ -35,7 +35,9 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - Nếu kỳ trả phòng chưa có hóa đơn thì luôn preview/tạo hóa đơn kỳ cuối, kể cả trả đúng ngày cuối tháng. Nếu đã có hóa đơn đủ tháng nhưng trả giữa tháng và số ngày không khớp, phải xóa/hủy rồi lập lại đúng trước khi trả phòng; Phase 1 chưa dùng credit note.
 - Hóa đơn chưa có thanh toán/settlement được phép xóa vật lý trong transaction; khoản phát sinh phải được trả về `ChuaXuLy` và liên kết hóa đơn ghép phải được tháo an toàn. Hóa đơn đã có thanh toán, `KetChuyenNo`, `TruCoc` hoặc đang mang `TienNoKyTruoc` không được xóa.
 - Phase 1 không cho thu vượt số còn phải trả của hóa đơn. Tiền ứng trước sau này phải có ledger/số dư riêng, không biểu diễn bằng `HoaDon.SoTienDaThu > TongCong`.
+  - Triển khai REVIEW-004 khóa dòng `HoaDon` bằng `SELECT ... FOR UPDATE` trước mọi lần thu/phân bổ settlement; `ThanhToan` và số tổng hợp trên hóa đơn tiếp tục được ghi trong cùng transaction.
 - Giao dịch cọc thủ công không được backdate trước ngày bắt đầu hoặc sau ngày hiện tại. `TruNo` phải tham chiếu hóa đơn cùng hợp đồng; `DieuChinh` chỉ do flow nội bộ tạo. Thu/hoàn thủ công lưu phương thức `TienMat`/`ChuyenKhoan`; mọi thay đổi số dư phải khóa theo hợp đồng và không làm số dư âm.
+  - Triển khai REVIEW-005 dùng dòng `HopDong` làm khóa serialize ledger; UI thủ công chỉ cho `ThuThemCoc`, `HoanCoc`, `TruNo`, trong đó thu/hoàn bắt buộc phương thức và `TruNo` bắt buộc chọn hóa đơn còn nợ cùng hợp đồng.
 - Dịch vụ `TheoNguoi`: người có mặt bất kỳ ngày nào trong kỳ được tính đủ một suất tháng; cần lưu hiệu lực thành viên và không xóa cứng lịch sử.
 - Ngày đến hạn kỳ N lấy `HopDong.NgayThanhToanHangThang` trong tháng N+1; nếu tháng ngắn hơn thì dùng ngày cuối tháng.
 - Snapshot hóa đơn tối thiểu gồm nhà, mã/tên phòng, khách đại diện, CCCD, tên/đơn vị dịch vụ và mô tả khoản phát sinh.
