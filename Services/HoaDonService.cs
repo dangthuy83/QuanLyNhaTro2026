@@ -333,15 +333,26 @@ public class HoaDonService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
-            var hoaDon = await hoaDonRepo.GetByIdAsync(conn, tx, hoaDonId)
+            var hoaDon = await hoaDonRepo.GetByIdForUpdateAsync(conn, tx, hoaDonId)
                 ?? throw new KeyNotFoundException($"Khong tim thay hoa don #{hoaDonId}.");
 
-            if (hoaDon.SoTienDaThu > 0)
+            var coThanhToan = (await conn.QueryAsync<int>(
+                "SELECT Id FROM ThanhToan WHERE HoaDonId = @HoaDonId FOR UPDATE",
+                new { HoaDonId = hoaDonId }, tx)).Any();
+            if (hoaDon.SoTienDaThu > 0 || coThanhToan)
                 throw new InvalidOperationException("Khong the xoa hoa don da co giao dich thu tien.");
 
             if (hoaDon.TienNoKyTruoc > 0)
                 throw new InvalidOperationException("Khong the xoa hoa don dang mang no ky truoc da ket chuyen.");
 
+            var coGiaoDichCoc = (await conn.QueryAsync<int>(
+                "SELECT Id FROM GiaoDichCoc WHERE HoaDonId = @HoaDonId FOR UPDATE",
+                new { HoaDonId = hoaDonId }, tx)).Any();
+            if (coGiaoDichCoc)
+                throw new InvalidOperationException("Khong the xoa hoa don da co giao dich coc lien quan.");
+
+            await khoanPhatSinhRepo.TraVeChuaXuLyAsync(conn, tx, hoaDonId);
+            await hoaDonRepo.UnlinkHoaDonGhepAsync(conn, tx, hoaDonId, hoaDon.HoaDonGhepId);
             await chiTietRepo.DeleteByHoaDonAsync(conn, tx, hoaDonId);
             await hoaDonRepo.DeleteAsync(conn, tx, hoaDonId);
 

@@ -10,8 +10,8 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 và REVIEW-010 đã triển khai; REVIEW-008/009/011 chưa làm |
-| Build | Phiên 54: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 và REVIEW-010/011 đã triển khai; REVIEW-008/009 chưa làm |
+| Build | Phiên 55: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
 | Database | Phiên 53 schema smoke pass 19 bảng, 77 constraint, 7 dịch vụ mẫu; REVIEW-006/007 concurrency smoke pass và DB tạm đã drop. Dry-run DB thật sạch, apply-once mới đã tạo 2 CHECK + 1 index. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006/007 đã xong; REVIEW-008 đến REVIEW-016 còn lại | Cao |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006/007/010/011 đã xong; REVIEW-008/009 và REVIEW-012 đến REVIEW-016 còn lại | Cao |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,25 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 55 - REVIEW-011: hoàn tác an toàn khi xóa hóa đơn
+
+Đã hoàn thiện `HoaDonService.XoaHoaDonAsync` theo quyết định Phase 1:
+
+- Khóa dòng `HoaDon` bằng `SELECT ... FOR UPDATE` trước mọi guard và thao tác xóa, serialize với flow thu tiền đang dùng cùng khóa.
+- Chặn xóa nếu có bất kỳ dòng `ThanhToan`, `GiaoDichCoc.HoaDonId`, `SoTienDaThu > 0` hoặc `TienNoKyTruoc > 0`; không chỉ tin dữ liệu tổng hợp trên hóa đơn.
+- Khoản phát sinh liên kết hóa đơn chỉ được hoàn tác từ `DaDuaVaoHoaDon` về `ChuaXuLy` và xóa `HoaDonId`. Nếu đã ở trạng thái xử lý khác thì chặn toàn bộ thao tác.
+- Khóa và tháo liên kết `HoaDonGhepId` ở hóa đơn còn lại trước khi xóa; sau đó xóa chi tiết và hóa đơn trong cùng transaction.
+
+Kiểm tra thực tế:
+
+- Service smoke database tạm pass: hóa đơn hợp lệ được xóa, chi tiết biến mất, khoản phát sinh trở lại `ChuaXuLy`, hóa đơn ghép còn lại có link `NULL`.
+- Guard smoke pass cho payment row dù `SoTienDaThu` bị lệch bằng 0, `TienNoKyTruoc`, ledger cọc và khoản phát sinh đã xử lý.
+- Concurrency smoke xóa đồng thời với thu tiền pass: chỉ một thao tác thành công; kết quả hoặc hóa đơn bị xóa sạch, hoặc hóa đơn và thanh toán cùng tồn tại nhất quán.
+- Database tạm đã drop trong `finally`. Không thay đổi schema, không có migration và không đụng database vận hành.
+- `dotnet build --no-restore` pass 0 error; warning duy nhất `NU1900` do sandbox không truy cập vulnerability feed.
+
+Phạm vi giữ nguyên: chưa làm REVIEW-008/009; không mở rộng credit note/soft-delete hóa đơn, UI diện rộng, Syncfusion, nhắn tin hoặc auth/multi-user.
 
 ### Phiên 54 - REVIEW-010: hoàn thiện chuyển phòng
 

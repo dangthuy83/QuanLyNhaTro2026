@@ -130,6 +130,29 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
             new { Id = id },
             transaction: tx);
 
+    public async Task UnlinkHoaDonGhepAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int id,
+        int? hoaDonGhepId)
+    {
+        await conn.QueryAsync<int>(
+            """
+            SELECT Id
+            FROM HoaDon
+            WHERE HoaDonGhepId = @Id OR (@HoaDonGhepId IS NOT NULL AND Id = @HoaDonGhepId)
+            ORDER BY Id
+            FOR UPDATE
+            """,
+            new { Id = id, HoaDonGhepId = hoaDonGhepId },
+            transaction: tx);
+
+        await conn.ExecuteAsync(
+            "UPDATE HoaDon SET HoaDonGhepId = NULL WHERE HoaDonGhepId = @Id OR Id = @Id",
+            new { Id = id },
+            transaction: tx);
+    }
+
 
 // ── Bổ sung Phase 2–3 ────────────────────────────────────────────────────────
 

@@ -112,6 +112,36 @@ public class KhoanPhatSinhHopDongRepository(IDbConnection db) : BaseRepository(d
             tx);
     }
 
+    public async Task TraVeChuaXuLyAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hoaDonId)
+    {
+        var trangThaiKhongTheHoanTac = (await conn.QueryAsync<int>(
+            """
+            SELECT Id
+            FROM KhoanPhatSinhHopDong
+            WHERE HoaDonId = @HoaDonId
+              AND TrangThai <> 'DaDuaVaoHoaDon'
+            FOR UPDATE
+            """,
+            new { HoaDonId = hoaDonId },
+            tx)).Any();
+        if (trangThaiKhongTheHoanTac)
+            throw new InvalidOperationException("Hoa don co khoan phat sinh da duoc xu ly, khong the xoa.");
+
+        await conn.ExecuteAsync(
+            """
+            UPDATE KhoanPhatSinhHopDong
+            SET HoaDonId = NULL,
+                TrangThai = 'ChuaXuLy'
+            WHERE HoaDonId = @HoaDonId
+              AND TrangThai = 'DaDuaVaoHoaDon'
+            """,
+            new { HoaDonId = hoaDonId },
+            tx);
+    }
+
     public async Task<decimal> ApDungTruCocAsync(
         MySqlConnection conn,
         MySqlTransaction tx,

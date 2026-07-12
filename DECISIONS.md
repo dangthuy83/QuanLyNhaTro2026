@@ -35,6 +35,7 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - Nếu kỳ trả phòng chưa có hóa đơn thì luôn preview/tạo hóa đơn kỳ cuối, kể cả trả đúng ngày cuối tháng. Nếu đã có hóa đơn đủ tháng nhưng trả giữa tháng và số ngày không khớp, phải xóa/hủy rồi lập lại đúng trước khi trả phòng; Phase 1 chưa dùng credit note.
 - Khi chuyển phòng, khoản phát sinh chưa xử lý có `NgayPhatSinh <= NgayChuyenDi` thuộc hóa đơn hợp đồng/phòng cũ; hóa đơn ghép chỉ là cách trình bày, không đổi scope dữ liệu. Nếu chuyển ngày cuối tháng, hợp đồng mới bắt đầu ngày đầu tháng sau, dịch vụ cố định tháng cũ tính trên hóa đơn phòng cũ và không tạo hóa đơn 0 ngày cho phòng mới trong tháng cũ; nợ cũ chưa settlement sẽ được cơ chế hóa đơn đầu tiên của hợp đồng mới mang sang.
 - Hóa đơn chưa có thanh toán/settlement được phép xóa vật lý trong transaction; khoản phát sinh phải được trả về `ChuaXuLy` và liên kết hóa đơn ghép phải được tháo an toàn. Hóa đơn đã có thanh toán, `KetChuyenNo`, `TruCoc` hoặc đang mang `TienNoKyTruoc` không được xóa.
+  - Triển khai REVIEW-011 khóa dòng `HoaDon` trước khi kiểm tra/xóa; kiểm tra trực tiếp mọi dòng `ThanhToan` và `GiaoDichCoc` thay vì chỉ tin số tổng hợp. Khoản phát sinh chỉ được hoàn tác nếu còn `DaDuaVaoHoaDon`; trạng thái đã xử lý khác làm thao tác xóa bị chặn và rollback.
 - Phase 1 không cho thu vượt số còn phải trả của hóa đơn. Tiền ứng trước sau này phải có ledger/số dư riêng, không biểu diễn bằng `HoaDon.SoTienDaThu > TongCong`.
   - Triển khai REVIEW-004 khóa dòng `HoaDon` bằng `SELECT ... FOR UPDATE` trước mọi lần thu/phân bổ settlement; `ThanhToan` và số tổng hợp trên hóa đơn tiếp tục được ghi trong cùng transaction.
 - Giao dịch cọc thủ công không được backdate trước ngày bắt đầu hoặc sau ngày hiện tại. `TruNo` phải tham chiếu hóa đơn cùng hợp đồng; `DieuChinh` chỉ do flow nội bộ tạo. Thu/hoàn thủ công lưu phương thức `TienMat`/`ChuyenKhoan`; mọi thay đổi số dư phải khóa theo hợp đồng và không làm số dư âm.
@@ -372,6 +373,7 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 - REVIEW-006/007: chống chồng khoảng hợp đồng bằng khóa dòng phòng + overlap query, trạng thái `ChoHieuLuc`, kích hoạt đến hạn có guard, và khóa sửa lịch sử hợp đồng sau phát sinh dữ liệu.
 - REVIEW-010: chuyển phòng khóa/recheck hợp đồng và hai phòng trong transaction, đưa khoản phát sinh đến ngày chuyển vào hóa đơn cũ, hỗ trợ chuyển cuối tháng không sinh hóa đơn phòng mới ở kỳ cũ.
+- REVIEW-011: xóa hóa đơn chưa settlement dưới khóa transaction, trả khoản phát sinh về `ChuaXuLy`, tháo liên kết hóa đơn ghép và chặn mọi payment/ledger cọc/nợ kết chuyển.
 
 - Core MVC: phòng, khách thuê, hợp đồng, dịch vụ, chỉ số, hóa đơn.
 - Dashboard.
