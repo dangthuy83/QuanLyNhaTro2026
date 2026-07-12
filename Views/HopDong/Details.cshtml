@@ -139,16 +139,14 @@
                            class="btn btn-sm btn-outline-danger">
                             <i class="bi bi-exclamation-diamond me-1"></i>Khoản phát sinh
                         </a>
-                        <form asp-action="KetThuc" asp-route-id="@Model.Id" method="post"
-                              onsubmit="return confirm('Xác nhận kết thúc hợp đồng?')">
-                            @Html.AntiForgeryToken()
-                            <button class="btn btn-sm btn-outline-warning">Kết thúc HĐ</button>
-                        </form>
-                        <form asp-action="Huy" asp-route-id="@Model.Id" method="post"
-                              onsubmit="return confirm('Xác nhận huỷ hợp đồng?')">
-                            @Html.AntiForgeryToken()
-                            <button class="btn btn-sm btn-outline-danger">Huỷ HĐ</button>
-                        </form>
+                        @if (Model.NgayBatDau.Date > DateTime.Today)
+                        {
+                            <form asp-action="Huy" asp-route-id="@Model.Id" method="post"
+                                  onsubmit="return confirm('Chỉ có thể huỷ hợp đồng tương lai chưa phát sinh hóa đơn, chỉ số, cọc, thanh toán hoặc khoản phát sinh. Tiếp tục?')">
+                                @Html.AntiForgeryToken()
+                                <button class="btn btn-sm btn-outline-danger">Huỷ HĐ</button>
+                            </form>
+                        }
                     </div>
                 </div>
             </div>

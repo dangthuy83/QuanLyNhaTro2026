@@ -6,6 +6,428 @@ Vai tro review: Solution Architect + Business Analyst cho ung dung quan ly nha t
 
 ---
 
+## 0. Review toàn diện sẵn sàng vận hành - 12/07/2026
+
+Phạm vi: Nhà/Phòng, Khách thuê, Hợp đồng, Dịch vụ, Giá/Hình thức, Chỉ số, Hóa đơn,
+Thanh toán/Công nợ, Cọc, Chuyển phòng, Trả phòng, Báo cáo và toàn vẹn database.
+Đợt này chỉ review/chẩn đoán và smoke trên database tạm; chưa sửa code nghiệp vụ.
+
+### 0.1. Executive summary
+
+**Kết luận:** lõi tính tiền đã có nhiều nền tảng tốt, nhưng dự án **chưa sẵn sàng nhập dữ liệu thật
+hoặc thay Excel hoàn toàn**. Có thể dùng để pilot có kiểm soát sau khi xử lý Phase 1, nhưng chưa nên
+vận hành song song nhiều thao tác hoặc cho phép người dùng kết thúc/trả/chuyển phòng tự do.
+
+Năm rủi ro lớn nhất:
+
+1. Hợp đồng có thể bị đóng mà không tạo/kiểm tra hóa đơn, chỉ số và cọc kỳ cuối.
+2. Lịch sử giá phòng gắn theo `Phong`, có thể lấy giá của hợp đồng cũ thay cho giá thỏa thuận hợp đồng mới.
+3. Chưa bảo vệ chồng thời gian hợp đồng; hợp đồng tương lai cũng bị gắn ngay `DangHieuLuc` và làm phòng `DangThue`.
+4. Thu tiền và ledger cọc không khóa dòng/số dư, có thể sai khi hai request chạy đồng thời.
+5. Số khách `TheoNguoi` và thông tin nhận diện hóa đơn không có lịch sử theo kỳ, nên lập bù/in lại có thể đổi kết quả.
+
+Các phần ổn định nhất theo bằng chứng hiện tại:
+
+- `Database/schema.sql` tạo sạch thành công: 19 bảng, 74 constraint, 7 dịch vụ mẫu và đủ cột trọng yếu.
+- `BillingPeriodCalculator` xử lý giao khoảng ngày và năm nhuận đúng về mặt công thức.
+- Công thức chỉ số thường/reset có guard ở code và CHECK constraint; chỉ số theo hợp đồng có unique scope.
+- `HopDongDichVu` và `LichSuHinhThucDichVu` đã resolve theo kỳ cho các service tính tiền chính.
+- Hóa đơn đã tạo giữ snapshot số lượng, đơn giá và thành tiền; lập hóa đơn đơn lẻ có transaction và unique kỳ.
+
+Các module phải xử lý trước dữ liệu thật: vòng đời hợp đồng/phòng, trả/chuyển phòng, lịch sử giá phòng,
+thanh toán/cọc đồng thời, lịch sử nhân khẩu, snapshot nhận diện hóa đơn và constraint tài chính.
+
+### 0.2. Ma trận tổng hợp A-M
+
+| Luồng | Quy tắc/code hiện tại | Trạng thái | Mức độ | Hậu quả chính | Đề xuất nhỏ nhất |
+|---|---|---|---|---|---|
+| A. Nhà/Phòng | Có FK Nhà-Phòng và chặn xóa phòng đã dùng; trạng thái phòng vẫn sửa tay | Có rủi ro | High | Phòng `Trong` dù còn hợp đồng hoặc ngược lại | Khóa sửa tay, thêm reconcile trạng thái |
+| B. Khách thuê | CRUD + upload extension/size; chưa có duplicate/file lifecycle | Thiếu | High | Trùng hồ sơ, file mồ côi, ảnh giả | Service upload atomic + kiểm tra magic bytes |
+| C. Hợp đồng | Tạo có transaction nhưng chỉ check một trạng thái, sửa/kết thúc còn lỏng | Thiếu | Critical | Chồng kỳ, sửa lịch sử, bỏ qua quyết toán | Lifecycle service + overlap query/constraint |
+| D. Dịch vụ | `PhongDichVu`/`HopDongDichVu` theo kỳ đã có | Đúng phần lớn | Medium | Một số UI/query vận hành chưa theo kỳ đầy đủ | Tập trung resolver dùng chung |
+| E. Giá/Hình thức | Hình thức theo kỳ tốt hơn; giá phòng scope theo phòng | Có rủi ro | Critical | Sai tiền hợp đồng mới | Chuyển lịch sử giá thuê sang scope hợp đồng |
+| F. Chỉ số | Reset/unique/hợp đồng đã có; lưu bulk không atomic, ngày đọc chưa khóa | Có rủi ro | High | Chuỗi công tơ đứt, sửa audit sau chốt | Transaction + guard hóa đơn/ngày đọc |
+| G. Hóa đơn | Snapshot tiền tốt; thiếu snapshot nhận diện, xóa khoản phát sinh lỗi | Có rủi ro | High | In lại đổi nội dung, không xóa được hóa đơn hợp lệ | Bổ sung snapshot + unlink/revert có transaction |
+| H. Thanh toán/Công nợ | Có bút toán phi tiền mặt; chưa khóa invoice | Có rủi ro | Critical | Thu vượt/lost update, lệch `SoTienDaThu` | `SELECT ... FOR UPDATE` + reconcile |
+| I. Tiền cọc | Có ledger và transaction flow chính; ghi tay/race còn hở | Có rủi ro | Critical | Âm số dư thực, cấn nhầm hóa đơn | Khóa ledger, validate cùng hợp đồng |
+| J. Chuyển phòng | Transaction toàn flow; thiếu guard phòng đích/khoản phát sinh/cuối tháng | Thiếu | High | Chồng phòng, bỏ khoản tiền, không chuyển cuối tháng | Recheck trong tx + tách flow cuối tháng |
+| K. Trả/kết thúc | Flow trả phòng có transaction nhưng full-month no-invoice bị bỏ qua; `KetThuc` bypass | Thiếu | Critical | Mất tiền kỳ cuối/chỉ số/cọc | Một lifecycle service duy nhất |
+| L. Báo cáo/vận hành | Có công nợ, nhắc nợ, kiểm tra dữ liệu; kỳ mặc định và due date chưa đúng | Có rủi ro | High | Chốt nhầm kỳ, báo quá hạn sai | Mặc định N-1 + dùng ngày đến hạn đã chốt |
+| M. Database | Fresh schema pass; thiếu nhiều CHECK/unique logic và lock strategy | Thiếu | High | Dữ liệu xấu lọt qua request/race | Bổ sung constraint + update SQL apply-once |
+
+### 0.3. Phát hiện chi tiết
+
+#### REVIEW-001 - Trả cuối tháng có thể đóng hợp đồng mà không có hóa đơn kỳ cuối
+
+- **Mức độ / loại:** Critical - bug xác nhận bằng code và service smoke.
+- **Module:** K, G, F - `TraPhongService`.
+- **Hiện trạng:** `canSinhHd = soNgayO < soNgayTrongThang && hdThangNay == null`; ngày cuối tháng luôn
+  cho `canSinhHd=false`, kể cả chưa có hóa đơn. Service vẫn đổi hợp đồng `DaKetThuc`, phòng `Trong` và tất toán cọc.
+- **Bằng chứng:** `Services/TraPhongService.cs`, `TinhPreviewAsync` dòng 41-62 và `ThucHienAsync` dòng 110-215.
+  Smoke `CASE_RETURN_FULL_MONTH`: `CanCreate=False; Invoices=0; Contract=DaKetThuc; Room=Trong`.
+- **Tái hiện:** hợp đồng ở trọn 07/2026, chưa lập hóa đơn, trả ngày 31/07/2026.
+- **Hậu quả:** mất toàn bộ tiền phòng/dịch vụ kỳ cuối; thiếu chỉ số không còn chặn; cọc có thể hoàn sai.
+- **Sửa nhỏ nhất:** nếu chưa có hóa đơn kỳ trả thì luôn preview/tạo hóa đơn kỳ cuối; chỉ bỏ tạo khi đã có hóa đơn hợp lệ.
+- **Cần user quyết định:** Không.
+
+#### REVIEW-002 - Nút Kết thúc/Hủy hợp đồng bỏ qua flow trả phòng
+
+- **Mức độ / loại:** Critical - bug xác nhận bằng code.
+- **Module:** C, K, A, H, I.
+- **Hiện trạng:** `HopDongController.KetThuc/Huy` update trạng thái rồi gọi `PhongService.XuLyKetThucHopDongAsync`,
+  không transaction và không kiểm tra hóa đơn, chỉ số, khoản phát sinh, nợ, cọc hay ngày kết thúc thực tế.
+- **Bằng chứng:** `Controllers/HopDongController.cs`, action `KetThuc` dòng 173-184 và `Huy` dòng 186-197.
+- **Tái hiện:** hợp đồng đang ở, còn thiếu chỉ số/nợ/cọc; POST `/HopDong/KetThuc/{id}`.
+- **Hậu quả:** phòng về `Trong` trong khi nghĩa vụ tài chính chưa hoàn tất; luồng kiểm tra dữ liệu không còn thấy hợp đồng.
+- **Sửa nhỏ nhất:** bỏ `KetThuc` trực tiếp cho hợp đồng đã bắt đầu; route qua lifecycle service. `Huy` chỉ dành cho hợp đồng
+  chưa nhận phòng/chưa có dữ liệu nghiệp vụ và phải atomic với trạng thái phòng.
+- **Cần user quyết định:** Có - chốt chính xác điều kiện “Hủy” khác “Trả phòng”.
+
+#### REVIEW-003 - Lịch sử giá phòng của hợp đồng cũ ghi đè giá hợp đồng mới
+
+- **Mức độ / loại:** Critical - bug xác nhận bằng service smoke.
+- **Module:** E, G, C.
+- **Hiện trạng:** hóa đơn tra `LichSuThayDoiGia` bằng `LoaiDoiTuong='Phong'` + `PhongId`, fallback mới dùng
+  `HopDong.TienThueThoaThuan`. Lịch sử cũ của phòng tiếp tục áp dụng cho hợp đồng mới.
+- **Bằng chứng:** `Services/HoaDonService.cs` dòng 163; `ChuyenPhongService.LayGiaPhongAsync`;
+  `TraPhongService.LayGiaPhongAsync`; `GiaService` cập nhật `Phong.GiaThueMacDinh`.
+  Smoke: giá hợp đồng `3,000,000` nhưng preview lấy `2,500,000` từ lịch sử phòng.
+- **Tái hiện:** tăng giá phòng ở hợp đồng A, kết thúc A, tạo hợp đồng B cùng phòng với giá thỏa thuận khác, lập hóa đơn B.
+- **Hậu quả:** sai tiền phòng mọi kỳ của hợp đồng mới.
+- **Sửa nhỏ nhất:** lịch sử thay đổi tiền thuê đang hiệu lực phải scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ là giá mặc định.
+- **Cần user quyết định:** Có - xác nhận đổi giá giữa hợp đồng là theo hợp đồng hay theo phòng/toàn bộ người ở.
+
+#### REVIEW-004 - Thu tiền đồng thời có thể thu vượt hoặc ghi đè `SoTienDaThu`
+
+- **Mức độ / loại:** Critical - rủi ro code cần concurrency smoke sau fix.
+- **Module:** H, M.
+- **Hiện trạng:** `HoaDonService.ThuTienAsync` đọc hóa đơn trước transaction; trong transaction không `FOR UPDATE`, rồi
+  tính giá trị tuyệt đối `SoTienDaThuMoi` từ snapshot cũ. `CongNoSettlementService` cũng không khóa các hóa đơn được phân bổ.
+- **Bằng chứng:** `Services/HoaDonService.cs` dòng 284-316; `Services/CongNoSettlementService.cs` dòng 20-53 và 69-137.
+- **Tái hiện:** hai request cùng thu phần còn lại của một hóa đơn.
+- **Hậu quả:** có thể có hai dòng `ThanhToan` nhưng `SoTienDaThu` chỉ phản ánh một, hoặc tổng thu vượt nợ.
+- **Sửa nhỏ nhất:** mở transaction trước, `SELECT ... FOR UPDATE`, tính từ `SUM(ThanhToan)`/giá trị khóa và update có điều kiện.
+- **Cần user quyết định:** Không.
+
+#### REVIEW-005 - Ledger cọc có race và cho cấn nhầm hóa đơn khác hợp đồng
+
+- **Mức độ / loại:** Critical - bug/rủi ro xác nhận bằng code.
+- **Module:** I, H, M.
+- **Hiện trạng:** `InsertDeltaAsync` đọc `SUM(SoTien)` không khóa; hai lần hoàn/trừ đồng thời có thể cùng pass.
+  Khi ghi tay `TruNo` có `hoaDonId`, service không kiểm tra hóa đơn thuộc `hopDongId` của ledger.
+- **Bằng chứng:** `Services/GiaoDichCocService.cs` dòng 45-70 và 281-307; `GiaoDichCocRepository.GetSoDuAsync`;
+  `Views/GiaoDichCoc/Index.cshtml` cho nhập ID hóa đơn tự do.
+- **Tái hiện:** hai request hoàn cùng số dư; hoặc ledger hợp đồng A nhập hóa đơn của hợp đồng B.
+- **Hậu quả:** tổng delta thực âm dù từng snapshot không âm; cọc A trả nợ B; chuỗi `SoDuSauGiaoDich` sai.
+- **Sửa nhỏ nhất:** khóa một row balance/contract, validate invoice cùng hợp đồng, giới hạn loại giao dịch theo trạng thái hợp đồng.
+- **Cần user quyết định:** Có - chốt có cho điều chỉnh tay/backdate và yêu cầu phương thức tiền mặt/chuyển khoản hay không.
+
+#### REVIEW-006 - Chưa chống chồng thời gian hợp đồng và chưa có trạng thái hợp đồng tương lai
+
+- **Mức độ / loại:** High - bug xác nhận bằng code/schema.
+- **Module:** C, A, M.
+- **Hiện trạng:** tạo hợp đồng chỉ tìm `TrangThai='DangHieuLuc'`; mọi hợp đồng mới bị set ngay `DangHieuLuc` và phòng
+  `DangThue`, không xét khoảng ngày. Schema không có constraint chống overlap.
+- **Bằng chứng:** `HopDongService.TaoHopDongAsync` dòng 24-48; `HopDongRepository.GetDangHieuLucByPhongAsync`;
+  bảng `HopDong` trong `Database/schema.sql` không có unique/generated active key hay CHECK ngày.
+- **Tái hiện:** tạo hợp đồng bắt đầu tháng sau cho phòng đang trống; hoặc dữ liệu cũ có hợp đồng kết thúc nhưng trạng thái active.
+- **Hậu quả:** phòng bị thuê sớm; không tạo được hợp đồng hiện tại; query theo ngày có thể trả một trong nhiều hợp đồng.
+- **Sửa nhỏ nhất:** overlap query theo `[NgayBatDau, NgayKetThuc]`, trạng thái `ChoHieuLuc` hoặc derive theo ngày, khóa phòng khi tạo.
+- **Cần user quyết định:** Có - chốt mô hình trạng thái cho hợp đồng tương lai.
+
+#### REVIEW-007 - Sửa hợp đồng có thể sửa lịch sử và tạo dữ liệu không hợp lệ
+
+- **Mức độ / loại:** High - bug xác nhận bằng code.
+- **Module:** C, G, I.
+- **Hiện trạng:** `SuaHopDongAsync` update ngày, giá, cọc, trạng thái và thay toàn bộ khách, không kiểm tra ngày kết thúc,
+  overlap, hóa đơn/thanh toán/ledger đã có, hoặc khách đại diện thuộc danh sách. Hidden `PhongId/TrangThai` vẫn có thể tamper.
+- **Bằng chứng:** `Services/HopDongService.cs` dòng 123-155; `HopDongRepository.UpdateAsync`;
+  `Views/HopDong/Edit.cshtml` dòng 22-24. Model `HopDong` không có validation attribute.
+- **Tái hiện:** sửa `NgayKetThuc < NgayBatDau`, đổi tiền cọc sau khi ledger đã ghi, gửi `khachChinhId` không nằm trong checkbox.
+- **Hậu quả:** hóa đơn cũ không còn khớp hợp đồng; cọc thỏa thuận lệch ledger; không có/không đúng đại diện.
+- **Sửa nhỏ nhất:** load bản gốc trong transaction, whitelist field, guard theo dữ liệu đã chốt, validate đại diện và ngày.
+- **Cần user quyết định:** Có - chốt những field nào được phép sửa sau hóa đơn đầu tiên.
+
+#### REVIEW-008 - Dịch vụ TheoNgười không có lịch sử nhân khẩu theo kỳ
+
+- **Mức độ / loại:** High - khoảng trống mô hình, xác nhận bằng service smoke.
+- **Module:** C, D, G.
+- **Hiện trạng:** số lượng lấy `COUNT(HopDongKhachThue)` hiện tại, không có `NgayBatDau/NgayKetThuc` thành viên.
+- **Bằng chứng:** `FixedServiceQuantityCalculator.ResolveQuantityAsync`; bảng `HopDongKhachThue` trong schema.
+  Smoke preview cùng kỳ đổi `SoLuong` từ 2 xuống 1 sau khi xóa một liên kết khách.
+- **Tái hiện:** khách rời hợp đồng rồi lập bù hóa đơn kỳ trước chưa chốt.
+- **Hậu quả:** sai dịch vụ theo người; không audit được ai ở kỳ nào. Hóa đơn đã chốt không đổi tiền nhưng liên kết lịch sử bị mất.
+- **Sửa nhỏ nhất:** thêm hiệu lực ngày/kỳ cho thành viên và resolve count theo kỳ; cấm xóa cứng liên kết đã có kỳ chốt.
+- **Cần user quyết định:** Có - tính theo đầu kỳ, cuối kỳ, số ngày thực ở hay thu đủ tháng nếu có mặt bất kỳ ngày nào.
+
+#### REVIEW-009 - Lưu/sửa chỉ số chưa atomic và chưa bảo vệ dữ liệu đã dùng trên hóa đơn
+
+- **Mức độ / loại:** High - bug xác nhận bằng code.
+- **Module:** F, G, M.
+- **Hiện trạng:** `SaveChiSoItemsAsync` insert/update từng dòng không transaction; không kiểm tra `NgayDoc` thuộc kỳ/hợp đồng;
+  update dòng đã được `ChiTietHoaDon` tham chiếu vẫn được phép.
+- **Bằng chứng:** `Controllers/ChiSoController.cs` dòng 386-516; `ChiSoDienNuocRepository.UpdateAsync`.
+- **Tái hiện:** bulk có dòng cuối vi phạm unique; các dòng trước đã lưu. Hoặc sửa `ChiSoCuoi` của chỉ số đã chốt.
+- **Hậu quả:** bulk nửa vời; audit chỉ số không còn khớp snapshot số lượng trên hóa đơn.
+- **Sửa nhỏ nhất:** transaction toàn batch, validate kỳ/ngày hợp đồng, chặn update/delete khi đã được hóa đơn dùng hoặc tạo correction record.
+- **Cần user quyết định:** Có - có cho phép bút toán điều chỉnh chỉ số sau chốt hay chỉ hủy/reissue hóa đơn.
+
+#### REVIEW-010 - Chuyển phòng thiếu guard phòng đích, khoản phát sinh và ca cuối tháng
+
+- **Mức độ / loại:** High - bug/luồng thiếu xác nhận bằng code.
+- **Module:** J, A, C, G.
+- **Hiện trạng:** service không recheck hợp đồng cũ còn active/phòng mới còn trống/không overlap trong transaction;
+  không đưa `KhoanPhatSinhHopDong` vào hai hóa đơn; ngày cuối tháng bị throw thay vì có flow riêng.
+- **Bằng chứng:** `Services/ChuyenPhongService.cs` dòng 22-50, 58-107, 109-198; không có query khoản phát sinh.
+- **Tái hiện:** hai người cùng chọn một phòng trống; tạo khoản phát sinh trước chuyển; chuyển ngày cuối tháng.
+- **Hậu quả:** hai hợp đồng active cùng phòng, bỏ sót khoản tiền, vận hành bị chặn ở ca hợp lệ.
+- **Sửa nhỏ nhất:** recheck/lock hai phòng và hợp đồng trong tx, đưa khoản phát sinh vào quyết toán cũ, thêm nhánh cuối tháng.
+- **Cần user quyết định:** Có - khoản phát sinh trước ngày chuyển thuộc hóa đơn phòng cũ hay hóa đơn gộp chung.
+
+#### REVIEW-011 - Xóa hóa đơn có khoản phát sinh bị FK chặn và chưa có nghiệp vụ hoàn tác
+
+- **Mức độ / loại:** High - bug xác nhận bằng service smoke.
+- **Module:** G, H.
+- **Hiện trạng:** `XoaHoaDonAsync` chỉ xóa chi tiết rồi hóa đơn, không trả `KhoanPhatSinhHopDong` về `ChuaXuLy`, không xử lý
+  `HoaDonGhepId`; FK `KhoanPhatSinhHopDong.HoaDonId` chặn delete.
+- **Bằng chứng:** `HoaDonService.XoaHoaDonAsync` dòng 327-354; schema FK `FK_KhoanPhatSinh_HoaDon`.
+  Smoke: `BlockedByFk=True; InvoiceStillExists=1`.
+- **Tái hiện:** lập hóa đơn có khoản phát sinh, chưa thu, bấm xóa.
+- **Hậu quả:** flow xóa hợp lệ báo lỗi DB; không thể chốt lại kỳ; hóa đơn ghép có thể để link treo.
+- **Sửa nhỏ nhất:** trong transaction unlink/revert khoản phát sinh, unlink cặp ghép, kiểm tra mọi settlement liên quan rồi xóa.
+- **Cần user quyết định:** Có - xóa hay dùng trạng thái `DaHuy` + hóa đơn thay thế để audit.
+
+#### REVIEW-012 - Thay đổi/xóa lịch sử giá không chặn kỳ đã có hóa đơn
+
+- **Mức độ / loại:** High - bug xác nhận bằng code.
+- **Module:** E, G.
+- **Hiện trạng:** `GiaService.LuuThayDoiAsync/XoaThayDoiAsync` không query hóa đơn liên quan. Thay đổi tương lai còn cập nhật ngay
+  `Phong.GiaThueMacDinh`/`PhongDichVu.DonGia`, làm giá “hiện tại” UI không còn là giá kỳ hiện tại.
+- **Bằng chứng:** `Services/GiaService.cs` dòng 13-119 và 122-188.
+- **Tái hiện:** đã có hóa đơn 07/2026, thêm/xóa lịch sử áp dụng 07/2026; hoặc nhập giá áp dụng 01/2027 từ 07/2026.
+- **Hậu quả:** preview lập bù thay đổi; form hợp đồng/phòng gợi ý sai thời điểm; chuỗi `GiaCu/GiaMoi` khó audit.
+- **Sửa nhỏ nhất:** guard hóa đơn từ kỳ áp dụng, resolve “giá hiện hành hôm nay” thay vì cập nhật base bằng giá tương lai.
+- **Cần user quyết định:** Không sau khi scope giá thuê ở REVIEW-003 được chốt.
+
+#### REVIEW-013 - Snapshot hóa đơn chưa đủ để bảo toàn nội dung lịch sử
+
+- **Mức độ / loại:** High - khoảng trống dữ liệu xác nhận bằng schema/query.
+- **Module:** G, L.
+- **Hiện trạng:** hóa đơn snapshot tiền nhưng phiếu thu/report lấy tên phòng, nhà, khách, tên/đơn vị dịch vụ từ bảng hiện tại.
+- **Bằng chứng:** `HoaDonController.XuatPhieuThu/InPhieuThu`; `ChiTietHoaDonRepository.GetByHoaDonAsync` join `DichVu` hiện tại;
+  schema `HoaDon/ChiTietHoaDon` không có snapshot tên phòng/khách/dịch vụ/đơn vị.
+- **Tái hiện:** đổi tên phòng/dịch vụ, sửa đại diện hoặc chuyển phòng rồi in lại hóa đơn cũ.
+- **Hậu quả:** chứng từ cũ đổi nội dung dù số tiền giữ nguyên; khó đối chiếu pháp lý/vận hành.
+- **Sửa nhỏ nhất:** snapshot mã/tên phòng, nhà, khách đại diện, tên/đơn vị dịch vụ và mô tả khoản phát sinh khi chốt.
+- **Cần user quyết định:** Có - mức snapshot nhận diện tối thiểu cần giữ trên chứng từ.
+
+#### REVIEW-014 - Hồ sơ khách và ảnh CCCD thiếu chống trùng và quản lý vòng đời file
+
+- **Mức độ / loại:** High - bug/rủi ro xác nhận bằng code; fake-image cần smoke bảo mật.
+- **Module:** B.
+- **Hiện trạng:** chỉ kiểm tra extension/kích thước, không kiểm tra magic bytes; file được lưu trước DB; thay ảnh/xóa khách không xóa
+  file cũ; hidden path ảnh có thể bị sửa; không có cảnh báo CCCD/SĐT trùng; xóa khách đang gắn hợp đồng dựa vào FK và có thể trả 500.
+- **Bằng chứng:** `KhachThueController.TryLuuAnhAsync/LuuAnhAsync/Delete`; `KhachThueRepository`; schema không unique CCCD/SĐT.
+- **Tái hiện:** upload text đổi đuôi `.jpg`; DB insert lỗi sau lưu file; thay ảnh nhiều lần; tạo hai hồ sơ cùng CCCD.
+- **Hậu quả:** hồ sơ trùng, file mồ côi, nội dung không phải ảnh trong static files, trải nghiệm lỗi khi xóa.
+- **Sửa nhỏ nhất:** validate signature/decode ảnh, staging + commit/cleanup, giữ path server-side, duplicate warning và delete service.
+- **Cần user quyết định:** Có - CCCD/SĐT là unique cứng hay chỉ cảnh báo cho hồ sơ cũ/không đủ thông tin.
+
+#### REVIEW-015 - Trạng thái phòng có thể bị sửa tay và lệch hợp đồng
+
+- **Mức độ / loại:** High - bug xác nhận bằng code/UI.
+- **Module:** A, C.
+- **Hiện trạng:** form sửa phòng cho chọn `Trong/DangThue/DangSuaChua`; repository ghi thẳng. Di chuyển `NhaId` cũng làm toàn bộ
+  lịch sử phòng/hóa đơn được báo cáo dưới nhà mới.
+- **Bằng chứng:** `Views/Phong/Edit.cshtml` dòng 57-63; `PhongRepository.UpdateAsync`; dashboard đếm trực tiếp `Phong.TrangThai`.
+- **Tái hiện:** phòng còn hợp đồng active nhưng sửa thành `Trong`, sau đó chọn làm phòng chuyển đến.
+- **Hậu quả:** dashboard sai, có thể tạo/chuyển thêm hợp đồng; báo cáo lịch sử đổi nhà.
+- **Sửa nhỏ nhất:** trạng thái thuê derive từ hợp đồng/lifecycle; chỉ cho sửa trạng thái bảo trì khi không có hợp đồng; guard đổi nhà sau dữ liệu.
+- **Cần user quyết định:** Có - có cho chuyển một phòng vật lý sang nhà khác hay phải tạo phòng mới.
+
+#### REVIEW-016 - Schema thiếu constraint cho các invariant tài chính và thời gian
+
+- **Mức độ / loại:** High - thiếu xác nhận bằng schema.
+- **Module:** M.
+- **Hiện trạng:** chưa có CHECK cho ngày hợp đồng, tháng/năm hóa đơn/chỉ số, tiền không âm, trạng thái phòng/hợp đồng/hóa đơn,
+  hình thức thanh toán, `ThanhToan.SoTien > 0`, `ThuChi`; chưa có DB guard hợp đồng overlap hoặc một đại diện duy nhất.
+- **Bằng chứng:** `Database/schema.sql` các bảng `Phong`, `HopDong`, `HoaDon`, `ThanhToan`, `ThuChi`, `HopDongKhachThue`.
+- **Tái hiện:** repository/script/import ghi trực tiếp giá trị âm, tháng 13, trạng thái lạ hoặc hai đại diện.
+- **Hậu quả:** code path khác/race/import có thể tạo dữ liệu service không xử lý được.
+- **Sửa nhỏ nhất:** bổ sung CHECK/index/generated unique phù hợp và một update SQL apply-once cho DB hiện tại.
+- **Cần user quyết định:** Có - dải năm hợp lệ và cách enforce overlap trong MySQL.
+
+#### REVIEW-017 - Báo quá hạn bỏ qua `NgayThanhToanHangThang`
+
+- **Mức độ / loại:** High - bug hoặc khoảng trống chính sách.
+- **Module:** H, L.
+- **Hiện trạng:** schema có `HopDong.NgayThanhToanHangThang` nhưng model/repository không dùng; công nợ coi ngày đầu tháng N+1 là mốc
+  quá hạn cho hóa đơn kỳ N.
+- **Bằng chứng:** `HoaDonRepository.GetCongNoAsync` dòng 163-168; model `HopDong` thiếu property tương ứng.
+- **Tái hiện:** hợp đồng quy định thanh toán ngày 5 nhưng báo cáo ngày 2 đã đánh dấu quá hạn.
+- **Hậu quả:** nhắc nợ sai, mất tin cậy báo cáo.
+- **Sửa nhỏ nhất:** chốt due date rồi snapshot `NgayDenHan` trên hóa đơn hoặc tính từ kỳ + ngày hợp đồng.
+- **Cần user quyết định:** Có - ngày đến hạn là ngày mấy của tháng N+1 và xử lý tháng thiếu ngày.
+
+#### REVIEW-018 - Hóa đơn đã tồn tại khi trả giữa tháng chưa có chính sách điều chỉnh
+
+- **Mức độ / loại:** Medium - khoảng trống nghiệp vụ.
+- **Module:** K, G.
+- **Hiện trạng:** nếu đã có hóa đơn tháng trả, `TraPhongService` không sinh/điều chỉnh hóa đơn dù ngày trả giữa tháng; vẫn đóng hợp đồng.
+- **Bằng chứng:** `TraPhongService` điều kiện `hdThangNay == null`.
+- **Tái hiện:** chốt hóa đơn đủ tháng trước, sau đó khách trả ngày 10.
+- **Hậu quả:** có thể thu đủ tháng hoặc cần hoàn/điều chỉnh nhưng hệ thống không thể hiện chính sách.
+- **Sửa nhỏ nhất:** chặn trả cho tới khi hủy/reissue hoặc tạo credit/debit adjustment theo quyết định.
+- **Cần user quyết định:** Có.
+
+#### REVIEW-019 - Chỉ số ngoài hợp đồng có thể phá chuỗi audit
+
+- **Mức độ / loại:** Medium - rủi ro xác nhận bằng code.
+- **Module:** F.
+- **Hiện trạng:** cho nhập/xóa dòng tự do, không bắt `TuChiSo` nối mốc gần nhất, không khóa dòng đã làm mốc cho chỉ số sau.
+- **Bằng chứng:** `ChiSoNgoaiHopDongController.ValidateAsync/Delete`; `ChiSoNgoaiHopDongRepository.DeleteAsync`.
+- **Tái hiện:** nhập `TuChiSo` cách xa mốc cuối hoặc xóa đoạn đã dùng làm mốc đầu hợp đồng mới.
+- **Hậu quả:** mất audit sản lượng phòng trống và chuỗi công tơ không giải thích được.
+- **Sửa nhỏ nhất:** validate continuity, soft-delete/correction và khóa mốc đã có dòng sau phụ thuộc.
+- **Cần user quyết định:** Có - có cho phép gap hợp lệ khi thay đồng hồ ngoài hợp đồng hay phải dùng loại reset riêng.
+
+#### REVIEW-020 - Màn vận hành mặc định sai kỳ thu tiền trả sau
+
+- **Mức độ / loại:** Medium - UX có thể gây lỗi nghiệp vụ.
+- **Module:** G, F, L.
+- **Hiện trạng:** Hóa đơn, chỉ số, preview và dashboard mặc định `DateTime.Today.Month/Year`, trong khi tháng N+1 thu kỳ N.
+- **Bằng chứng:** `HoaDonController`, `ChiSoController`, `HomeController`, `KiemTraDuLieuController`.
+- **Tái hiện:** đầu tháng 8 mở preview và bấm chốt mặc định, hệ thống đưa kỳ 8 thay vì kỳ sử dụng 7.
+- **Hậu quả:** chốt nhầm kỳ tương lai, thiếu chỉ số hoặc pro-rata sai kỳ.
+- **Sửa nhỏ nhất:** helper `DefaultBillingPeriod = Today.AddMonths(-1)` cho màn thu/chốt; vẫn cho chọn kỳ khác rõ ràng.
+- **Cần user quyết định:** Không.
+
+#### REVIEW-021 - KiemTraDuLieu và báo cáo chưa reconcile dữ liệu denormalized/snapshot
+
+- **Mức độ / loại:** Medium - thiếu kiểm soát vận hành.
+- **Module:** L, H, I.
+- **Hiện trạng:** chỉ xét hợp đồng `DangHieuLuc`; không thấy hợp đồng vừa kết thúc còn thiếu hóa đơn. Chưa kiểm tra
+  `HoaDon.SoTienDaThu = SUM(ThanhToan)`, `GiaoDichCoc.SoDuSauGiaoDich`, trạng thái phòng-hợp đồng, tổng chi tiết-snapshot.
+- **Bằng chứng:** `KiemTraDuLieuRepository.GetRowsAsync`; `KiemTraDuLieuController`.
+- **Tái hiện:** direct `KetThuc` hoặc sửa DB tạo lệch snapshot; màn vẫn không cảnh báo.
+- **Hậu quả:** lỗi tài chính tồn tại âm thầm đến cuối kỳ.
+- **Sửa nhỏ nhất:** thêm các query reconcile read-only và nhóm “hợp đồng kết thúc chưa quyết toán”.
+- **Cần user quyết định:** Không.
+
+#### REVIEW-022 - ThuChi cho phép dữ liệu âm/sai loại và sửa/xóa không audit
+
+- **Mức độ / loại:** Medium - bug/rủi ro xác nhận bằng code/schema.
+- **Module:** L, M.
+- **Hiện trạng:** model không validation, schema không CHECK; controller tin `ModelState`; giao dịch đã ghi có thể sửa/xóa cứng.
+- **Bằng chứng:** `ThuChiController`; `ThuChiRepository`; bảng `ThuChi` trong schema.
+- **Tái hiện:** POST `LoaiGiaoDich=Khac`, `SoTien=-100000`, hoặc sửa giao dịch tháng đã đối chiếu.
+- **Hậu quả:** báo cáo thu chi/cân đối sai và mất audit.
+- **Sửa nhỏ nhất:** validate + CHECK, soft delete/correction hoặc nhật ký thay đổi.
+- **Cần user quyết định:** Có - ThuChi có cần khóa sổ theo tháng không.
+
+#### REVIEW-023 - Chưa có lớp bảo vệ vận hành nếu app được mở ngoài máy quản lý
+
+- **Mức độ / loại:** High nếu triển khai LAN/Internet; khoảng trống vận hành đã biết.
+- **Module:** L, M, `Program.cs`.
+- **Hiện trạng:** không đăng nhập/phân quyền; mọi route tài chính và upload đều truy cập được; chưa thấy health check, backup/restore drill,
+  audit người thao tác hay policy HTTPS/HSTS trong production.
+- **Bằng chứng:** `Program.cs`; `DECISIONS.md` xác nhận hiện chỉ một chủ nhà và chưa cần auth.
+- **Tái hiện:** mở cổng app cho thiết bị khác trong LAN.
+- **Hậu quả:** bất kỳ ai truy cập được có thể sửa/xóa dữ liệu tài chính và xem ảnh CCCD.
+- **Sửa nhỏ nhất:** nếu chỉ localhost thì bind localhost; nếu LAN thì thêm auth tối thiểu, HTTPS, backup và audit actor trước go-live.
+- **Cần user quyết định:** Có - mô hình triển khai thực tế localhost, LAN hay Internet.
+
+#### REVIEW-024 - Migration hiện tại có guard, nhưng archive không được coi là idempotent cho baseline mới
+
+- **Mức độ / loại:** Medium - lưu ý vận hành database.
+- **Module:** M.
+- **Hiện trạng:** `Database/updates/20260712_khach_thue_identity_vehicle.sql` có `INFORMATION_SCHEMA` guard. File
+  `archive_pre_20260710/20260628_add_giao_dich_coc.sql` không idempotent; các file archive chỉ dành lịch sử và không chạy trên baseline.
+- **Bằng chứng:** toàn bộ `Database/updates/` và `Database/updates/README.md`.
+- **Tái hiện:** chạy lại toàn bộ archive trên DB tạo từ schema mới.
+- **Hậu quả:** lỗi table/constraint exists và có thể dừng deployment giữa chừng.
+- **Sửa nhỏ nhất:** deployment checklist chỉ chạy file trực tiếp trong `updates/` theo mốc đã ghi; thêm bảng migration journal khi có dữ liệu thật.
+- **Cần user quyết định:** Không.
+
+### 0.4. Câu hỏi nghiệp vụ cần chốt
+
+1. `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay còn trường hợp hủy sau khi đã nhận phòng?
+2. Thay đổi giá thuê giữa hợp đồng có luôn thuộc riêng `HopDong`, còn `Phong.GiaThueMacDinh` chỉ là giá gợi ý cho hợp đồng mới?
+3. Khách vào/ra giữa kỳ của dịch vụ `TheoNguoi` tính đủ tháng, theo số ngày, theo đầu kỳ hay cuối kỳ?
+4. Hóa đơn đủ tháng đã chốt nhưng khách trả giữa tháng: giữ nguyên, hủy/reissue, hay tạo khoản điều chỉnh/credit?
+5. Có cho trả dư/ứng trước không? Nếu có, số dư thuộc hợp đồng, chuỗi khách qua chuyển phòng hay khách thuê đại diện?
+6. Ngày đến hạn chuẩn của hóa đơn kỳ N là ngày nào trong tháng N+1; xử lý ngày 29-31 thế nào?
+7. Giao dịch cọc thủ công có cho backdate/điều chỉnh không; có cần lưu phương thức thu/hoàn và chứng từ không?
+8. Hóa đơn cần snapshot tối thiểu những thông tin nhận diện nào: nhà, phòng, khách đại diện, CCCD, dịch vụ, đơn vị?
+9. App sẽ chạy chỉ trên localhost, trong LAN hay có truy cập Internet?
+10. `ThuChi` có khóa sổ theo tháng và dùng bút toán điều chỉnh thay cho sửa/xóa không?
+
+### 0.5. Kế hoạch triển khai đề xuất
+
+#### Phase 1 - Critical/High làm sai tiền hoặc bỏ quyết toán
+
+- **Phạm vi file:** `TraPhongService`, `HopDongController/HopDongService`, `ChuyenPhongService`, `HoaDonService`,
+  `GiaService/LichSuThayDoiGiaRepository`, `GiaoDichCocService`, `CongNoSettlementService`.
+- **Schema:** có - scope lịch sử giá thuê theo hợp đồng, constraint ngày/trạng thái tối thiểu, chuẩn bị lock/balance nếu cần.
+- **DB hiện tại:** cần file apply-once mới trong `Database/updates/`; đồng thời cập nhật `schema.sql`.
+- **Smoke:** full-month return no invoice; direct end blocked; old/new contract price; concurrent double payment/deposit;
+  transfer room conflict; delete/reissue invoice with charges.
+- **Hoàn thành khi:** không còn đường làm hợp đồng non-active mà bỏ hóa đơn/chỉ số/cọc; tiền thuê mới không bị lịch sử cũ ghi đè;
+  các request đồng thời không làm lệch tổng tiền.
+
+#### Phase 2 - Toàn vẹn, transaction và lịch sử
+
+- **Phạm vi file:** `HopDongService`, `ChiSoController/Repository`, `HopDongKhachThue`, `KhachThueController`,
+  `Database/schema.sql`, các repository thanh toán/cọc.
+- **Schema:** có - effective dates nhân khẩu, CHECK/index/unique logic, snapshot nhận diện hóa đơn.
+- **DB hiện tại:** có update SQL và kế hoạch backfill rõ ràng; chưa có dữ liệu thật nên ưu tiên baseline sạch nếu user xác nhận reset.
+- **Smoke:** overlap/future contract; edit after invoice; meter batch rollback; edit linked reading blocked; tenant-count historical;
+  upload failure cleanup và duplicate identity.
+- **Hoàn thành khi:** model/schema/service cùng enforce invariant; không còn batch nửa vời; dữ liệu chốt không bị sửa ngược.
+
+#### Phase 3 - Luồng vận hành còn thiếu
+
+- **Phạm vi file:** `ChuyenPhongService/View`, `TraPhongService/View`, `HoaDonService`, `KiemTraDuLieuRepository`,
+  `KhoanPhatSinhHopDongRepository`.
+- **Schema:** tùy quyết định adjustment/credit và due date; có thể cần `NgayDenHan`, trạng thái hủy/thay thế hóa đơn.
+- **DB hiện tại:** cần update nếu thêm cột/bảng.
+- **Smoke:** chuyển cuối tháng/nhiều lần; trả giữa tháng có hóa đơn; khoản phát sinh trước/sau trả; cọc thiếu;
+  hợp đồng kết thúc chưa quyết toán phải hiện trên dashboard kiểm tra.
+- **Hoàn thành khi:** mọi ca trả/chuyển có đường thao tác rõ, rollback toàn bộ và báo đúng số tiền còn phải xử lý.
+
+#### Phase 4 - UX, báo cáo, hiệu năng và vận hành
+
+- **Phạm vi file:** controllers/view mặc định kỳ, `HoaDonRepository.GetCongNoAsync`, `KiemTraDuLieu`, `ExcelService`,
+  `ThuChi`, `Program.cs`/deployment docs.
+- **Schema:** có thể thêm `NgayDenHan`, audit actor, lock-period; không bắt buộc cho tối ưu query thuần túy.
+- **DB hiện tại:** update nếu thêm cột/index.
+- **Smoke:** tháng 12/chuyển năm/năm nhuận; Excel numeric/date/text; dataset lớn; backup-restore; auth theo mô hình triển khai.
+- **Hoàn thành khi:** mặc định kỳ N-1, báo quá hạn đúng, reconcile sạch, query đủ nhanh và deployment có backup/bảo vệ truy cập.
+
+### 0.6. Bằng chứng kiểm tra phiên 49
+
+```text
+Git: main = origin/main = 1c1273b; worktree sạch trước review.
+dotnet build --no-restore: pass 0 warning, 0 error trước khi restore harness.
+Schema smoke DB tạm: 19 tables, 74 constraints, 7 seed services, PASS; DB tạm đã drop.
+Business smoke DB tạm:
+- Full-month return: đóng hợp đồng/phòng nhưng 0 hóa đơn.
+- Contract price 3,000,000: preview lấy 2,500,000 từ lịch sử phòng cũ.
+- TheoNguoi cùng kỳ: quantity đổi 2 -> 1 sau khi sửa liên kết khách.
+- Xóa hóa đơn có khoản phát sinh: FK block, hóa đơn còn nguyên.
+Database tạm đã drop; không đụng dữ liệu vận hành.
+```
+
+Giới hạn: chưa chạy concurrency smoke thực sự cho REVIEW-004/005 và chưa visual Browser QA; các điểm đó được phân loại
+đúng là rủi ro code cần smoke sau fix, không trình bày như kết quả runtime đã xác nhận.
+
+### 0.7. Tiến độ Phase 1 sau khi duyệt nghiệp vụ
+
+- Nhóm REVIEW-001/002 đã được triển khai local: hóa đơn kỳ trả phòng chưa tồn tại luôn được tạo, direct `KetThuc` không còn đổi trạng thái, `Huy` có transaction và guard dữ liệu nghiệp vụ.
+- Build và `git diff --check` pass. Service-level smoke database tạm pass: `FullMonthInvoice=1`, hợp đồng `DaKetThuc`, phòng `Trong`, hủy hợp lệ thành `DaHuy`, hủy khi có ledger cọc bị chặn. Database tạm đã drop trong `finally`.
+- REVIEW-001/002 được xem là resolved theo phạm vi nhóm Phase 1 này; các guard overlap/trạng thái tương lai đầy đủ tiếp tục thuộc REVIEW-006.
+- Chưa triển khai REVIEW-003/004/005/011 trong nhóm này.
+
 ## 1. Ket luan tong quan
 
 Da xu ly trong phien 46:

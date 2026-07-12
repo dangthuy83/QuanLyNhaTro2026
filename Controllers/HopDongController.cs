@@ -13,7 +13,6 @@ public class HopDongController(
     PhongRepository phongRepo,
     KhachThueRepository khachThueRepo,
     HopDongService hopDongService,
-    PhongService phongService,
     GiaoDichCocService giaoDichCocService,
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo) : Controller
 {
@@ -176,11 +175,20 @@ public class HopDongController(
         var hd = await hopDongRepo.GetByIdAsync(id);
         if (hd == null) return NotFound();
 
-        await hopDongRepo.UpdateTrangThaiAsync(id, "DaKetThuc");
-        await phongService.XuLyKetThucHopDongAsync(hd.PhongId);
+        if (hd.TrangThai != "DangHieuLuc")
+        {
+            TempData["Error"] = "Hop dong khong con hieu luc.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
-        TempData["Success"] = "Đã kết thúc hợp đồng.";
-        return RedirectToAction(nameof(Details), new { id });
+        if (DateTime.Today < hd.NgayBatDau.Date)
+        {
+            TempData["Error"] = "Hợp đồng chưa bắt đầu. Chỉ có thể dùng Hủy nếu chưa phát sinh dữ liệu nghiệp vụ.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        TempData["Error"] = "Hợp đồng đã bắt đầu phải kết thúc qua flow Trả phòng để quyết toán hóa đơn, chỉ số và cọc.";
+        return RedirectToAction("Confirm", "TraPhong", new { hopDongId = id });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -189,8 +197,15 @@ public class HopDongController(
         var hd = await hopDongRepo.GetByIdAsync(id);
         if (hd == null) return NotFound();
 
-        await hopDongRepo.UpdateTrangThaiAsync(id, "DaHuy");
-        await phongService.XuLyKetThucHopDongAsync(hd.PhongId);
+        try
+        {
+            await hopDongService.HuyHopDongAsync(id, DateTime.Today);
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
         TempData["Success"] = "Đã huỷ hợp đồng.";
         return RedirectToAction(nameof(Details), new { id });

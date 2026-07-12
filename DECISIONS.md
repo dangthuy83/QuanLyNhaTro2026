@@ -10,11 +10,38 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 
 | # | Vấn đề | Ngữ cảnh | Ưu tiên |
 |---|---|---|---|
-| 1 | Khi trả phòng còn nợ, có cần cờ riêng đánh dấu "đã trừ nợ vào cọc" trong `HopDong` không, hay lưu vào `GhiChu` là đủ? | Trả phòng, hoàn cọc, công nợ | Trung bình |
-| 2 | Có thêm index cho các cột hay dùng trong `WHERE`/`JOIN` không? Ví dụ `HopDong.PhongId`, `HoaDon.HopDongId`, `ThanhToan.HoaDonId`, `ChiSoDienNuoc.PhongId`. | Tối ưu khi dữ liệu lớn | Thấp |
-| 3 | Có gửi nhắc nợ tự động không, gửi cho chủ nhà bằng Telegram Bot hay gửi khách thuê qua ZNS/SMS? | Module thông báo giai đoạn sau; giai đoạn 1 chỉ có màn nhắc nợ cho chủ nhà tự xử lý | Thấp |
-| 5 | Có cần in phiếu thu HTML bằng `window.print()` không, bên cạnh xuất Excel? | Thu tiền, hóa đơn | Trung bình |
-| 6 | Cần thống nhất nhãn `LoaiDoiTuong` trong `LichSuThayDoiGia`: code hiện dùng `Phong` và `DichVu`, còn comment trong schema cũ từng mô tả theo `HopDong`/`PhongDichVu`. | Lịch sử giá | Trung bình |
+| 1 | `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay có trường hợp hủy sau khi đã nhận phòng? | Vòng đời hợp đồng; phân biệt Hủy và Trả phòng | Cao |
+| 2 | Thay đổi giá thuê giữa hợp đồng có luôn thuộc riêng `HopDong`, còn `Phong.GiaThueMacDinh` chỉ là giá gợi ý cho hợp đồng mới? | Lịch sử giá; tránh lịch sử hợp đồng cũ áp sang hợp đồng mới | Cao |
+| 3 | Khách vào/ra giữa kỳ của dịch vụ `TheoNguoi` tính đủ tháng, theo số ngày, theo đầu kỳ hay cuối kỳ? | Lịch sử nhân khẩu và tiền dịch vụ | Cao |
+| 4 | Hóa đơn đủ tháng đã chốt nhưng khách trả giữa tháng: giữ nguyên, hủy/reissue hay tạo khoản điều chỉnh/credit? | Trả phòng và snapshot hóa đơn | Cao |
+| 5 | Có cho khách trả dư/ứng trước không; nếu có số dư thuộc hợp đồng, chuỗi khách qua chuyển phòng hay hồ sơ khách? | Thanh toán, công nợ, chuyển phòng | Cao |
+| 6 | Ngày đến hạn của hóa đơn kỳ N là ngày nào trong tháng N+1; nếu cấu hình ngày 29-31 nhưng tháng ngắn hơn thì xử lý thế nào? | Báo cáo công nợ và nhắc nợ | Cao |
+| 7 | Giao dịch cọc thủ công có cho backdate/điều chỉnh không; có cần lưu phương thức thu/hoàn và chứng từ? | Ledger cọc và audit tiền thật | Cao |
+| 8 | Hóa đơn cần snapshot tối thiểu thông tin nào: nhà, phòng, khách đại diện, CCCD, tên/đơn vị dịch vụ? | Bảo toàn chứng từ lịch sử | Cao |
+| 9 | Hợp đồng tương lai dùng trạng thái `ChoHieuLuc` riêng hay trạng thái được suy ra từ ngày? | Chống chồng kỳ và trạng thái phòng | Cao |
+| 10 | Có cho chuyển một phòng vật lý sang Nhà khác sau khi đã có dữ liệu, hay phải tạo phòng mới để giữ lịch sử? | Nhà-Phòng và báo cáo lịch sử | Trung bình |
+| 11 | `ThuChi` có khóa sổ theo tháng và dùng bút toán điều chỉnh thay cho sửa/xóa không? | Audit thu chi | Trung bình |
+| 12 | App sẽ chạy chỉ trên localhost, trong LAN hay có truy cập Internet? | Auth, HTTPS, backup và bảo vệ ảnh CCCD | Cao |
+| 13 | Có gửi nhắc nợ tự động không, gửi cho chủ nhà bằng Telegram Bot hay gửi khách thuê qua ZNS/SMS? | Giai đoạn sau; hiện chỉ có màn nhắc nợ | Thấp |
+| 14 | Có thêm index theo kết quả benchmark dữ liệu lớn không? | Tối ưu query | Thấp |
+
+---
+
+## Quyết định chốt cho Phase 1 ngày 12/07/2026
+
+- `Hủy` chỉ dùng trước ngày bắt đầu và khi hợp đồng chưa có hóa đơn, chỉ số gắn hợp đồng, giao dịch cọc, thanh toán hoặc khoản phát sinh. Hợp đồng đã đến ngày bắt đầu phải đi qua flow `Trả phòng`; không có đường `Kết thúc` trực tiếp bỏ qua quyết toán.
+- `HopDong.TienThueThoaThuan` là giá gốc riêng của hợp đồng. Thay đổi giá thuê giữa hợp đồng được lưu theo scope `HopDong`; `Phong.GiaThueMacDinh` chỉ là giá gợi ý cho hợp đồng mới và không mang lịch sử giá hợp đồng cũ sang hợp đồng mới.
+- Nếu kỳ trả phòng chưa có hóa đơn thì luôn preview/tạo hóa đơn kỳ cuối, kể cả trả đúng ngày cuối tháng. Nếu đã có hóa đơn đủ tháng nhưng trả giữa tháng và số ngày không khớp, phải xóa/hủy rồi lập lại đúng trước khi trả phòng; Phase 1 chưa dùng credit note.
+- Hóa đơn chưa có thanh toán/settlement được phép xóa vật lý trong transaction; khoản phát sinh phải được trả về `ChuaXuLy` và liên kết hóa đơn ghép phải được tháo an toàn. Hóa đơn đã có thanh toán, `KetChuyenNo`, `TruCoc` hoặc đang mang `TienNoKyTruoc` không được xóa.
+- Phase 1 không cho thu vượt số còn phải trả của hóa đơn. Tiền ứng trước sau này phải có ledger/số dư riêng, không biểu diễn bằng `HoaDon.SoTienDaThu > TongCong`.
+- Giao dịch cọc thủ công không được backdate trước ngày bắt đầu hoặc sau ngày hiện tại. `TruNo` phải tham chiếu hóa đơn cùng hợp đồng; `DieuChinh` chỉ do flow nội bộ tạo. Thu/hoàn thủ công lưu phương thức `TienMat`/`ChuyenKhoan`; mọi thay đổi số dư phải khóa theo hợp đồng và không làm số dư âm.
+- Dịch vụ `TheoNguoi`: người có mặt bất kỳ ngày nào trong kỳ được tính đủ một suất tháng; cần lưu hiệu lực thành viên và không xóa cứng lịch sử.
+- Ngày đến hạn kỳ N lấy `HopDong.NgayThanhToanHangThang` trong tháng N+1; nếu tháng ngắn hơn thì dùng ngày cuối tháng.
+- Snapshot hóa đơn tối thiểu gồm nhà, mã/tên phòng, khách đại diện, CCCD, tên/đơn vị dịch vụ và mô tả khoản phát sinh.
+- Hợp đồng tương lai dùng trạng thái `ChoHieuLuc`; chỉ chuyển `DangHieuLuc` khi đến ngày bắt đầu và không chồng kỳ.
+- Trước khi có quyết định triển khai khác, ứng dụng chỉ chạy localhost; Phase 1 không mở rộng auth/multi-user.
+
+Các dòng tương ứng trong bảng `Mục Chưa Chốt` phía trên được giữ lại làm dấu vết câu hỏi của phiên review; nội dung tại mục này là quyết định mới nhất và có hiệu lực.
 
 ---
 
@@ -413,4 +440,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 43 - 07/07/2026
+Cập nhật lần cuối: Phiên 49 - 12/07/2026. Phiên 49 chỉ bổ sung vấn đề chưa chốt từ review; không tự chốt quyết định nghiệp vụ mới.

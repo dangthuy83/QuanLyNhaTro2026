@@ -39,7 +39,8 @@ public class TraPhongService(
             throw new InvalidOperationException("Hop dong khong co ngay o trong ky tra phong.");
 
         var hdThangNay = await hoaDonRepo.GetByHopDongThangNamAsync(hopDongId, thang, nam);
-        bool canSinhHd = soNgayO < soNgayTrongThang && hdThangNay == null;
+        ValidateHoaDonKyTraPhong(hdThangNay, soNgayO, soNgayTrongThang);
+        bool canSinhHd = hdThangNay == null;
 
         decimal tienPhongProRata = 0;
         decimal tongDichVuThangCuoi = 0;
@@ -108,7 +109,8 @@ public class TraPhongService(
             throw new InvalidOperationException("Hop dong khong co ngay o trong ky tra phong.");
 
         var hdThangNay = await hoaDonRepo.GetByHopDongThangNamAsync(hopDongId, thang, nam);
-        bool canSinhHd = soNgayO < soNgayTrongThang && hdThangNay == null;
+        ValidateHoaDonKyTraPhong(hdThangNay, soNgayO, soNgayTrongThang);
+        bool canSinhHd = hdThangNay == null;
 
         await using var conn = new MySqlConnection(config.GetConnectionString("DefaultConnection"));
         await conn.OpenAsync();
@@ -409,6 +411,18 @@ public class TraPhongService(
             """,
             new { HopDongId = hopDongId },
             tx);
+
+    private static void ValidateHoaDonKyTraPhong(HoaDon? hoaDon, int soNgayO, int soNgayTrongThang)
+    {
+        if (hoaDon == null || soNgayO == soNgayTrongThang)
+            return;
+
+        if (hoaDon.SoNgayO != soNgayO || hoaDon.SoNgayTrongThang != soNgayTrongThang)
+        {
+            throw new InvalidOperationException(
+                "Ky tra phong da co hoa don khong khop ngay tra. Hay xoa/huy va lap lai hoa don dung so ngay o truoc khi tra phong.");
+        }
+    }
 
     private static async Task<decimal> TinhNoKyTruocAsync(
         MySqlConnection conn,

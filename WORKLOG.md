@@ -10,17 +10,21 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 4: đang xử lý rủi ro nghiệp vụ lõi - ledger cọc đã có bản tối thiểu |
-| Build | `dotnet build --no-restore` thành công với 0 warning, 0 error ở phiên mới nhất. `dotnet test --no-restore` kết thúc mã 0 nhưng không có output test đáng kể |
+| Giai đoạn | Sau review toàn diện phiên 49: chưa sẵn sàng nhập dữ liệu thật; đề xuất Phase 1 xử lý lỗi Critical/High trước |
+| Build | Phiên 49: `dotnet build --no-restore` pass 0 warning, 0 error trước restore harness; `dotnet test --no-restore -p:NuGetAudit=false` mã 0 nhưng repo không có test tự động đáng kể |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Chưa có dữ liệu vận hành thật. Phiên 45 chốt baseline mới: sau khi hoàn thành sẽ tạo lại database từ `Database/schema.sql`; các update cũ đã chuyển vào `Database/updates/archive_pre_20260710` và không chạy trên baseline mới. Schema sạch đã smoke pass 17 bảng; dịch vụ hợp đồng theo kỳ, hóa đơn, lịch sử giá và xóa phòng an toàn đã smoke bằng database tạm. |
+| Database | Chưa có dữ liệu vận hành thật. Phiên 49 tạo database tạm từ `Database/schema.sql` và smoke pass 19 bảng, 74 constraint, 7 dịch vụ mẫu; database tạm đã xóa. Chỉ chạy file trực tiếp trong `Database/updates/` cho DB hiện tại, không chạy archive trên baseline mới. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
-| Quyết định quan trọng | `Database/schema.sql` là nguồn chuẩn; `PhongDichVu` giữ cấu hình/đơn giá phòng, `HopDongDichVu` giữ dịch vụ hợp đồng theo kỳ; Điện mẫu là bắt buộc, Nước là tùy chọn; hóa đơn vẫn snapshot đơn giá; thay đổi giá và thay đổi đăng ký dịch vụ đều áp dụng theo kỳ; phòng đã có dữ liệu nghiệp vụ không được xóa cứng. |
+| Quyết định quan trọng | Giữ nguyên các quyết định đã chốt. Phiên 49 không chốt thêm nghiệp vụ; các câu hỏi về Hủy/Trả phòng, scope lịch sử giá thuê, nhân khẩu theo kỳ, trả dư và ngày đến hạn đã đưa vào `DECISIONS.md` mục Chưa Chốt. |
 
 ### Việc cần làm tiếp
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
+| 0 | Duyệt Phase 1 của review phiên 49 | Xem `PROJECT_REVIEW.md` mục 0; chưa triển khai fix hàng loạt trước khi user duyệt | Critical |
+| 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | `REVIEW-001`, `REVIEW-002`, `REVIEW-010` | Critical |
+| 0.2 | Sửa scope lịch sử giá thuê và lock thanh toán/cọc | `REVIEW-003`, `REVIEW-004`, `REVIEW-005` | Critical |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | `REVIEW-006` đến `REVIEW-016` | Cao |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -53,6 +57,96 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 50 - Chốt nghiệp vụ Critical và triển khai nhóm Phase 1 đầu tiên
+
+Ngày: 12/07/2026
+
+Quyết định đã được duyệt và ghi vào `DECISIONS.md`: ranh giới Hủy/Trả phòng, scope giá thuê theo hợp đồng, hóa đơn kỳ cuối, xóa/reissue hóa đơn, không thu dư trong Phase 1, guard ledger cọc, lịch sử nhân khẩu, due date, snapshot chứng từ, hợp đồng tương lai và phạm vi localhost.
+
+Đã triển khai nhóm REVIEW-001/002:
+
+- `TraPhongService` luôn preview/tạo hóa đơn kỳ cuối khi kỳ trả phòng chưa có hóa đơn, kể cả trả ngày cuối tháng.
+- Nếu trả giữa tháng nhưng hóa đơn hiện có không khớp số ngày ở, flow trả phòng bị chặn để xóa/hủy và lập lại đúng.
+- `HopDong/KetThuc` không còn cập nhật trực tiếp hợp đồng/phòng; endpoint chuyển vào flow `TraPhong`.
+- Bỏ nút `Kết thúc HĐ` trực tiếp. Nút `Hủy HĐ` chỉ hiện cho hợp đồng tương lai.
+- `HopDongService.HuyHopDongAsync` khóa hợp đồng trong transaction và chỉ cho hủy trước ngày bắt đầu khi chưa có hóa đơn, chỉ số, cọc, thanh toán hoặc khoản phát sinh.
+
+Xác minh hiện tại:
+
+```text
+dotnet build --no-restore: PASS, 0 error; 1 warning NU1900 do vulnerability feed của môi trường.
+git diff --check: PASS.
+Service-level smoke database tạm: PASS.
+PHASE1_GROUP1_SMOKE_PASS FullMonthInvoice=1 Contract=DaKetThuc Room=Trong EligibleCancel=DaHuy DepositCancel=Blocked.
+Database tạm đã DROP trong `finally`; không đụng dữ liệu vận hành.
+```
+
+Không thay đổi schema trong nhóm này; không tạo apply-once SQL.
+
+---
+
+### Phiên 49 - Review toàn diện logic, dữ liệu và sẵn sàng vận hành
+
+Ngày: 12/07/2026
+
+Phạm vi:
+
+- Đọc đầy đủ `DECISIONS.md`, `WORKLOG.md`, `PROJECT_REVIEW.md`, `Database/schema.sql`, toàn bộ
+  `Database/updates/` kể cả archive và `Program.cs`.
+- Rà bằng `rg` toàn bộ controller/service/repository/model liên quan các luồng A-M.
+- Chỉ chẩn đoán và cập nhật tài liệu; không sửa nghiệp vụ, schema hoặc dữ liệu vận hành.
+
+Git đầu phiên:
+
+```text
+main = origin/main = 1c1273b feat: expand tenant and contract details
+Worktree clean; không có commit local chưa push.
+```
+
+Kết quả xác minh:
+
+```text
+dotnet build --no-restore
+Build succeeded. 0 Warning(s), 0 Error(s).
+
+dotnet test --no-restore -p:NuGetAudit=false
+Exit code 0; repo không có test output đáng kể.
+
+Schema smoke database TEST_REVIEW_SCHEMA_*:
+Tables=19; Constraints=74; SeedServices=7; SCHEMA_SMOKE_PASS.
+Database tạm đã DROP trong finally.
+
+Business smoke database TEST_REVIEW_BUSINESS_*:
+CASE_RETURN_FULL_MONTH: không tạo hóa đơn nhưng hợp đồng DaKetThuc, phòng Trong.
+CASE_PRICE_HISTORY: giá hợp đồng 3,000,000 nhưng preview lấy 2,500,000 từ lịch sử phòng cũ.
+CASE_PEOPLE_HISTORY: số lượng TheoNguoi của cùng kỳ đổi 2 -> 1 khi sửa liên kết khách.
+CASE_DELETE_CHARGE: xóa hóa đơn có khoản phát sinh bị FK chặn; hóa đơn còn nguyên.
+Database tạm đã DROP trong finally.
+```
+
+Kết luận:
+
+- Chưa sẵn sàng nhập dữ liệu thật/thay Excel hoàn toàn.
+- Ghi 24 phát hiện `REVIEW-001` đến `REVIEW-024` trong `PROJECT_REVIEW.md` mục 0.
+- Critical ưu tiên: trả phòng cuối tháng, kết thúc/hủy bypass, scope lịch sử giá phòng, race thanh toán và race/cấn nhầm cọc.
+- High tiếp theo: overlap hợp đồng, sửa hợp đồng sau chốt, lịch sử nhân khẩu, atomic chỉ số, chuyển phòng,
+  xóa hóa đơn có khoản phát sinh, snapshot chứng từ, constraint DB và due date công nợ.
+- Browser/visual QA không cần để xác nhận các lỗi backend này; concurrency smoke thật được hoãn đến sau khi có fix khóa dòng.
+- Restore harness phát sinh `NU1900` do môi trường không truy cập vulnerability feed; đây không phải lỗi compile.
+
+Tài liệu cập nhật:
+
+- `PROJECT_REVIEW.md`: executive summary, ma trận A-M, 24 phát hiện, câu hỏi và kế hoạch 4 phase.
+- `DECISIONS.md`: chỉ cập nhật “Mục Chưa Chốt”; không tự chốt nghiệp vụ mới.
+- `WORKLOG.md`: bằng chứng build/schema/business smoke và trạng thái Git.
+
+Không làm:
+
+- Không sửa code/schema nghiệp vụ.
+- Không chạy/xóa dữ liệu thật.
+- Không đưa `appsettings.json` vào Git.
+- Không mở rộng Syncfusion, nhắc nợ tự động, Telegram/ZNS/SMS hoặc refactor diện rộng.
 
 ### Phiên 48 - Thông tin CCCD, phương tiện và mặc định hợp đồng
 
