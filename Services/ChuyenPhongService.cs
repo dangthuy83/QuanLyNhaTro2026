@@ -55,6 +55,34 @@ public class ChuyenPhongService(
 
         try
         {
+            var hdCuDaKhoa = await conn.QueryFirstOrDefaultAsync<HopDong>(
+                "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
+                new { Id = vm.HopDongCuId }, tx)
+                ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+            if (hdCuDaKhoa.TrangThai != "DangHieuLuc")
+                throw new InvalidOperationException("Hop dong khong con hieu luc de chuyen phong.");
+
+            var phongIds = new[] { hdCuDaKhoa.PhongId, vm.PhongMoiId }.Distinct().OrderBy(x => x).ToArray();
+            foreach (var phongId in phongIds)
+            {
+                var locked = await conn.ExecuteScalarAsync<int?>(
+                    "SELECT Id FROM Phong WHERE Id = @Id FOR UPDATE", new { Id = phongId }, tx);
+                if (!locked.HasValue) throw new InvalidOperationException("Khong tim thay phong can khoa.");
+            }
+
+            var biChong = await conn.ExecuteScalarAsync<bool>(
+                """
+                SELECT EXISTS(
+                    SELECT 1 FROM HopDong
+                    WHERE PhongId = @PhongId
+                      AND TrangThai <> 'DaHuy'
+                      AND NgayBatDau <= '9999-12-31'
+                      AND COALESCE(NgayKetThuc, '9999-12-31') >= @NgayBatDau)
+                """,
+                new { PhongId = vm.PhongMoiId, NgayBatDau = vm.NgayBatDauMoi.Date }, tx);
+            if (biChong)
+                throw new InvalidOperationException("Phong moi da co hop dong chiem dung trong khoang thoi gian nay.");
+
             await conn.ExecuteAsync(
                 "UPDATE HopDong SET TrangThai='DaChuyenPhong', NgayKetThuc=@Ngay WHERE Id=@Id",
                 new { Ngay = vm.NgayChuyenDi, Id = vm.HopDongCuId }, tx);

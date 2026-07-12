@@ -8,7 +8,8 @@ namespace QuanLyNhaTro.Controllers;
 public class KiemTraDuLieuController(
     KiemTraDuLieuRepository kiemTraRepo,
     NhaRepository nhaRepo,
-    HoaDonService hoaDonService) : Controller
+    HoaDonService hoaDonService,
+    HopDongService hopDongService) : Controller
 {
     public async Task<IActionResult> Index(
         int? thang,
@@ -17,6 +18,7 @@ public class KiemTraDuLieuController(
         string? tuKhoa,
         string trangThaiDong = "TatCa")
     {
+        await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "kiemtra";
         thang ??= DateTime.Today.Month;
         nam ??= DateTime.Today.Year;

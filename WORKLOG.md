@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-005 đã triển khai; bước tiếp theo là REVIEW-006/007 theo phạm vi High |
-| Build | Phiên 52: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 đã triển khai; REVIEW-008/009/010/011 chưa làm |
+| Build | Phiên 53: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 52 schema smoke pass 19 bảng, 75 constraint, 7 dịch vụ mẫu; migration và concurrency smoke REVIEW-004/005 pass trên database tạm rồi đã drop. |
+| Database | Phiên 53 schema smoke pass 19 bảng, 77 constraint, 7 dịch vụ mẫu; REVIEW-006/007 concurrency smoke pass và DB tạm đã drop. Dry-run DB thật sạch, apply-once mới đã tạo 2 CHECK + 1 index. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -21,10 +21,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | # | Việc | Ghi chú | Ưu tiên |
 |---|---|---|---|
-| 0 | Duyệt Phase 1 của review phiên 49 | Xem `PROJECT_REVIEW.md` mục 0; chưa triển khai fix hàng loạt trước khi user duyệt | Critical |
-| 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | `REVIEW-001`, `REVIEW-002`, `REVIEW-010` | Critical |
+| 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
+| 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002 đã xong; REVIEW-010 chưa triển khai | Critical |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | `REVIEW-006` đến `REVIEW-016` | Cao |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006/007 đã xong; REVIEW-008 đến REVIEW-016 còn lại | Cao |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,28 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 53 - REVIEW-006/007: chống chồng kỳ và khóa sửa lịch sử hợp đồng
+
+Đã triển khai thay đổi hẹp theo quyết định Phase 1:
+
+- `HopDongService.TaoHopDongAsync` khóa dòng `Phong` trong transaction, kiểm tra mọi hợp đồng không hủy có khoảng `[NgayBatDau, NgayKetThuc]` giao nhau rồi mới insert. Hai request đồng thời cùng phòng được serialize bằng khóa phòng.
+- Hợp đồng bắt đầu sau hôm nay được gán `ChoHieuLuc`; không đổi `Phong.TrangThai` sang `DangThue`. `KichHoatHopDongDenHanAsync` chỉ chuyển sang `DangHieuLuc` sau khi đến ngày và kiểm tra overlap lại dưới khóa phòng; controller hợp đồng, dashboard, phòng và kiểm tra dữ liệu dùng cùng service này.
+- `ChuyenPhongService` khóa lại hợp đồng cũ và hai dòng phòng theo thứ tự, rồi kiểm tra overlap phòng mới trước khi ghi.
+- Edit tải bản gốc `FOR UPDATE`; không tin hidden `PhongId`/`TrangThai`, giữ giá gốc `TienThueThoaThuan`, validate `NgayKetThuc >= NgayBatDau`, khách đại diện thuộc danh sách và khoảng sửa không overlap.
+- Khi đã có hóa đơn, chỉ số, ledger cọc, thanh toán hoặc khoản phát sinh, Edit chỉ cập nhật `GhiChu`; phòng, ngày, cọc, giá gốc và danh sách khách được giữ nguyên. Effective-date nhân khẩu chưa triển khai và tiếp tục thuộc REVIEW-008.
+- `Database/schema.sql` thêm CHECK khoảng ngày/trạng thái và index `IX_HopDong_Phong_KhoangNgay`; file apply-once mới là `Database/updates/20260712_contract_overlap_future_status.sql`.
+
+Kiểm tra thực tế:
+
+- `dotnet build --no-restore`: pass, 0 error; 1 warning `NU1900` vì sandbox không truy cập vulnerability feed.
+- Schema smoke database tạm: 19 bảng, 77 constraint, 7 dịch vụ mẫu, PASS; database tạm đã drop trong `finally`.
+- Service/concurrency smoke: cả 7 ca bắt buộc pass (future/ChoHieuLuc, overlap, race chỉ một thành công, khoảng nối tiếp, hidden field, ngày/đại diện, khóa lịch sử + sửa ghi chú); database tạm đã drop trong `finally`.
+- Dry-run database vận hành: `InvalidDateRanges=0`, `InvalidStatuses=0`, `OverlappingPairs=0`.
+- Apply-once database vận hành: `Constraints=2`, `Indexes=1`; không backfill/xóa dữ liệu và không replay hai migration cũ.
+- `git diff --check`: pass.
+
+Phạm vi giữ nguyên: chưa làm REVIEW-008/009/010/011; không mở rộng Syncfusion, nhắn tin, auth/multi-user hoặc refactor UI diện rộng.
 
 ### Phiên 52 - REVIEW-004/005: khóa thanh toán và ledger cọc
 

@@ -51,6 +51,27 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
             new { PhongId = phongId },
             transaction: tx);
 
+    public async Task<bool> CoChongKhoangAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int phongId,
+        DateTime ngayBatDau,
+        DateTime? ngayKetThuc,
+        int? excludeId = null)
+        => await conn.ExecuteScalarAsync<bool>(
+            """
+            SELECT EXISTS(
+                SELECT 1
+                FROM HopDong
+                WHERE PhongId = @PhongId
+                  AND TrangThai <> 'DaHuy'
+                  AND (@ExcludeId IS NULL OR Id <> @ExcludeId)
+                  AND NgayBatDau <= COALESCE(@NgayKetThuc, '9999-12-31')
+                  AND COALESCE(NgayKetThuc, '9999-12-31') >= @NgayBatDau)
+            """,
+            new { PhongId = phongId, NgayBatDau = ngayBatDau.Date, NgayKetThuc = ngayKetThuc?.Date, ExcludeId = excludeId },
+            transaction: tx);
+
     public async Task<HopDong?> GetByPhongAndDateAsync(int phongId, DateTime ngay)
         => await _db.QueryFirstOrDefaultAsync<HopDong>(
             """
@@ -118,6 +139,25 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
             """;
         await conn.ExecuteAsync(sql, hd, transaction: tx);
     }
+
+    public async Task UpdateEditableAsync(IDbConnection conn, IDbTransaction tx, HopDong hd)
+        => await conn.ExecuteAsync(
+            """
+            UPDATE HopDong SET
+                NgayBatDau = @NgayBatDau,
+                NgayKetThuc = @NgayKetThuc,
+                TienCoc = @TienCoc,
+                GhiChu = @GhiChu
+            WHERE Id = @Id
+            """,
+            hd,
+            transaction: tx);
+
+    public async Task UpdateGhiChuAsync(IDbConnection conn, IDbTransaction tx, int id, string? ghiChu)
+        => await conn.ExecuteAsync(
+            "UPDATE HopDong SET GhiChu = @GhiChu WHERE Id = @Id",
+            new { Id = id, GhiChu = ghiChu },
+            transaction: tx);
 
     public async Task UpdateTrangThaiAsync(int id, string trangThai)
         => await _db.ExecuteAsync(

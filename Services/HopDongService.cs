@@ -29,8 +29,8 @@ public class HopDongService(
                 new { Id = hopDongId },
                 tx) ?? throw new InvalidOperationException("Khong tim thay hop dong.");
 
-            if (hopDong.TrangThai != "DangHieuLuc")
-                throw new InvalidOperationException("Chi duoc huy hop dong dang hieu luc.");
+            if (hopDong.TrangThai is not ("ChoHieuLuc" or "DangHieuLuc"))
+                throw new InvalidOperationException("Chi duoc huy hop dong cho hieu luc hoac dang hieu luc.");
             if (ngayHuy.Date >= hopDong.NgayBatDau.Date)
                 throw new InvalidOperationException("Hop dong da den ngay bat dau. Hay dung flow Tra phong de quyet toan.");
 
@@ -90,7 +90,10 @@ public class HopDongService(
         int? khachChinhId,
         int[] phongDichVuIds)
     {
-        hopDong.TrangThai = "DangHieuLuc";
+        ValidateThongTinHopDong(hopDong, khachThueIds, khachChinhId);
+        hopDong.TrangThai = hopDong.NgayBatDau.Date > DateTime.Today
+            ? "ChoHieuLuc"
+            : "DangHieuLuc";
 
         var conn = (MySqlConnection)db;
         if (conn.State != ConnectionState.Open)
@@ -99,9 +102,14 @@ public class HopDongService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
-            var hopDongDangHieuLuc = await hopDongRepo.GetDangHieuLucByPhongAsync(conn, tx, hopDong.PhongId);
-            if (hopDongDangHieuLuc != null)
-                throw new InvalidOperationException($"Phong #{hopDong.PhongId} da co hop dong dang hieu luc.");
+            var phongTonTai = await conn.ExecuteScalarAsync<int?>(
+                "SELECT Id FROM Phong WHERE Id = @PhongId FOR UPDATE",
+                new { hopDong.PhongId }, tx);
+            if (!phongTonTai.HasValue)
+                throw new InvalidOperationException("Khong tim thay phong.");
+            if (await hopDongRepo.CoChongKhoangAsync(
+                    conn, tx, hopDong.PhongId, hopDong.NgayBatDau, hopDong.NgayKetThuc))
+                throw new InvalidOperationException("Phong da co hop dong chiem dung trong khoang thoi gian nay.");
 
             var dichVuDaChon = await ValidateDichVuAsync(
                 conn, tx, hopDong.PhongId, phongDichVuIds, requireActive: true);
@@ -114,7 +122,8 @@ public class HopDongService(
                 hopDongId,
                 dichVuDaChon.Select(x => x.Id),
                 hopDong.NgayBatDau);
-            await phongRepo.UpdateTrangThaiAsync(conn, tx, hopDong.PhongId, "DangThue");
+            if (hopDong.TrangThai == "DangHieuLuc")
+                await phongRepo.UpdateTrangThaiAsync(conn, tx, hopDong.PhongId, "DangThue");
             await giaoDichCocService.GhiNhanThuCocBanDauAsync(
                 conn,
                 tx,
@@ -198,16 +207,37 @@ public class HopDongService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
-            var giaGoc = await conn.ExecuteScalarAsync<decimal?>(
-                "SELECT TienThueThoaThuan FROM HopDong WHERE Id = @Id FOR UPDATE",
+            var banGoc = await conn.QueryFirstOrDefaultAsync<HopDong>(
+                "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
                 new { hopDong.Id },
                 transaction: tx)
                 ?? throw new InvalidOperationException("Khong tim thay hop dong.");
-            hopDong.TienThueThoaThuan = giaGoc;
 
-            await hopDongRepo.UpdateAsync(conn, tx, hopDong);
-            await hdKhachRepo.DeleteByHopDongAsync(conn, tx, hopDong.Id);
-            await CapNhatKhachThueAsync(conn, tx, hopDong.Id, khachThueIds, khachChinhId);
+            var coDuLieu = await CoDuLieuNghiepVuAsync(conn, tx, hopDong.Id);
+            if (coDuLieu)
+            {
+                await hopDongRepo.UpdateGhiChuAsync(conn, tx, hopDong.Id, hopDong.GhiChu);
+            }
+            else
+            {
+                ValidateThongTinHopDong(hopDong, khachThueIds, khachChinhId);
+                hopDong.PhongId = banGoc.PhongId;
+                hopDong.TrangThai = banGoc.TrangThai;
+                hopDong.TienThueThoaThuan = banGoc.TienThueThoaThuan;
+                hopDong.HopDongTruocId = banGoc.HopDongTruocId;
+                hopDong.DaXuLyChenhLechCoc = banGoc.DaXuLyChenhLechCoc;
+
+                await conn.ExecuteScalarAsync<int>(
+                    "SELECT Id FROM Phong WHERE Id = @PhongId FOR UPDATE",
+                    new { banGoc.PhongId }, tx);
+                if (await hopDongRepo.CoChongKhoangAsync(
+                        conn, tx, banGoc.PhongId, hopDong.NgayBatDau, hopDong.NgayKetThuc, hopDong.Id))
+                    throw new InvalidOperationException("Khoang thoi gian sua bi chong voi hop dong khac cua phong.");
+
+                await hopDongRepo.UpdateEditableAsync(conn, tx, hopDong);
+                await hdKhachRepo.DeleteByHopDongAsync(conn, tx, hopDong.Id);
+                await CapNhatKhachThueAsync(conn, tx, hopDong.Id, khachThueIds, khachChinhId);
+            }
 
             await tx.CommitAsync();
         }
@@ -217,6 +247,77 @@ public class HopDongService(
             throw;
         }
     }
+
+    public async Task<int> KichHoatHopDongDenHanAsync(DateTime ngay)
+    {
+        var conn = (MySqlConnection)db;
+        if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+
+        var ids = (await conn.QueryAsync<int>(
+            "SELECT Id FROM HopDong WHERE TrangThai = 'ChoHieuLuc' AND NgayBatDau <= @Ngay ORDER BY NgayBatDau, Id",
+            new { Ngay = ngay.Date })).ToArray();
+        var count = 0;
+        foreach (var id in ids)
+        {
+            await using var tx = await conn.BeginTransactionAsync();
+            try
+            {
+                var hd = await conn.QueryFirstOrDefaultAsync<HopDong>(
+                    "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE", new { Id = id }, tx);
+                if (hd == null || hd.TrangThai != "ChoHieuLuc" || hd.NgayBatDau.Date > ngay.Date)
+                {
+                    await tx.RollbackAsync();
+                    continue;
+                }
+                await conn.ExecuteScalarAsync<int>(
+                    "SELECT Id FROM Phong WHERE Id = @PhongId FOR UPDATE", new { hd.PhongId }, tx);
+                if (await hopDongRepo.CoChongKhoangAsync(
+                        conn, tx, hd.PhongId, hd.NgayBatDau, hd.NgayKetThuc, hd.Id))
+                {
+                    await tx.RollbackAsync();
+                    continue;
+                }
+                await conn.ExecuteAsync(
+                    "UPDATE HopDong SET TrangThai = 'DangHieuLuc' WHERE Id = @Id", new { hd.Id }, tx);
+                await phongRepo.UpdateTrangThaiAsync(conn, tx, hd.PhongId, "DangThue");
+                await tx.CommitAsync();
+                count++;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+        return count;
+    }
+
+    public async Task<bool> CoDuLieuNghiepVuAsync(int hopDongId)
+    {
+        var conn = (MySqlConnection)db;
+        if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+        return await CoDuLieuNghiepVuAsync(conn, null, hopDongId);
+    }
+
+    private static void ValidateThongTinHopDong(HopDong hopDong, int[] khachThueIds, int? khachChinhId)
+    {
+        if (hopDong.NgayKetThuc.HasValue && hopDong.NgayKetThuc.Value.Date < hopDong.NgayBatDau.Date)
+            throw new InvalidOperationException("Ngay ket thuc khong duoc truoc ngay bat dau.");
+        var selected = khachThueIds.Distinct().ToHashSet();
+        if (khachChinhId.HasValue && !selected.Contains(khachChinhId.Value))
+            throw new InvalidOperationException("Khach dai dien phai thuoc danh sach khach da chon.");
+    }
+
+    private static async Task<bool> CoDuLieuNghiepVuAsync(IDbConnection conn, IDbTransaction? tx, int id)
+        => await conn.ExecuteScalarAsync<int>(
+            """
+            SELECT
+                EXISTS(SELECT 1 FROM HoaDon WHERE HopDongId = @Id)
+              + EXISTS(SELECT 1 FROM ChiSoDienNuoc WHERE HopDongId = @Id)
+              + EXISTS(SELECT 1 FROM GiaoDichCoc WHERE HopDongId = @Id)
+              + EXISTS(SELECT 1 FROM KhoanPhatSinhHopDong WHERE HopDongId = @Id)
+              + EXISTS(SELECT 1 FROM ThanhToan tt INNER JOIN HoaDon hd ON hd.Id = tt.HoaDonId WHERE hd.HopDongId = @Id)
+            """, new { Id = id }, tx) > 0;
 
     private async Task CapNhatKhachThueAsync(
         IDbConnection conn,

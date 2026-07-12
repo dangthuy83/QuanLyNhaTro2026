@@ -18,12 +18,14 @@ public class HopDongController(
 {
     public async Task<IActionResult> Index()
     {
+        await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "hopdong";
         return View(await hopDongRepo.GetAllAsync());
     }
 
     public async Task<IActionResult> Details(int id)
     {
+        await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "hopdong";
         var hd = await hopDongRepo.GetByIdAsync(id);
         if (hd == null) return NotFound();
@@ -141,6 +143,7 @@ public class HopDongController(
         if (hd == null) return NotFound();
 
         await NapDuLieuFormEditAsync(id);
+        ViewBag.CoDuLieuNghiepVu = await hopDongService.CoDuLieuNghiepVuAsync(id);
         return View(hd);
     }
 
@@ -152,6 +155,7 @@ public class HopDongController(
         if (!ModelState.IsValid)
         {
             await NapDuLieuFormEditAsync(id);
+            ViewBag.CoDuLieuNghiepVu = await hopDongService.CoDuLieuNghiepVuAsync(id);
             return View(hd);
         }
 
@@ -165,6 +169,7 @@ public class HopDongController(
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             await NapDuLieuFormEditAsync(id);
+            ViewBag.CoDuLieuNghiepVu = await hopDongService.CoDuLieuNghiepVuAsync(id);
             return View(hd);
         }
     }

@@ -3,15 +3,18 @@ using Microsoft.AspNetCore.Mvc;
 using System.Data;
 using QuanLyNhaTro.Models;
 using QuanLyNhaTro.Repositories;
+using QuanLyNhaTro.Services;
 
 namespace QuanLyNhaTro.Controllers;
 
 public class HomeController(
     IDbConnection db,
-    PhongRepository phongRepo) : Controller
+    PhongRepository phongRepo,
+    HopDongService hopDongService) : Controller
 {
     public async Task<IActionResult> Index()
     {
+        await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "dashboard";
 
         var thang = DateTime.Today.Month;

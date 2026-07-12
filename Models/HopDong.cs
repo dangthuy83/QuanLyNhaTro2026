@@ -8,7 +8,7 @@ public class HopDong
     public DateTime? NgayKetThuc { get; set; }
     public decimal TienThueThoaThuan { get; set; }  // Giá thỏa thuận — dùng LayGiaApDung khi lập HĐơn
     public decimal TienCoc { get; set; }
-    public string TrangThai { get; set; } = "DangHieuLuc"; // DangHieuLuc | DaKetThuc | DaHuy | DaChuyenPhong
+    public string TrangThai { get; set; } = "DangHieuLuc"; // ChoHieuLuc | DangHieuLuc | DaKetThuc | DaHuy | DaChuyenPhong
     public int? HopDongTruocId { get; set; }               // Liên kết khi chuyển phòng
     public bool DaXuLyChenhLechCoc { get; set; } = false;  // Đã xử lý chênh lệch cọc chưa
     public DateTime? NgayTraPhongThucTe { get; set; }

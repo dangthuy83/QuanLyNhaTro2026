@@ -6,19 +6,23 @@
     var khoanPhatSinh = ViewBag.KhoanPhatSinh as IEnumerable<QuanLyNhaTro.Models.KhoanPhatSinhHopDong> ?? [];
     var dichVuHopDong = ViewBag.DichVuHopDong as IEnumerable<QuanLyNhaTro.Models.PhongDichVu> ?? [];
     bool dangHieuLuc = Model.TrangThai == "DangHieuLuc";
+    bool choHieuLuc = Model.TrangThai == "ChoHieuLuc";
     decimal soDuCoc = ViewBag.SoDuCoc is decimal value ? value : Model.TienCoc;
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
     <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
     <h5 class="mb-0">Hợp đồng — @Model.Phong?.TenPhong</h5>
-    @if (dangHieuLuc)
+    @if (dangHieuLuc || choHieuLuc)
     {
-        <a asp-controller="Gia" asp-action="HopDong" asp-route-hopDongId="@Model.Id"
-           class="btn btn-sm btn-outline-warning ms-auto">
-            <i class="bi bi-tag me-1"></i>Thay đổi giá thuê
-        </a>
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary me-1">
+        @if (dangHieuLuc)
+        {
+            <a asp-controller="Gia" asp-action="HopDong" asp-route-hopDongId="@Model.Id"
+               class="btn btn-sm btn-outline-warning ms-auto">
+                <i class="bi bi-tag me-1"></i>Thay đổi giá thuê
+            </a>
+        }
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary @(choHieuLuc ? "ms-auto" : "me-1")">
             <i class="bi bi-pencil me-1"></i>Sửa
         </a>
     }
@@ -72,6 +76,7 @@
                     <dd class="col-7">
                         @Html.Raw(Model.TrangThai switch {
                             "DangHieuLuc"   => "<span class='badge bg-success'>Đang hiệu lực</span>",
+                            "ChoHieuLuc"    => "<span class='badge bg-warning text-dark'>Chờ hiệu lực</span>",
                             "DaKetThuc"     => "<span class='badge bg-secondary'>Đã kết thúc</span>",
                             "DaHuy"         => "<span class='badge bg-danger'>Đã huỷ</span>",
                             _               => $"<span class='badge bg-light text-dark border'>{Model.TrangThai}</span>"
@@ -112,7 +117,7 @@
             </div>
         </div>
 
-        @if (dangHieuLuc)
+        @if (dangHieuLuc || choHieuLuc)
         {
             <div class="card shadow-sm border-warning">
                 <div class="card-body">

@@ -11,11 +11,13 @@ public class PhongController(
     HopDongRepository hopDongRepo,
     PhongDichVuRepository phongDichVuRepo,
     DichVuRepository dichVuRepo,
-    PhongService phongService) : Controller
+    PhongService phongService,
+    HopDongService hopDongService) : Controller
 {
     // GET /Phong
     public async Task<IActionResult> Index()
     {
+        await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "phong";
         var danhSach = await phongRepo.GetAllAsync();
         return View(danhSach);
@@ -71,6 +73,7 @@ public class PhongController(
     // GET /Phong/Details/5
     public async Task<IActionResult> Details(int id)
     {
+        await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "phong";
         var phong = await phongRepo.GetByIdAsync(id);
         if (phong == null) return NotFound();

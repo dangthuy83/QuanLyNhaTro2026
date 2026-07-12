@@ -133,7 +133,7 @@ CREATE TABLE PhongDichVu (
 
 -- ============================================================
 -- 6. HOPDONG — Hợp đồng thuê
--- TrangThai: DangHieuLuc | DaKetThuc | DaHuy | DaChuyenPhong
+-- TrangThai: ChoHieuLuc | DangHieuLuc | DaKetThuc | DaHuy | DaChuyenPhong
 -- HopDongTruocId: dùng khi khách CHUYỂN PHÒNG (không phải trả phòng thật) —
 --   liên kết hợp đồng mới với hợp đồng cũ để xử lý bù trừ tiền cọc và
 --   tính nợ kỳ trước xuyên hợp đồng.
@@ -156,8 +156,13 @@ CREATE TABLE HopDong (
     GhiChu TEXT NULL,
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_HopDong_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
-    CONSTRAINT FK_HopDong_Truoc FOREIGN KEY (HopDongTruocId) REFERENCES HopDong(Id)
+    CONSTRAINT FK_HopDong_Truoc FOREIGN KEY (HopDongTruocId) REFERENCES HopDong(Id),
+    CONSTRAINT CK_HopDong_KhoangNgay CHECK (NgayKetThuc IS NULL OR NgayKetThuc >= NgayBatDau),
+    CONSTRAINT CK_HopDong_TrangThai CHECK (TrangThai IN ('ChoHieuLuc', 'DangHieuLuc', 'DaKetThuc', 'DaHuy', 'DaChuyenPhong'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_HopDong_Phong_KhoangNgay
+    ON HopDong(PhongId, NgayBatDau, NgayKetThuc, TrangThai);
 
 -- ============================================================
 -- 7. HOPDONGKHACHTHUE — Liên kết nhiều-nhiều Hợp đồng <-> Khách thuê

@@ -6,6 +6,7 @@
     var khachHienTai  = ViewBag.KhachHienTai  as IEnumerable<QuanLyNhaTro.Models.HopDongKhachThue> ?? [];
     var khachHienTaiIds = khachHienTai.Select(k => k.KhachThueId).ToHashSet();
     var khachChinhId    = khachHienTai.FirstOrDefault(k => k.LaDaiDien)?.KhachThueId;
+    bool coDuLieuNghiepVu = ViewBag.CoDuLieuNghiepVu is true;
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
@@ -17,6 +18,13 @@
 
 <div class="card shadow-sm" style="max-width:640px">
     <div class="card-body">
+        @if (coDuLieuNghiepVu)
+        {
+            <div class="alert alert-warning py-2">
+                Hợp đồng đã phát sinh dữ liệu nghiệp vụ. Chỉ ghi chú được phép sửa; phòng, ngày, tiền cọc,
+                giá gốc và danh sách khách được giữ nguyên để bảo toàn lịch sử. Lịch sử nhân khẩu thuộc REVIEW-008.
+            </div>
+        }
         <form asp-action="Edit" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
@@ -26,11 +34,11 @@
             <div class="row g-3 mb-3">
                 <div class="col-6">
                     <label class="form-label fw-semibold">Ngày bắt đầu</label>
-                    <input asp-for="NgayBatDau" type="date" class="form-control" />
+                    <input asp-for="NgayBatDau" type="date" class="form-control" readonly="@coDuLieuNghiepVu" />
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-semibold">Ngày kết thúc</label>
-                    <input asp-for="NgayKetThuc" type="date" class="form-control" />
+                    <input asp-for="NgayKetThuc" type="date" class="form-control" readonly="@coDuLieuNghiepVu" />
                 </div>
             </div>
 
@@ -42,7 +50,7 @@
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-semibold">Tiền cọc (đ)</label>
-                    <input asp-for="TienCoc" type="number" min="0" class="form-control" />
+                    <input asp-for="TienCoc" type="number" min="0" class="form-control" readonly="@coDuLieuNghiepVu" />
                 </div>
             </div>
 
@@ -54,12 +62,20 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox"
                                    name="khachThueIds" value="@k.Id" id="k_@k.Id"
-                                   checked="@khachHienTaiIds.Contains(k.Id)" />
+                                   checked="@khachHienTaiIds.Contains(k.Id)" disabled="@coDuLieuNghiepVu" />
+                            @if (coDuLieuNghiepVu && khachHienTaiIds.Contains(k.Id))
+                            {
+                                <input type="hidden" name="khachThueIds" value="@k.Id" />
+                            }
                             <label class="form-check-label" for="k_@k.Id">
                                 @k.HoTen @(k.SoDienThoai != null ? $"({k.SoDienThoai})" : "")
                                 <input type="radio" name="khachChinhId" value="@k.Id"
                                        class="ms-2"
-                                       checked="@(k.Id == khachChinhId)" />
+                                       checked="@(k.Id == khachChinhId)" disabled="@coDuLieuNghiepVu" />
+                                @if (coDuLieuNghiepVu && k.Id == khachChinhId)
+                                {
+                                    <input type="hidden" name="khachChinhId" value="@k.Id" />
+                                }
                                 <small class="text-muted">chính</small>
                             </label>
                         </div>

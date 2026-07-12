@@ -42,6 +42,8 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - Ngày đến hạn kỳ N lấy `HopDong.NgayThanhToanHangThang` trong tháng N+1; nếu tháng ngắn hơn thì dùng ngày cuối tháng.
 - Snapshot hóa đơn tối thiểu gồm nhà, mã/tên phòng, khách đại diện, CCCD, tên/đơn vị dịch vụ và mô tả khoản phát sinh.
 - Hợp đồng tương lai dùng trạng thái `ChoHieuLuc`; chỉ chuyển `DangHieuLuc` khi đến ngày bắt đầu và không chồng kỳ.
+  - Triển khai REVIEW-006 khóa dòng `Phong` trong transaction trước khi tạo/chuyển/kích hoạt hợp đồng và kiểm tra giao nhau trên toàn bộ khoảng `[NgayBatDau, NgayKetThuc]`, không suy từ trạng thái phòng. Hợp đồng tương lai không đổi phòng sang `DangThue`; các màn hợp đồng, dashboard, phòng và kiểm tra dữ liệu kích hoạt hợp đồng đến hạn qua cùng service guard.
+  - Triển khai REVIEW-007 không tin `PhongId`, `TrangThai` hoặc giá gốc từ request Edit. Bản gốc được khóa/tải lại trong transaction; hợp đồng đã có dữ liệu nghiệp vụ chỉ cho sửa `GhiChu`. Danh sách khách được giữ nguyên khi đã phát sinh dữ liệu; lịch sử hiệu lực nhân khẩu vẫn thuộc REVIEW-008.
 - Trước khi có quyết định triển khai khác, ứng dụng chỉ chạy localhost; Phase 1 không mở rộng auth/multi-user.
 
 Các dòng tương ứng trong bảng `Mục Chưa Chốt` phía trên được giữ lại làm dấu vết câu hỏi của phiên review; nội dung tại mục này là quyết định mới nhất và có hiệu lực.
@@ -367,6 +369,8 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ### Đã hoàn thành
 
+- REVIEW-006/007: chống chồng khoảng hợp đồng bằng khóa dòng phòng + overlap query, trạng thái `ChoHieuLuc`, kích hoạt đến hạn có guard, và khóa sửa lịch sử hợp đồng sau phát sinh dữ liệu.
+
 - Core MVC: phòng, khách thuê, hợp đồng, dịch vụ, chỉ số, hóa đơn.
 - Dashboard.
 - Thu chi.
@@ -443,4 +447,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 49 - 12/07/2026. Phiên 49 chỉ bổ sung vấn đề chưa chốt từ review; không tự chốt quyết định nghiệp vụ mới.
+Cập nhật lần cuối: Phiên 53 - 12/07/2026. REVIEW-006/007 đã triển khai và kiểm tra trên database tạm; migration apply-once mới đã chạy trên database vận hành sau dry-run sạch.
