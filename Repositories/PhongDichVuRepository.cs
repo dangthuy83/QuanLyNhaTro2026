@@ -211,15 +211,24 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
     public async Task<PhongDichVu?> GetByIdAsync(int id)
     {
         const string sql = """
-            SELECT pdv.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh, dv.BatBuocKhiThue
+            SELECT pdv.*,
+                   dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh,
+                   dv.DonViTinh, dv.DonGiaMacDinh, dv.BatBuocKhiThue,
+                   p.Id, p.NhaId, p.TenPhong, p.DienTich, p.GiaThueMacDinh, p.TrangThai, p.GhiChu, p.NgayTao
             FROM PhongDichVu pdv
             JOIN DichVu dv ON pdv.DichVuId = dv.Id
+            JOIN Phong p ON pdv.PhongId = p.Id
             WHERE pdv.Id = @Id
             """;
-        var rows = await _db.QueryAsync<PhongDichVu, DichVu, PhongDichVu>(
+        var rows = await _db.QueryAsync<PhongDichVu, DichVu, Phong, PhongDichVu>(
             sql,
-            (pdv, dv) => { pdv.DichVu = dv; return pdv; },
-            new { Id = id }, splitOn: "Id");
+            (pdv, dv, phong) =>
+            {
+                pdv.DichVu = dv;
+                pdv.Phong = phong;
+                return pdv;
+            },
+            new { Id = id }, splitOn: "Id,Id");
         return rows.FirstOrDefault();
     }
 }

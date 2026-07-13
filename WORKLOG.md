@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-011 đã triển khai xong theo phạm vi đã chốt |
-| Build | Phiên 57: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 2: REVIEW-012 đã hoàn tất; REVIEW-013 đến REVIEW-016 còn lại |
+| Build | Phiên 58: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 57 schema/apply-once REVIEW-008 smoke pass; DB tạm drop trong `finally`. Dry-run DB vận hành sạch và apply-once đã chạy (`Rows=0`, `MissingNgayBatDau=0`). |
+| Database | Phiên 58 dry-run giá DB vận hành sạch; schema/service/concurrency/rollback smoke REVIEW-012 pass và DB tạm drop trong `finally`. Không đổi schema, không có dữ liệu lệch nên không cần apply-once. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,11 +24,11 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-011 đã xong; REVIEW-012 đến REVIEW-016 còn lại | Hoàn tất Phase 1 |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-012 đã xong; REVIEW-013 đến REVIEW-016 còn lại | Đang làm Phase 2 |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
-| 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Code hiện dùng `Phong` và `DichVu`; cần thống nhất với comment/schema | Trung bình |
+| 4 | Chốt nhãn `LoaiDoiTuong` của `LichSuThayDoiGia` | Đã thống nhất `HopDong` và `DichVu` trong code/model/schema ở REVIEW-003/012 | Hoàn tất |
 | 5 | Rà UI ledger cọc sau vận hành thực tế | Theo dõi thêm nhu cầu lọc/in phiếu sau khi dùng thật | Thấp |
 | 6 | Rà UI in phiếu thu sau vận hành | Bản HTML print tối thiểu đã có; theo dõi nhu cầu thêm logo/thông tin chủ nhà/mẫu phiếu riêng | Thấp |
 | 7 | Rà tiếp flow preview chốt hóa đơn hàng loạt sau vận hành | Đã thêm filter theo Nhà, tìm phòng/khách, lọc trạng thái dòng và chọn tất cả dòng sẵn sàng theo bộ lọc | Thấp |
@@ -57,6 +57,47 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 58 - REVIEW-012: khóa lịch sử giá theo hóa đơn và kỳ hiệu lực
+
+Đã triển khai:
+
+- `GiaService` khóa dòng `HopDong`/`PhongDichVu` và toàn bộ chuỗi lịch sử giá trong transaction trước khi thêm/xóa.
+- Chặn thêm hoặc xóa mốc giá khi đã có hóa đơn từ kỳ áp dụng trở đi. Giá thuê kiểm tra đúng hợp đồng; giá dịch vụ kiểm tra hợp đồng đã đăng ký đúng `PhongDichVu` tại kỳ hóa đơn.
+- Mốc giá tương lai không còn ghi ngay vào `PhongDichVu.DonGia`; giá base dịch vụ chỉ đồng bộ theo tháng hiện tại. `HopDong.TienThueThoaThuan` tiếp tục bất biến.
+- Thêm/xóa mốc giữa chuỗi cập nhật `GiaCu` của mốc kế tiếp trong cùng transaction; lỗi ở bước sau rollback toàn bộ.
+- Màn lịch sử giá resolve đúng giá hiện tại, hiển thị lỗi service khi lưu/xóa bị chặn và phục hồi đầy đủ view model sau lỗi.
+- `PhongDichVuRepository.GetByIdAsync` map thêm `Phong`, sửa tiêu đề màn giá từ thiếu tên phòng thành `Phòng 101 — Bảo trì thang máy`.
+- Sửa comment model `LichSuThayDoiGia` về scope thực tế `HopDong | DichVu`.
+
+Dry-run database vận hành trước khi sửa:
+
+```text
+REAL_DRY_RUN FutureHistory=0;ServiceBaseMismatch=0;InvoicedHistory=0;BrokenChains=0
+```
+
+Không có dữ liệu cần cleanup, không đổi schema và không tạo apply-once.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore: pass, 0 error; 1 warning NU1900 do môi trường
+SCHEMA_SMOKE_PASS
+CASE1_2_FUTURE_CURRENT_RESOLVER_PASS Current=100;Future=120
+CASE4_DELETE_FUTURE_CHAIN_PASS NextGiaCu=120
+CURRENT_PERIOD_SYNC_PASS Current=450
+CASE3_INVOICE_GUARDS_PASS RentInsert=True;RentDelete=True;ServiceInsert=True
+CASE5_CONCURRENCY_PASS Results=BLOCKED|OK
+CASE6_ROLLBACK_PASS InsertedRows=0;NextGiaCu=300
+CASE7_PREVIEW_STABILITY_PASS Old=100;Current=100
+REVIEW_012_SMOKE_PASS
+TEMP_DATABASE_DROPPED
+git diff --check: pass
+```
+
+Browser QA tại `http://127.0.0.1:5128/Gia/DichVu?phongDichVuId=1` pass: page identity và nội dung render đúng; tiêu đề đủ phòng/dịch vụ; cảnh báo giá tương lai/khóa hóa đơn hiển thị; submit giá không đổi trả lỗi nghiệp vụ trên form nhưng vẫn giữ giá hiện tại `50,000 đ`; console không có warning/error. Process test đã dừng.
+
+Phạm vi giữ nguyên: không làm REVIEW-013/014/015/016; không sửa dữ liệu giá thật; không thay đổi schema.
 
 ### Phiên 57 - REVIEW-008: lịch sử cư trú theo ngày và dịch vụ TheoNgười
 

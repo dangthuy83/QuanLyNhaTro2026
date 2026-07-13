@@ -1,6 +1,13 @@
 @model QuanLyNhaTro.Models.ThayDoiGiaViewModel
 @{ ViewData["Title"] = "Thay đổi giá — " + Model.TenDoiTuong; }
 <h4>Thay đổi giá — <span class="text-primary">@Model.TenDoiTuong</span></h4>
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 <div class="row g-4">
     <div class="col-md-5">
         <div class="card shadow-sm">
@@ -8,6 +15,10 @@
             <div class="card-body">
                 <form asp-action="LuuThayDoi" method="post">
                     @Html.AntiForgeryToken()
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+                    }
                     <input type="hidden" asp-for="LoaiDoiTuong" />
                     <input type="hidden" asp-for="DoiTuongId" />
                     <input type="hidden" asp-for="TenDoiTuong" />
@@ -35,7 +46,7 @@
                     </div>
                     <div class="form-text text-warning mb-3">
                         <i class="bi bi-exclamation-triangle"></i>
-                        Chỉ áp dụng cho hóa đơn lập từ kỳ đã chọn trở đi. Hóa đơn cũ không bị ảnh hưởng.
+                        Giá tương lai không làm thay đổi giá hiện tại. Không thể thêm hoặc xóa mốc giá nếu đã có hóa đơn từ kỳ áp dụng trở đi.
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ghi chú</label>

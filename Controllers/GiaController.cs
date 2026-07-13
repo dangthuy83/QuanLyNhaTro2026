@@ -40,13 +40,15 @@ public class GiaController(
         if (pdv == null) return NotFound();
 
         var now = DateTime.Today;
+        var giaApDung = await lichSuRepo.GetGiaTriApDungAsync(
+            "DichVu", phongDichVuId, now.Month, now.Year) ?? pdv.DonGia;
         return View("ThayDoiGia", new ThayDoiGiaViewModel
         {
             LoaiDoiTuong = "DichVu",
             DoiTuongId   = phongDichVuId,
             TenDoiTuong  = $"{pdv.Phong?.TenPhong} — {pdv.DichVu?.TenDichVu}",
-            GiaHienTai   = pdv.DonGia,
-            GiaMoi       = pdv.DonGia,
+            GiaHienTai   = giaApDung,
+            GiaMoi       = giaApDung,
             ThangApDung  = now.Month == 12 ? 1 : now.Month + 1,
             NamApDung    = now.Month == 12 ? now.Year + 1 : now.Year,
             LichSu       = await lichSuRepo.GetByDoiTuongAsync("DichVu", phongDichVuId)
@@ -58,7 +60,7 @@ public class GiaController(
     {
         if (!ModelState.IsValid)
         {
-            vm.LichSu = await lichSuRepo.GetByDoiTuongAsync(vm.LoaiDoiTuong, vm.DoiTuongId);
+            await NapLaiViewModelAsync(vm);
             return View("ThayDoiGia", vm);
         }
 
@@ -69,7 +71,7 @@ public class GiaController(
         catch (InvalidOperationException ex)
         {
             ModelState.AddModelError(string.Empty, ex.Message);
-            vm.LichSu = await lichSuRepo.GetByDoiTuongAsync(vm.LoaiDoiTuong, vm.DoiTuongId);
+            await NapLaiViewModelAsync(vm);
             return View("ThayDoiGia", vm);
         }
 
@@ -83,10 +85,47 @@ public class GiaController(
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Xoa(int id, string loai, int doiTuongId)
     {
-        await giaService.XoaThayDoiAsync(id);
-        TempData["Success"] = "Đã xóa bản ghi thay đổi giá.";
-        return loai == "HopDong"
-            ? RedirectToAction("HopDong", new { hopDongId = doiTuongId })
-            : RedirectToAction("DichVu", new { phongDichVuId = doiTuongId });
+        try
+        {
+            var item = await giaService.XoaThayDoiAsync(id);
+            TempData["Success"] = "Đã xóa bản ghi thay đổi giá.";
+            return item.LoaiDoiTuong == "HopDong"
+                ? RedirectToAction("HopDong", new { hopDongId = item.DoiTuongId })
+                : RedirectToAction("DichVu", new { phongDichVuId = item.DoiTuongId });
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return loai == "HopDong"
+                ? RedirectToAction("HopDong", new { hopDongId = doiTuongId })
+                : RedirectToAction("DichVu", new { phongDichVuId = doiTuongId });
+        }
+    }
+
+    private async Task NapLaiViewModelAsync(ThayDoiGiaViewModel vm)
+    {
+        var now = DateTime.Today;
+        if (vm.LoaiDoiTuong == "HopDong")
+        {
+            var hopDong = await hopDongRepo.GetByIdAsync(vm.DoiTuongId)
+                ?? throw new InvalidOperationException("Không tìm thấy hợp đồng cần thay đổi giá.");
+            vm.TenDoiTuong = $"Hợp đồng #{hopDong.Id} — {hopDong.Phong?.TenPhong}";
+            vm.GiaHienTai = await lichSuRepo.GetGiaTriApDungAsync(
+                "HopDong", hopDong.Id, now.Month, now.Year) ?? hopDong.TienThueThoaThuan;
+        }
+        else if (vm.LoaiDoiTuong == "DichVu")
+        {
+            var pdv = await phongDvRepo.GetByIdAsync(vm.DoiTuongId)
+                ?? throw new InvalidOperationException("Không tìm thấy dịch vụ phòng cần thay đổi giá.");
+            vm.TenDoiTuong = $"{pdv.Phong?.TenPhong} — {pdv.DichVu?.TenDichVu}";
+            vm.GiaHienTai = await lichSuRepo.GetGiaTriApDungAsync(
+                "DichVu", pdv.Id, now.Month, now.Year) ?? pdv.DonGia;
+        }
+        else
+        {
+            throw new InvalidOperationException("Loại đối tượng giá không hợp lệ.");
+        }
+
+        vm.LichSu = await lichSuRepo.GetByDoiTuongAsync(vm.LoaiDoiTuong, vm.DoiTuongId);
     }
 }

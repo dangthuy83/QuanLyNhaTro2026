@@ -11,8 +11,6 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 | # | Vấn đề | Ngữ cảnh | Ưu tiên |
 |---|---|---|---|
 | 1 | `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay có trường hợp hủy sau khi đã nhận phòng? | Vòng đời hợp đồng; phân biệt Hủy và Trả phòng | Cao |
-| 2 | Thay đổi giá thuê giữa hợp đồng có luôn thuộc riêng `HopDong`, còn `Phong.GiaThueMacDinh` chỉ là giá gợi ý cho hợp đồng mới? | Lịch sử giá; tránh lịch sử hợp đồng cũ áp sang hợp đồng mới | Cao |
-| 3 | Khách vào/ra giữa kỳ của dịch vụ `TheoNguoi` tính đủ tháng, theo số ngày, theo đầu kỳ hay cuối kỳ? | Lịch sử nhân khẩu và tiền dịch vụ | Cao |
 | 4 | Hóa đơn đủ tháng đã chốt nhưng khách trả giữa tháng: giữ nguyên, hủy/reissue hay tạo khoản điều chỉnh/credit? | Trả phòng và snapshot hóa đơn | Cao |
 | 5 | Có cho khách trả dư/ứng trước không; nếu có số dư thuộc hợp đồng, chuỗi khách qua chuyển phòng hay hồ sơ khách? | Thanh toán, công nợ, chuyển phòng | Cao |
 | 6 | Ngày đến hạn của hóa đơn kỳ N là ngày nào trong tháng N+1; nếu cấu hình ngày 29-31 nhưng tháng ngắn hơn thì xử lý thế nào? | Báo cáo công nợ và nhắc nợ | Cao |
@@ -161,6 +159,10 @@ Các cột dễ nhầm:
 - `HoaDonService`, `ChuyenPhongService`, `TraPhongService` hiện đã tra giá áp dụng thay vì đọc thẳng giá hiện tại.
 - Nếu kỳ hóa đơn nằm trước lần thay đổi giá đầu tiên, dùng `GiaCu` của lần thay đổi đầu tiên; không được rơi về giá hiện tại.
 - Mỗi đối tượng chỉ có một thay đổi giá trong cùng kỳ; ghi/xóa lịch sử giá và cập nhật giá hiện tại phải cùng transaction.
+- Không được thêm hoặc xóa mốc lịch sử giá nếu đã tồn tại hóa đơn của đúng scope từ kỳ áp dụng trở đi. Giá thuê kiểm tra theo `HopDong`; giá dịch vụ kiểm tra các hợp đồng đăng ký đúng `PhongDichVu` trong kỳ hóa đơn.
+- Mọi thay đổi chuỗi giá phải khóa dòng đối tượng và các mốc lịch sử trong transaction. Hai thao tác đồng thời cùng kỳ chỉ một thao tác được thành công; lỗi ở bất kỳ bước nào phải rollback cả insert/delete, sửa `GiaCu` của mốc sau và đồng bộ giá hiện tại.
+- Mốc giá tương lai không được cập nhật ngay `PhongDichVu.DonGia`. Trường này chỉ phản ánh giá hiệu lực của tháng hiện tại; màn hình và tính hóa đơn từng kỳ phải resolve từ lịch sử giá.
+- `HopDong.TienThueThoaThuan` luôn là giá gốc của hợp đồng và không bị ghi ngược bởi lịch sử thay đổi giá.
 
 ### 4.4 Dịch vụ theo chỉ số
 
@@ -465,4 +467,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 57 - 13/07/2026. REVIEW-008 đã triển khai; build, schema/apply-once, service/concurrency, tìm kiếm server-side và Browser QA đều pass. Apply-once đã chạy trên database vận hành sau dry-run sạch, không có dòng cần backfill.
+Cập nhật lần cuối: Phiên 58 - 13/07/2026. REVIEW-012 đã triển khai; dry-run giá database vận hành sạch, build, schema/service/concurrency/rollback smoke và Browser QA màn lịch sử giá đều pass. Không cần migration vì không đổi schema và không có dữ liệu giá lệch cần sửa.
