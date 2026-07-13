@@ -13,6 +13,7 @@ public class HopDongController(
     PhongRepository phongRepo,
     KhachThueRepository khachThueRepo,
     HopDongService hopDongService,
+    CuTruService cuTruService,
     GiaoDichCocService giaoDichCocService,
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo) : Controller
 {
@@ -44,7 +45,7 @@ public class HopDongController(
     {
         ViewData["ActiveMenu"] = "hopdong";
         ViewBag.DanhSachPhong = await phongRepo.GetAllAsync();
-        ViewBag.DanhSachKhach = await khachThueRepo.GetAllAsync();
+        ViewBag.DanhSachKhach = Array.Empty<KhachThue>();
         ViewBag.PhongIdMacDinh = phongId;
         return View();
     }
@@ -59,7 +60,8 @@ public class HopDongController(
         if (!ModelState.IsValid)
         {
             ViewBag.PhongDichVuIdsDaChon = phongDichVuIds;
-            await NapDuLieuFormCreateAsync(hd.PhongId);
+            ViewBag.KhachChinhIdDaChon = khachChinhId;
+            await NapDuLieuFormCreateAsync(hd.PhongId, khachThueIds);
             return View(hd);
         }
 
@@ -74,7 +76,8 @@ public class HopDongController(
         {
             ModelState.AddModelError(string.Empty, ex.Message);
             ViewBag.PhongDichVuIdsDaChon = phongDichVuIds;
-            await NapDuLieuFormCreateAsync(hd.PhongId);
+            ViewBag.KhachChinhIdDaChon = khachChinhId;
+            await NapDuLieuFormCreateAsync(hd.PhongId, khachThueIds);
             return View(hd);
         }
     }
@@ -216,11 +219,47 @@ public class HopDongController(
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    private async Task NapDuLieuFormCreateAsync(int? phongIdMacDinh)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> ThemNguoiO(
+        int id,
+        int khachThueId,
+        DateTime ngayBatDau,
+        DateTime? ngayKetThucDuKien,
+        bool laDaiDien = false)
+    {
+        try
+        {
+            await cuTruService.ThemGiaiDoanAsync(
+                id, khachThueId, ngayBatDau, ngayKetThucDuKien, laDaiDien);
+            TempData["Success"] = "Đã thêm giai đoạn cư trú mới.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> KetThucCuTru(int id, int cuTruId, DateTime ngayKetThuc)
+    {
+        try
+        {
+            await cuTruService.KetThucGiaiDoanAsync(cuTruId, ngayKetThuc);
+            TempData["Success"] = "Đã ghi nhận ngày rời thực tế.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    private async Task NapDuLieuFormCreateAsync(int? phongIdMacDinh, IEnumerable<int>? selectedKhachIds = null)
     {
         ViewData["ActiveMenu"] = "hopdong";
         ViewBag.DanhSachPhong = await phongRepo.GetAllAsync();
-        ViewBag.DanhSachKhach = await khachThueRepo.GetAllAsync();
+        ViewBag.DanhSachKhach = await khachThueRepo.GetByIdsAsync(selectedKhachIds ?? []);
         ViewBag.PhongIdMacDinh = phongIdMacDinh;
     }
 
@@ -228,8 +267,9 @@ public class HopDongController(
     {
         ViewData["ActiveMenu"] = "hopdong";
         ViewBag.DanhSachPhong = await phongRepo.GetAllAsync();
-        ViewBag.DanhSachKhach = await khachThueRepo.GetAllAsync();
-        ViewBag.KhachHienTai = await hdKhachRepo.GetByHopDongAsync(hopDongId);
+        var khachHienTai = (await hdKhachRepo.GetByHopDongAsync(hopDongId)).ToList();
+        ViewBag.KhachHienTai = khachHienTai;
+        ViewBag.DanhSachKhach = await khachThueRepo.GetByIdsAsync(khachHienTai.Select(x => x.KhachThueId));
     }
 
     private async Task<CapNhatDichVuHopDongViewModel> BuildCapNhatDichVuViewModelAsync(

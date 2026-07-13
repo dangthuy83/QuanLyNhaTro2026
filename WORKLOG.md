@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-007 và REVIEW-009/010/011 đã triển khai; REVIEW-008 chưa làm |
-| Build | Phiên 56: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 1: REVIEW-001 đến REVIEW-011 đã triển khai xong theo phạm vi đã chốt |
+| Build | Phiên 57: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 53 schema smoke pass 19 bảng, 77 constraint, 7 dịch vụ mẫu; REVIEW-006/007 concurrency smoke pass và DB tạm đã drop. Dry-run DB thật sạch, apply-once mới đã tạo 2 CHECK + 1 index. |
+| Database | Phiên 57 schema/apply-once REVIEW-008 smoke pass; DB tạm drop trong `finally`. Dry-run DB vận hành sạch và apply-once đã chạy (`Rows=0`, `MissingNgayBatDau=0`). |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006/007/009/010/011 đã xong; REVIEW-008 và REVIEW-012 đến REVIEW-016 còn lại | Cao |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-011 đã xong; REVIEW-012 đến REVIEW-016 còn lại | Hoàn tất Phase 1 |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,53 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 57 - REVIEW-008: lịch sử cư trú theo ngày và dịch vụ TheoNgười
+
+Đã triển khai:
+
+- Mở rộng `HopDongKhachThue` thành từng giai đoạn cư trú với `NgayBatDau`, `NgayKetThucDuKien`, `NgayKetThuc` thực tế nullable và `LaDaiDien`; unique theo hợp đồng/khách/ngày bắt đầu, có CHECK và index hiệu lực.
+- `FixedServiceQuantityCalculator` đếm khách duy nhất có giai đoạn giao với kỳ. Khách ở một ngày vẫn tính đủ một suất; ngày dự kiến chỉ cảnh báo và không tham gia tính tiền.
+- Thêm `CuTruService` khóa hợp đồng, chặn giai đoạn cùng khách chồng nhau và chặn đại diện kép; không có đường xóa cứng lịch sử.
+- Tạo hợp đồng yêu cầu ít nhất một khách và đúng một đại diện ban đầu. Hủy hợp đồng tương lai giữ nguyên lịch sử cư trú.
+- Chuyển phòng đóng giai đoạn cũ đúng ngày chuyển, mở giai đoạn mới từ hôm sau; trả phòng đóng mọi giai đoạn đang mở đúng ngày trả.
+- Màn tạo hợp đồng và thêm người ở tìm server-side theo tên/SĐT/CCCD/biển số, debounce 300 ms, giới hạn 20 kết quả; khách cũ được chọn lại để tạo giai đoạn mới.
+- `KhachThue/Details` có card lịch sử cư trú phía dưới. `KhachThue/Index` có phòng hiện tại, dự kiến rời, trạng thái và bộ lọc.
+- CCCD trùng được chặn ở `KhachThueService`/UI và link về hồ sơ cũ; không merge và không tạo unique DB cứng ngoài phạm vi REVIEW-014.
+- Thêm apply-once `Database/updates/20260713_tenant_residency_history.sql`, đồng thời cập nhật `Database/schema.sql` và README.
+
+Dry-run database vận hành trước apply:
+
+```text
+TotalHopDongKhachThue=0
+NoRepresentativeContracts=0
+ManyRepresentativeContracts=0
+DuplicateTenantInContract=0
+DuplicateCCCD=0
+InvalidContractDates=0
+```
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore: pass, 0 error; 1 warning NU1900 do vulnerability feed môi trường.
+SCHEMA_SMOKE_PASS ResidencyColumns=3
+MIGRATION_SMOKE_PASS Before=2;After=2;BackfillStart=2026-01-01;BackfillEnd=2026-03-31
+CASE1_ONE_DAY_FULL_UNIT_PASS Quantity=1
+CASE2_3_HISTORY_AND_RETURN_PASS June=1;July=1;Periods=2
+CASE4_5_OVERLAP_REPRESENTATIVE_PASS
+CONCURRENCY_PASS Results=OK|BLOCKED
+CASE6_TRANSFER_RETURN_PASS OldEnd=2026-07-10;NewStart=2026-07-11;ReturnEnd=2026-07-20
+CASE7_8_BACKFILL_SEARCH_PASS HistoryPreserved=True;SearchRows=20
+REVIEW_008_SMOKE_PASS
+TEMP_DATABASE_DROPPED
+REAL_APPLY_PASS Rows=0;MissingNgayBatDau=0
+git diff --check: pass
+```
+
+Browser QA tại `http://127.0.0.1:5126` pass: danh sách khách render đủ bộ lọc; tìm `Đặng` ở màn tạo hợp đồng trả 3 kết quả server-side, chọn hồ sơ #12 tạo đúng một dòng đã chọn; không có console warning/error. Process test đã dừng.
+
+Phạm vi giữ nguyên: không làm REVIEW-012/013/014 ngoài guard CCCD tối thiểu; không merge hồ sơ, không thêm unique cứng CCCD, không mở rộng Syncfusion/nhắn tin/auth.
 
 ### Phiên 56 - REVIEW-009: atomic batch và khóa chỉ số đã chốt
 

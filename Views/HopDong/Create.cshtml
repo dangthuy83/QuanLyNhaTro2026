@@ -9,6 +9,7 @@
     var selectedIds = ViewBag.PhongDichVuIdsDaChon as int[];
     var selectedJson = JsonSerializer.Serialize(selectedIds ?? []);
     var restoreSelection = selectedIds != null;
+    int? khachChinhIdDaChon = ViewBag.KhachChinhIdDaChon;
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
@@ -69,25 +70,22 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Khách thuê</label>
-                <div class="border rounded p-2" style="max-height:200px; overflow-y:auto">
+                <input id="tenantSearch" type="search" class="form-control" autocomplete="off"
+                       placeholder="Tìm theo tên, SĐT, CCCD hoặc biển số (ít nhất 2 ký tự)" />
+                <div id="tenantSearchResults" class="list-group mt-1"></div>
+                <div id="selectedTenants" class="border rounded p-2 mt-2">
                     @foreach (var k in danhSachKhach)
                     {
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox"
-                                   name="khachThueIds" value="@k.Id" id="k_@k.Id" />
-                            <label class="form-check-label" for="k_@k.Id">
-                                @k.HoTen @(k.SoDienThoai != null ? $"({k.SoDienThoai})" : "")
-                                <input type="radio" name="khachChinhId" value="@k.Id"
-                                       class="ms-2" title="Đánh dấu khách chính" />
-                                <small class="text-muted">chính</small>
-                            </label>
+                        <div class="d-flex align-items-center gap-2 mb-2 tenant-row" data-id="@k.Id">
+                            <input type="hidden" name="khachThueIds" value="@k.Id" />
+                            <input type="radio" name="khachChinhId" value="@k.Id" checked="@(k.Id == khachChinhIdDaChon)" />
+                            <span class="flex-grow-1">@k.HoTen <small class="text-muted">@k.SoDienThoai · @k.CCCD</small></span>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-tenant">Bỏ</button>
                         </div>
                     }
-                    @if (!danhSachKhach.Any())
-                    {
-                        <p class="text-muted mb-0 small">Chưa có khách. <a asp-controller="KhachThue" asp-action="Create">Thêm khách mới</a></p>
-                    }
                 </div>
+                <div class="form-text">Chọn hồ sơ cũ để tạo giai đoạn cư trú mới; nút tròn đánh dấu người đại diện.</div>
+                <a asp-controller="KhachThue" asp-action="Create" class="small">Chưa có hồ sơ? Thêm khách mới</a>
             </div>
 
             <div class="mb-3">
@@ -163,6 +161,46 @@
     });
     if (!restoreSelection && phongSelect?.value) applyRoomPrice();
     loadServices();
+
+    const searchInput = document.getElementById('tenantSearch');
+    const results = document.getElementById('tenantSearchResults');
+    const selected = document.getElementById('selectedTenants');
+    let searchTimer;
+    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
+    }[c]));
+    const bindRemove = () => selected.querySelectorAll('.remove-tenant').forEach(button => {
+        button.onclick = () => button.closest('.tenant-row')?.remove();
+    });
+    const addTenant = item => {
+        if (selected.querySelector(`[data-id="${item.id}"]`)) return;
+        const row = document.createElement('div');
+        row.className = 'd-flex align-items-center gap-2 mb-2 tenant-row';
+        row.dataset.id = item.id;
+        row.innerHTML = `<input type="hidden" name="khachThueIds" value="${item.id}">
+            <input type="radio" name="khachChinhId" value="${item.id}">
+            <span class="flex-grow-1">${escapeHtml(item.hoTen)} <small class="text-muted">${escapeHtml(item.soDienThoai)} · ${escapeHtml(item.cccd)}</small></span>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-tenant">Bỏ</button>`;
+        selected.appendChild(row);
+        bindRemove();
+    };
+    searchInput?.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const term = searchInput.value.trim();
+        if (term.length < 2) { results.innerHTML = ''; return; }
+        searchTimer = setTimeout(async () => {
+            const response = await fetch(`@Url.Action("Search", "KhachThue")?term=${encodeURIComponent(term)}&limit=20`);
+            const rows = response.ok ? await response.json() : [];
+            results.innerHTML = rows.map(x => `<button type="button" class="list-group-item list-group-item-action">
+                <strong>${escapeHtml(x.hoTen)}</strong><br><small>${escapeHtml(x.soDienThoai)} · CCCD ${escapeHtml(x.cccd)} · ${escapeHtml(x.bienSoXe)}</small></button>`).join('');
+            results.querySelectorAll('button').forEach((button, index) => button.onclick = () => {
+                addTenant(rows[index]);
+                results.innerHTML = '';
+                searchInput.value = '';
+            });
+        }, 300);
+    });
+    bindRemove();
 })();
 </script>
 }

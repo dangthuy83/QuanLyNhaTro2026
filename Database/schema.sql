@@ -172,11 +172,23 @@ CREATE TABLE HopDongKhachThue (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     HopDongId INT NOT NULL,
     KhachThueId INT NOT NULL,
+    NgayBatDau DATE NOT NULL,
+    NgayKetThucDuKien DATE NULL,
+    NgayKetThuc DATE NULL,
     LaDaiDien BIT NOT NULL DEFAULT 0,
     CONSTRAINT FK_HDKT_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_HDKT_KhachThue FOREIGN KEY (KhachThueId) REFERENCES KhachThue(Id),
-    CONSTRAINT UQ_HopDong_Khach UNIQUE (HopDongId, KhachThueId)
+    CONSTRAINT CK_HDKT_KhoangNgay CHECK (
+        (NgayKetThucDuKien IS NULL OR NgayKetThucDuKien >= NgayBatDau)
+        AND (NgayKetThuc IS NULL OR NgayKetThuc >= NgayBatDau)
+    ),
+    CONSTRAINT UQ_HDKT_GiaiDoan UNIQUE (HopDongId, KhachThueId, NgayBatDau)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_HDKT_HopDong_HieuLuc
+    ON HopDongKhachThue(HopDongId, NgayBatDau, NgayKetThuc, KhachThueId);
+CREATE INDEX IX_HDKT_Khach_HieuLuc
+    ON HopDongKhachThue(KhachThueId, NgayBatDau, NgayKetThuc, HopDongId);
 
 -- ============================================================
 -- 8. HOPDONGDICHVU — Dịch vụ đăng ký theo hợp đồng và kỳ sử dụng

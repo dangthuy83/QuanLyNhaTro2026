@@ -184,10 +184,21 @@ Các cột dễ nhầm:
 - Không đổi ý nghĩa `DichVu.LoaiTinhPhi`: chỉ gồm `CoDinh` và `TheoChiSo`.
 - `DichVu.CachTinhCoDinh` xác định số lượng cho dịch vụ cố định:
   - `TheoPhong`: `SoLuong = 1`, phù hợp Internet hoặc khoản thu theo phòng/hợp đồng.
-  - `TheoNguoi`: `SoLuong = COUNT(HopDongKhachThue)` của hợp đồng, phù hợp nước không dùng công tơ, vệ sinh, máy giặt, bảo trì nếu chủ nhà thu theo người.
+  - `TheoNguoi`: `SoLuong = COUNT(DISTINCT KhachThueId)` có giai đoạn cư trú giao với kỳ, phù hợp nước không dùng công tơ, vệ sinh, máy giặt, bảo trì nếu chủ nhà thu theo người.
 - Nếu `LoaiTinhPhi = TheoChiSo`, `CachTinhCoDinh` không ảnh hưởng.
 - Nếu dịch vụ `CoDinh + TheoNguoi` nhưng hợp đồng chưa gắn khách thuê, preview/chốt hóa đơn phải báo lỗi và không tạo hóa đơn để tránh tính `SoLuong = 0`.
-- Giai đoạn hiện tại lấy số người theo liên kết hiện có trong `HopDongKhachThue`; chưa xử lý người vào/ra giữa tháng vì bảng này chưa có `NgayBatDau`/`NgayKetThuc` riêng.
+- Từ REVIEW-008, số người được resolve theo các giai đoạn `HopDongKhachThue` giao với kỳ; người rời sau khi ở một ngày vẫn được tính đủ một suất, còn kỳ không giao thì không tính.
+
+### 4.4.2.1 Lịch sử cư trú và dịch vụ TheoNgười
+
+- `KhachThue` là hồ sơ cá nhân lâu dài. Khách rời rồi quay lại phải tái sử dụng hồ sơ cũ; không tự động merge hồ sơ trùng.
+- `HopDongKhachThue` là từng giai đoạn cư trú, lưu `NgayBatDau` thực tế, `NgayKetThucDuKien`, `NgayKetThuc` thực tế nullable và `LaDaiDien`.
+- Một khách có thể có nhiều giai đoạn không chồng nhau trong cùng hợp đồng. Không xóa cứng giai đoạn đã ghi.
+- Dịch vụ `CoDinh + TheoNguoi` đếm `COUNT(DISTINCT KhachThueId)` có giai đoạn giao với bất kỳ ngày nào trong kỳ; mỗi khách được tính đủ một suất tháng. Chỉ dùng ngày thực tế, không dùng ngày dự kiến để tính tiền.
+- Mỗi thời điểm tối đa một đại diện hiệu lực; đại diện phải thuộc một giai đoạn đang cư trú. Mọi thay đổi cư trú được serialize dưới khóa hợp đồng.
+- Chuyển phòng đóng giai đoạn cũ vào ngày chuyển và mở giai đoạn mới từ hôm sau. Trả phòng đóng mọi giai đoạn đang mở vào ngày trả. Hủy hợp đồng tương lai giữ nguyên các dòng để audit.
+- Tạo hợp đồng và thêm người ở tìm hồ sơ server-side theo tên/SĐT/CCCD/biển số, debounce và giới hạn 20 kết quả; không tải toàn bộ danh sách khách.
+- CCCD trùng bị chặn ở service/UI và hướng người vận hành về hồ sơ cũ. Cleanup/merge và unique DB cứng tiếp tục thuộc REVIEW-014.
 
 ### 4.4.3 Dịch vụ đăng ký theo hợp đồng
 
@@ -319,7 +330,7 @@ TongTienDV    = Sum(ChiTietHoaDon.ThanhTien)
 TongTienPhatSinh = Sum(KhoanPhatSinhHopDong.SoTien chua xu ly duoc dua vao hoa don)
 TheoChiSo     = ChiSoConsumptionCalculator.Calculate(ChiSoDienNuoc) * DonGia
 CoDinh + TheoPhong = 1 * DonGia
-CoDinh + TheoNguoi = COUNT(HopDongKhachThue) * DonGia
+CoDinh + TheoNguoi = COUNT(DISTINCT KhachThueId có giai đoạn giao kỳ) * DonGia
 TienNoKyTruoc = snapshot nợ kỳ trước
 TongCong      = TienPhong + TongTienDV + TongTienPhatSinh + TienNoKyTruoc
 ```
@@ -454,4 +465,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 53 - 12/07/2026. REVIEW-006/007 đã triển khai và kiểm tra trên database tạm; migration apply-once mới đã chạy trên database vận hành sau dry-run sạch.
+Cập nhật lần cuối: Phiên 57 - 13/07/2026. REVIEW-008 đã triển khai; build, schema/apply-once, service/concurrency, tìm kiếm server-side và Browser QA đều pass. Apply-once đã chạy trên database vận hành sau dry-run sạch, không có dòng cần backfill.

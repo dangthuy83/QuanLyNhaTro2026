@@ -13,7 +13,7 @@ public class HopDongKhachThueRepository(IDbConnection db) : BaseRepository(db)
             FROM HopDongKhachThue hdkt
             INNER JOIN KhachThue kt ON kt.Id = hdkt.KhachThueId
             WHERE hdkt.HopDongId = @HopDongId
-            ORDER BY hdkt.LaDaiDien DESC, kt.HoTen
+            ORDER BY hdkt.NgayBatDau DESC, hdkt.LaDaiDien DESC, kt.HoTen
             """;
         return await _db.QueryAsync<HopDongKhachThue, KhachThue, HopDongKhachThue>(
             sql,
@@ -22,13 +22,27 @@ public class HopDongKhachThueRepository(IDbConnection db) : BaseRepository(db)
             splitOn: "Id");
     }
 
-    public async Task InsertAsync(int hopDongId, int khachThueId, bool laKhachChinh = false)
+    public async Task InsertAsync(
+        int hopDongId,
+        int khachThueId,
+        DateTime ngayBatDau,
+        DateTime? ngayKetThucDuKien,
+        bool laKhachChinh = false)
     {
         const string sql = """
-            INSERT INTO HopDongKhachThue (HopDongId, KhachThueId, LaDaiDien)
-            VALUES (@HopDongId, @KhachThueId, @LaDaiDien)
+            INSERT INTO HopDongKhachThue
+                (HopDongId, KhachThueId, NgayBatDau, NgayKetThucDuKien, NgayKetThuc, LaDaiDien)
+            VALUES
+                (@HopDongId, @KhachThueId, @NgayBatDau, @NgayKetThucDuKien, NULL, @LaDaiDien)
             """;
-        await _db.ExecuteAsync(sql, new { HopDongId = hopDongId, KhachThueId = khachThueId, LaDaiDien = laKhachChinh });
+        await _db.ExecuteAsync(sql, new
+        {
+            HopDongId = hopDongId,
+            KhachThueId = khachThueId,
+            NgayBatDau = ngayBatDau.Date,
+            NgayKetThucDuKien = ngayKetThucDuKien?.Date,
+            LaDaiDien = laKhachChinh
+        });
     }
 
     public async Task InsertAsync(
@@ -36,30 +50,41 @@ public class HopDongKhachThueRepository(IDbConnection db) : BaseRepository(db)
         IDbTransaction tx,
         int hopDongId,
         int khachThueId,
+        DateTime ngayBatDau,
+        DateTime? ngayKetThucDuKien,
         bool laKhachChinh = false)
     {
         const string sql = """
-            INSERT INTO HopDongKhachThue (HopDongId, KhachThueId, LaDaiDien)
-            VALUES (@HopDongId, @KhachThueId, @LaDaiDien)
+            INSERT INTO HopDongKhachThue
+                (HopDongId, KhachThueId, NgayBatDau, NgayKetThucDuKien, NgayKetThuc, LaDaiDien)
+            VALUES
+                (@HopDongId, @KhachThueId, @NgayBatDau, @NgayKetThucDuKien, NULL, @LaDaiDien)
             """;
         await conn.ExecuteAsync(
             sql,
-            new { HopDongId = hopDongId, KhachThueId = khachThueId, LaDaiDien = laKhachChinh },
+            new
+            {
+                HopDongId = hopDongId,
+                KhachThueId = khachThueId,
+                NgayBatDau = ngayBatDau.Date,
+                NgayKetThucDuKien = ngayKetThucDuKien?.Date,
+                LaDaiDien = laKhachChinh
+            },
             transaction: tx);
     }
 
-    public async Task DeleteByHopDongAsync(int hopDongId)
-        => await _db.ExecuteAsync(
-            "DELETE FROM HopDongKhachThue WHERE HopDongId = @HopDongId",
-            new { HopDongId = hopDongId });
+    public async Task<IEnumerable<HopDongKhachThue>> GetByKhachThueAsync(int khachThueId)
+    {
+        const string sql = """
+            SELECT hdkt.*, hd.TrangThai AS TrangThaiHopDong, p.TenPhong, n.TenNha
+            FROM HopDongKhachThue hdkt
+            INNER JOIN HopDong hd ON hd.Id = hdkt.HopDongId
+            INNER JOIN Phong p ON p.Id = hd.PhongId
+            INNER JOIN Nha n ON n.Id = p.NhaId
+            WHERE hdkt.KhachThueId = @KhachThueId
+            ORDER BY hdkt.NgayBatDau DESC, hdkt.Id DESC
+            """;
+        return await _db.QueryAsync<HopDongKhachThue>(sql, new { KhachThueId = khachThueId });
+    }
 
-    public async Task DeleteByHopDongAsync(IDbConnection conn, IDbTransaction tx, int hopDongId)
-        => await conn.ExecuteAsync(
-            "DELETE FROM HopDongKhachThue WHERE HopDongId = @HopDongId",
-            new { HopDongId = hopDongId },
-            transaction: tx);
-
-    public async Task DeleteAsync(int id)
-        => await _db.ExecuteAsync(
-            "DELETE FROM HopDongKhachThue WHERE Id = @Id", new { Id = id });
 }

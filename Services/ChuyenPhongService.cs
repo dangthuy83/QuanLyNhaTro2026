@@ -120,12 +120,8 @@ public class ChuyenPhongService(
                     GhiChu = $"Chuyen tu {phongCu.TenPhong} ngay {vm.NgayChuyenDi:dd/MM/yyyy}"
                 }, tx);
 
-            await conn.ExecuteAsync("""
-                INSERT INTO HopDongKhachThue (HopDongId, KhachThueId, LaDaiDien)
-                SELECT @MoiId, KhachThueId, LaDaiDien
-                FROM HopDongKhachThue WHERE HopDongId = @CuId
-                """,
-                new { MoiId = hdMoiId, CuId = vm.HopDongCuId }, tx);
+            await CuTruService.ChuyenSangHopDongMoiAsync(
+                conn, tx, vm.HopDongCuId, hdMoiId, vm.NgayChuyenDi, vm.NgayBatDauMoi);
 
             var selectedIds = vm.PhongDichVuIds.Distinct().ToHashSet();
             var dvMoi = await phongDvRepo.GetSelectedForPhongAsync(
@@ -288,7 +284,10 @@ public class ChuyenPhongService(
             }
             else
             {
-                var soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(conn, tx, hopDongId, dv.DichVu!);
+                var kyBatDau = new DateTime(nam, thang, 1);
+                var kyKetThuc = kyBatDau.AddMonths(1).AddDays(-1);
+                var soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(
+                    conn, tx, hopDongId, dv.DichVu!, kyBatDau, kyKetThuc);
                 result.Add(new ChiTietDichVuTam(
                     dv.DichVuId,
                     null,

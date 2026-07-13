@@ -1,8 +1,89 @@
 @model IEnumerable<QuanLyNhaTro.Models.KhachThue>
-@{ ViewData["Title"]="Khách thuê"; ViewData["ActiveMenu"]="khachthue"; }
-<div class="d-flex justify-content-between align-items-center mb-3"><h5 class="mb-0">Danh sách khách thuê</h5><a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Thêm khách</a></div>
-@if(TempData["Success"]!=null){<div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>}
-<div class="card shadow-sm"><div class="table-responsive"><table class="table table-hover mb-0 align-middle"><thead class="table-light"><tr><th>Họ tên</th><th>Ngày sinh</th><th>Điện thoại</th><th>CCCD</th><th>Ngày cấp</th><th>Biển số xe</th><th>Loại xe</th><th>Nghề nghiệp</th><th>Ghi chú</th><th></th></tr></thead><tbody>
-@foreach(var k in Model){<tr><td><a asp-action="Details" asp-route-id="@k.Id" class="fw-semibold text-decoration-none">@k.HoTen</a></td><td>@(k.NgaySinh?.ToString("dd/MM/yyyy")??"—")</td><td>@k.SoDienThoai</td><td>@k.CCCD</td><td>@(k.NgayCapCCCD?.ToString("dd/MM/yyyy")??"—")</td><td>@k.BienSoXe</td><td>@k.LoaiXe</td><td>@k.NgheNghiep</td><td class="text-truncate" style="max-width:180px">@k.GhiChu</td><td class="text-end text-nowrap"><a asp-action="Edit" asp-route-id="@k.Id" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a><form asp-action="Delete" asp-route-id="@k.Id" method="post" class="d-inline" onsubmit="return confirm('Xóa khách @k.HoTen?')">@Html.AntiForgeryToken()<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form></td></tr>}
-@if(!Model.Any()){<tr><td colspan="10" class="text-center text-muted py-4">Chưa có khách nào.</td></tr>}
-</tbody></table></div></div>
+@{
+    ViewData["Title"] = "Khách thuê";
+    ViewData["ActiveMenu"] = "khachthue";
+    var danhSachPhong = ViewBag.DanhSachPhong as IEnumerable<QuanLyNhaTro.Models.Phong> ?? [];
+    string? tuKhoa = ViewBag.TuKhoa;
+    string? trangThai = ViewBag.TrangThai;
+    int? phongId = ViewBag.PhongId;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Danh sách khách thuê</h5>
+    <a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Thêm khách</a>
+</div>
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<form method="get" class="card card-body shadow-sm mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label small">Tìm kiếm</label>
+            <input name="tuKhoa" value="@tuKhoa" class="form-control" placeholder="Tên, SĐT, CCCD hoặc biển số" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Phòng hiện tại</label>
+            <select name="phongId" class="form-select">
+                <option value="">Tất cả phòng</option>
+                @foreach (var p in danhSachPhong)
+                {
+                    <option value="@p.Id" selected="@(phongId == p.Id)">@p.TenPhong</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Trạng thái</label>
+            <select name="trangThai" class="form-select">
+                <option value="TatCa" selected="@(string.IsNullOrEmpty(trangThai) || trangThai == "TatCa")">Tất cả</option>
+                <option value="DangO" selected="@(trangThai == "DangO")">Đang ở</option>
+                <option value="SapDen" selected="@(trangThai == "SapDen")">Sắp đến</option>
+                <option value="DaRoi" selected="@(trangThai == "DaRoi")">Đã rời</option>
+                <option value="ChuaCuTru" selected="@(trangThai == "ChuaCuTru")">Chưa cư trú</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button class="btn btn-primary flex-grow-1">Lọc</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Xóa</a>
+        </div>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light"><tr><th>Họ tên</th><th>Điện thoại</th><th>CCCD</th><th>Biển số</th><th>Phòng hiện tại</th><th>Dự kiến rời</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var k in Model)
+            {
+                <tr>
+                    <td><a asp-action="Details" asp-route-id="@k.Id" class="fw-semibold text-decoration-none">@k.HoTen</a></td>
+                    <td>@(k.SoDienThoai ?? "—")</td><td>@(k.CCCD ?? "—")</td><td>@(k.BienSoXe ?? "—")</td>
+                    <td>@(k.PhongHienTai ?? "—")</td>
+                    <td>@(k.NgayKetThucDuKienHienTai?.ToString("dd/MM/yyyy") ?? "—")</td>
+                    <td><span class="badge @TrangThaiClass(k.TrangThaiCuTru)">@TrangThaiText(k.TrangThaiCuTru)</span></td>
+                    <td class="text-end text-nowrap">
+                        <a asp-action="Edit" asp-route-id="@k.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="8" class="text-center text-muted py-4">Không có khách phù hợp.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@functions {
+    private static string TrangThaiText(string value) => value switch
+    {
+        "DangO" => "Đang ở", "SapDen" => "Sắp đến", "DaRoi" => "Đã rời", _ => "Chưa cư trú"
+    };
+    private static string TrangThaiClass(string value) => value switch
+    {
+        "DangO" => "bg-success", "SapDen" => "bg-warning text-dark", "DaRoi" => "bg-secondary", _ => "bg-light text-dark border"
+    };
+}

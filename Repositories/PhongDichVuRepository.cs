@@ -159,6 +159,8 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
                AND hd.TrangThai = 'DangHieuLuc'
             LEFT JOIN HopDongKhachThue hdkt
                 ON hdkt.HopDongId = hd.Id
+               AND hdkt.NgayBatDau <= CURDATE()
+               AND (hdkt.NgayKetThuc IS NULL OR hdkt.NgayKetThuc >= CURDATE())
             LEFT JOIN PhongDichVu pdv
                 ON pdv.PhongId = p.Id
                AND pdv.DichVuId = @DichVuId

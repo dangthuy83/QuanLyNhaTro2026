@@ -186,6 +186,8 @@ public class TraPhongService(
                 }
             }
 
+            await CuTruService.DongTatCaDangMoAsync(conn, tx, hopDongId, ngayTraPhong);
+
             await conn.ExecuteAsync(
                 """
                 UPDATE HopDong
@@ -319,7 +321,10 @@ public class TraPhongService(
             }
             else
             {
-                var soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(conn, tx, hopDongId, dv.DichVu!);
+                var kyBatDau = new DateTime(nam, thang, 1);
+                var kyKetThuc = kyBatDau.AddMonths(1).AddDays(-1);
+                var soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(
+                    conn, tx, hopDongId, dv.DichVu!, kyBatDau, kyKetThuc);
                 result.Add(new ChiTietDichVuTam(
                     dv.DichVuId,
                     null,

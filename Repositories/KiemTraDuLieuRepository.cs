@@ -30,7 +30,10 @@ public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
             FROM HopDong hd
             INNER JOIN Phong p ON p.Id = hd.PhongId
             INNER JOIN Nha n ON n.Id = p.NhaId
-            LEFT JOIN HopDongKhachThue hdkt ON hdkt.HopDongId = hd.Id
+            LEFT JOIN HopDongKhachThue hdkt
+                ON hdkt.HopDongId = hd.Id
+               AND hdkt.NgayBatDau <= @KyKetThuc
+               AND (hdkt.NgayKetThuc IS NULL OR hdkt.NgayKetThuc >= @Ky)
             LEFT JOIN KhachThue kt ON kt.Id = hdkt.KhachThueId
             LEFT JOIN HopDongDichVu hdv
                 ON hdv.HopDongId = hd.Id
@@ -60,7 +63,8 @@ public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
             Thang = thang,
             Nam = nam,
             NhaId = nhaId,
-            Ky = new DateTime(nam, thang, 1)
+            Ky = new DateTime(nam, thang, 1),
+            KyKetThuc = new DateTime(nam, thang, 1).AddMonths(1).AddDays(-1)
         });
     }
 }

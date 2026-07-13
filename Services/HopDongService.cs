@@ -235,8 +235,19 @@ public class HopDongService(
                     throw new InvalidOperationException("Khoang thoi gian sua bi chong voi hop dong khac cua phong.");
 
                 await hopDongRepo.UpdateEditableAsync(conn, tx, hopDong);
-                await hdKhachRepo.DeleteByHopDongAsync(conn, tx, hopDong.Id);
-                await CapNhatKhachThueAsync(conn, tx, hopDong.Id, khachThueIds, khachChinhId);
+                await conn.ExecuteAsync(
+                    """
+                    UPDATE HopDongKhachThue
+                    SET NgayBatDau=@NgayBatDau,
+                        NgayKetThucDuKien=@NgayKetThucDuKien
+                    WHERE HopDongId=@HopDongId AND NgayKetThuc IS NULL
+                    """,
+                    new
+                    {
+                        NgayBatDau = hopDong.NgayBatDau.Date,
+                        NgayKetThucDuKien = hopDong.NgayKetThuc?.Date,
+                        HopDongId = hopDong.Id
+                    }, tx);
             }
 
             await tx.CommitAsync();
@@ -304,7 +315,11 @@ public class HopDongService(
         if (hopDong.NgayKetThuc.HasValue && hopDong.NgayKetThuc.Value.Date < hopDong.NgayBatDau.Date)
             throw new InvalidOperationException("Ngay ket thuc khong duoc truoc ngay bat dau.");
         var selected = khachThueIds.Distinct().ToHashSet();
-        if (khachChinhId.HasValue && !selected.Contains(khachChinhId.Value))
+        if (selected.Count == 0)
+            throw new InvalidOperationException("Hợp đồng phải có ít nhất một khách cư trú.");
+        if (!khachChinhId.HasValue)
+            throw new InvalidOperationException("Hợp đồng phải có một người đại diện.");
+        if (!selected.Contains(khachChinhId.Value))
             throw new InvalidOperationException("Khach dai dien phai thuoc danh sach khach da chon.");
     }
 
@@ -326,9 +341,18 @@ public class HopDongService(
         int[] khachThueIds,
         int? khachChinhId)
     {
+        var hopDong = await conn.QuerySingleAsync<HopDong>(
+            "SELECT * FROM HopDong WHERE Id=@Id", new { Id = hopDongId }, tx);
         foreach (var khachId in khachThueIds.Distinct())
         {
-            await hdKhachRepo.InsertAsync(conn, tx, hopDongId, khachId, khachId == khachChinhId);
+            await hdKhachRepo.InsertAsync(
+                conn,
+                tx,
+                hopDongId,
+                khachId,
+                hopDong.NgayBatDau,
+                hopDong.NgayKetThuc,
+                khachId == khachChinhId);
         }
     }
 

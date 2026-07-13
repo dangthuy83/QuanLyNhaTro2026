@@ -62,8 +62,8 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox"
                                    name="khachThueIds" value="@k.Id" id="k_@k.Id"
-                                   checked="@khachHienTaiIds.Contains(k.Id)" disabled="@coDuLieuNghiepVu" />
-                            @if (coDuLieuNghiepVu && khachHienTaiIds.Contains(k.Id))
+                                   checked="@khachHienTaiIds.Contains(k.Id)" disabled />
+                            @if (khachHienTaiIds.Contains(k.Id))
                             {
                                 <input type="hidden" name="khachThueIds" value="@k.Id" />
                             }
@@ -71,8 +71,8 @@
                                 @k.HoTen @(k.SoDienThoai != null ? $"({k.SoDienThoai})" : "")
                                 <input type="radio" name="khachChinhId" value="@k.Id"
                                        class="ms-2"
-                                       checked="@(k.Id == khachChinhId)" disabled="@coDuLieuNghiepVu" />
-                                @if (coDuLieuNghiepVu && k.Id == khachChinhId)
+                                       checked="@(k.Id == khachChinhId)" disabled />
+                                @if (k.Id == khachChinhId)
                                 {
                                     <input type="hidden" name="khachChinhId" value="@k.Id" />
                                 }

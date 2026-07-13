@@ -16,4 +16,8 @@ public class KhachThue
     public string? AnhCCCDMatSau { get; set; }
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
+
+    public string? PhongHienTai { get; set; }
+    public DateTime? NgayKetThucDuKienHienTai { get; set; }
+    public string TrangThaiCuTru { get; set; } = "ChuaCuTru";
 }

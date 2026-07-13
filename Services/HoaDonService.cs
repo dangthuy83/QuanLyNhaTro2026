@@ -222,7 +222,10 @@ public class HoaDonService(
                 decimal soLuong;
                 try
                 {
-                    soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(db, null, hopDongId, pdv.DichVu);
+                    var kyBatDau = new DateTime(nam, thang, 1);
+                    var kyKetThuc = kyBatDau.AddMonths(1).AddDays(-1);
+                    soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(
+                        db, null, hopDongId, pdv.DichVu, kyBatDau, kyKetThuc);
                 }
                 catch (InvalidOperationException ex)
                 {

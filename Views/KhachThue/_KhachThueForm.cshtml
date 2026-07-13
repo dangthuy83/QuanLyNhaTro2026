@@ -1,5 +1,14 @@
 @model QuanLyNhaTro.Models.KhachThue
 
+@if (ViewBag.HoSoTrungCccd is QuanLyNhaTro.Models.KhachThue hoSoCu)
+{
+    <div class="alert alert-warning">
+        CCCD này đã thuộc hồ sơ
+        <a asp-controller="KhachThue" asp-action="Details" asp-route-id="@hoSoCu.Id" class="alert-link">@hoSoCu.HoTen (#@hoSoCu.Id)</a>.
+        Hãy tái sử dụng hồ sơ cũ; hệ thống không tự động gộp hồ sơ.
+    </div>
+}
+
 <div class="mb-3">
     <label asp-for="HoTen" class="form-label fw-semibold">
         Họ tên <span class="text-danger">*</span>
@@ -23,6 +32,7 @@
     <div class="col-md-6">
         <label asp-for="CCCD" class="form-label fw-semibold">CCCD</label>
         <input asp-for="CCCD" class="form-control" />
+        <span asp-validation-for="CCCD" class="text-danger small"></span>
     </div>
     <div class="col-md-6">
         <label asp-for="NgayCapCCCD" class="form-label fw-semibold">Ngày cấp CCCD</label>

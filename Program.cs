@@ -27,8 +27,10 @@ builder.Services.AddTransient<IDbConnection>(_ =>
 builder.Services.AddScoped<NhaRepository>();
 builder.Services.AddScoped<PhongRepository>();
 builder.Services.AddScoped<KhachThueRepository>();
+builder.Services.AddScoped<KhachThueService>();
 builder.Services.AddScoped<HopDongRepository>();
 builder.Services.AddScoped<HopDongKhachThueRepository>();
+builder.Services.AddScoped<CuTruService>();
 builder.Services.AddScoped<HoaDonRepository>();
 builder.Services.AddScoped<ChiTietHoaDonRepository>();
 builder.Services.AddScoped<ThanhToanRepository>();

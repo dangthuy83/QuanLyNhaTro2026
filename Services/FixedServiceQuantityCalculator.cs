@@ -10,7 +10,9 @@ public static class FixedServiceQuantityCalculator
         IDbConnection conn,
         IDbTransaction? tx,
         int hopDongId,
-        DichVu dichVu)
+        DichVu dichVu,
+        DateTime kyBatDau,
+        DateTime kyKetThuc)
     {
         if (dichVu.LoaiTinhPhi != DichVu.LoaiCoDinh)
             throw new InvalidOperationException("Chi dung helper nay cho dich vu co dinh.");
@@ -19,8 +21,14 @@ public static class FixedServiceQuantityCalculator
             return 1;
 
         var soKhach = await conn.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM HopDongKhachThue WHERE HopDongId = @HopDongId",
-            new { HopDongId = hopDongId },
+            """
+            SELECT COUNT(DISTINCT KhachThueId)
+            FROM HopDongKhachThue
+            WHERE HopDongId = @HopDongId
+              AND NgayBatDau <= @KyKetThuc
+              AND (NgayKetThuc IS NULL OR NgayKetThuc >= @KyBatDau)
+            """,
+            new { HopDongId = hopDongId, KyBatDau = kyBatDau.Date, KyKetThuc = kyKetThuc.Date },
             transaction: tx);
 
         if (soKhach <= 0)

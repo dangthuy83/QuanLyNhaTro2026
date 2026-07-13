@@ -202,7 +202,13 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
             JOIN HopDong hop ON hd.HopDongId = hop.Id
             JOIN Phong p     ON hop.PhongId  = p.Id
             JOIN Nha n        ON p.NhaId      = n.Id
-            LEFT JOIN HopDongKhachThue hkt ON hop.Id = hkt.HopDongId AND hkt.LaDaiDien = 1
+            LEFT JOIN HopDongKhachThue hkt
+                   ON hkt.Id = (
+                        SELECT x.Id FROM HopDongKhachThue x
+                        WHERE x.HopDongId = hop.Id AND x.LaDaiDien = 1
+                          AND x.NgayBatDau <= LAST_DAY(STR_TO_DATE(CONCAT(hd.Nam, '-', LPAD(hd.Thang, 2, '0'), '-01'), '%Y-%m-%d'))
+                          AND (x.NgayKetThuc IS NULL OR x.NgayKetThuc >= STR_TO_DATE(CONCAT(hd.Nam, '-', LPAD(hd.Thang, 2, '0'), '-01'), '%Y-%m-%d'))
+                        ORDER BY x.NgayBatDau DESC, x.Id DESC LIMIT 1)
             LEFT JOIN KhachThue k          ON hkt.KhachThueId = k.Id
             WHERE hd.SoTienDaThu < hd.TongCong AND hd.TongCong > 0
             ORDER BY hop.TrangThai DESC, hd.Nam, hd.Thang, p.TenPhong
