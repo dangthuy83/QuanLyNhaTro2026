@@ -41,6 +41,9 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - Dịch vụ `TheoNguoi`: người có mặt bất kỳ ngày nào trong kỳ được tính đủ một suất tháng; cần lưu hiệu lực thành viên và không xóa cứng lịch sử.
 - Ngày đến hạn kỳ N lấy `HopDong.NgayThanhToanHangThang` trong tháng N+1; nếu tháng ngắn hơn thì dùng ngày cuối tháng.
 - Snapshot hóa đơn tối thiểu gồm nhà, mã/tên phòng, khách đại diện, CCCD, tên/đơn vị dịch vụ và mô tả khoản phát sinh.
+  - Triển khai REVIEW-013 lưu snapshot ID/tên nhà, ID/tên phòng, ID/tên/CCCD khách đại diện trên `HoaDon`; tên/đơn vị dịch vụ trên `ChiTietHoaDon`; mô tả và số tiền thực tế đưa vào hóa đơn trên `KhoanPhatSinhHopDong`.
+  - Nếu trong kỳ có các đại diện kế tiếp nhau không chồng thời gian, hóa đơn chọn giai đoạn đại diện bắt đầu muộn nhất có giao với kỳ. Không có đại diện hoặc có hai đại diện đồng thời trong kỳ thì không được chốt.
+  - Chi tiết, phiếu thu HTML/Excel và báo cáo công nợ cũ đọc snapshot nhận diện; đổi tên hồ sơ hiện tại không được làm thay đổi chứng từ đã chốt. Xóa hóa đơn hợp lệ sẽ gỡ và xóa snapshot liên kết của khoản phát sinh để lần chốt sau lấy giá trị mới.
 - Hợp đồng tương lai dùng trạng thái `ChoHieuLuc`; chỉ chuyển `DangHieuLuc` khi đến ngày bắt đầu và không chồng kỳ.
   - Triển khai REVIEW-006 khóa dòng `Phong` trong transaction trước khi tạo/chuyển/kích hoạt hợp đồng và kiểm tra giao nhau trên toàn bộ khoảng `[NgayBatDau, NgayKetThuc]`, không suy từ trạng thái phòng. Hợp đồng tương lai không đổi phòng sang `DangThue`; các màn hợp đồng, dashboard, phòng và kiểm tra dữ liệu kích hoạt hợp đồng đến hạn qua cùng service guard.
   - Triển khai REVIEW-007 không tin `PhongId`, `TrangThai` hoặc giá gốc từ request Edit. Bản gốc được khóa/tải lại trong transaction; hợp đồng đã có dữ liệu nghiệp vụ chỉ cho sửa `GhiChu`. Danh sách khách được giữ nguyên khi đã phát sinh dữ liệu; lịch sử hiệu lực nhân khẩu vẫn thuộc REVIEW-008.

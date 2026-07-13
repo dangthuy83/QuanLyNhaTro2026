@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 2: REVIEW-012 đã hoàn tất; REVIEW-013 đến REVIEW-016 còn lại |
-| Build | Phiên 58: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 2: REVIEW-013 đã hoàn tất; REVIEW-014 đến REVIEW-016 còn lại |
+| Build | Phiên 59: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 58 dry-run giá DB vận hành sạch; schema/service/concurrency/rollback smoke REVIEW-012 pass và DB tạm drop trong `finally`. Không đổi schema, không có dữ liệu lệch nên không cần apply-once. |
+| Database | Phiên 59 dry-run REVIEW-013 sạch; apply-once snapshot hóa đơn đã chạy trên DB vận hành, hậu kiểm đủ 11 cột/1 constraint. Schema/migration/service/Excel smoke pass và DB tạm drop trong `finally`. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-012 đã xong; REVIEW-013 đến REVIEW-016 còn lại | Đang làm Phase 2 |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-013 đã xong; REVIEW-014 đến REVIEW-016 còn lại | Đang làm Phase 2 |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,41 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 59 - REVIEW-013: snapshot nhận diện chứng từ hóa đơn
+
+Đã triển khai:
+
+- `HoaDon` lưu snapshot nhà, phòng và khách đại diện/CCCD; `ChiTietHoaDon` lưu tên/đơn vị dịch vụ; khoản phát sinh lưu mô tả/số tiền thực tế tại lúc gắn hóa đơn.
+- `HoaDonSnapshotService` là điểm ghi chung cho lập hóa đơn thường, chuyển phòng và trả phòng. Không có đại diện hoặc đại diện chồng thời gian trong kỳ bị chặn; các giai đoạn đại diện kế tiếp hợp lệ chọn giai đoạn mới nhất giao kỳ.
+- Chi tiết hóa đơn, danh sách, phiếu thu HTML/Excel và báo cáo công nợ dùng snapshot nhận diện. Đổi dữ liệu gốc sau chốt không làm thay đổi chứng từ cũ.
+- Xóa hóa đơn hợp lệ trả khoản phát sinh về `ChuaXuLy` đồng thời xóa snapshot liên kết, để lần chốt lại lấy đúng mô tả/số tiền mới.
+- Thêm apply-once `Database/updates/20260713_invoice_identity_snapshot.sql` có dry-run fail-closed và backfill không xóa/merge dữ liệu; cập nhật baseline và README.
+
+Dry-run và apply DB vận hành:
+
+```text
+REAL_DRY_RUN TotalInvoices=0;MissingScope=0;NoRepresentative=0;ManyRepresentatives=0;TotalDetails=0;InvalidServiceIdentity=0;LinkedCharges=0;BlankChargeDescriptions=0
+REAL_MIGRATION_APPLIED
+REAL_DRY_RUN ...;SnapshotColumns=11;SnapshotConstraints=1
+```
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore: pass, 0 error; 1 warning NU1900 do môi trường
+SCHEMA_SMOKE_PASS
+MIGRATION_BACKFILL_RERUN_PASS
+SERVICE_EXCEL_SNAPSHOT_PASS
+SEQUENTIAL_REPRESENTATIVE_PASS
+REPRESENTATIVE_GUARD_PASS
+TEMP_DB_DROPPED
+git diff --check: pass
+```
+
+Browser QA `/HoaDon` sau migration pass: trang render đúng, trạng thái chưa có hóa đơn hợp lệ và console không có warning/error; process test đã dừng.
+
+Phạm vi giữ nguyên: không làm REVIEW-014/015/016; không merge hồ sơ khách; không thêm unique cứng CCCD; không tạo/xóa dữ liệu hóa đơn thật.
 
 ### Phiên 58 - REVIEW-012: khóa lịch sử giá theo hóa đơn và kỳ hiệu lực
 

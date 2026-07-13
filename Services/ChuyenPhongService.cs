@@ -15,7 +15,8 @@ public class ChuyenPhongService(
     LichSuThayDoiGiaRepository lichSuRepo,
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     GiaoDichCocService giaoDichCocService,
-    CongNoSettlementService congNoSettlementService)
+    CongNoSettlementService congNoSettlementService,
+    HoaDonSnapshotService snapshotService)
 {
     public async Task<(int HopDongMoiId, int HoaDonCuId, int? HoaDonMoiId)> ThucHienAsync(
         ChuyenPhongViewModel vm)
@@ -152,29 +153,20 @@ public class ChuyenPhongService(
             decimal tongPhatSinhCu = khoanPhatSinhCu.Sum(x => x.SoTienConLai);
             decimal tongCongCu = tienPhongCu + tongDvCu + tongPhatSinhCu;
 
-            var hdCuId = await conn.ExecuteScalarAsync<int>("""
-                INSERT INTO HoaDon
-                    (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
-                     TongTienPhatSinh, TongCong, SoTienDaThu, TrangThaiThanhToan,
-                     SoNgayO, SoNgayTrongThang, TienNoKyTruoc)
-                VALUES
-                    (@HopDongId, @Thang, @Nam, NOW(), @TienPhong, @TongDV,
-                     @TongTienPhatSinh, @TongCong, 0, 'ChuaThu',
-                     @SoNgayO, @SoNgayTrongThang, 0);
-                SELECT LAST_INSERT_ID();
-                """,
-                new
+            var hdCuId = await snapshotService.InsertHoaDonAsync(conn, tx, new HoaDon
                 {
                     HopDongId = vm.HopDongCuId,
                     Thang = thang,
                     Nam = nam,
+                    NgayLap = DateTime.Now,
                     TienPhong = tienPhongCu,
-                    TongDV = tongDvCu,
+                    TongTienDichVu = tongDvCu,
                     TongTienPhatSinh = tongPhatSinhCu,
                     TongCong = tongCongCu,
                     SoNgayO = soNgayOCu,
-                    SoNgayTrongThang = soNgayTrongThang
-                }, tx);
+                    SoNgayTrongThang = soNgayTrongThang,
+                    TrangThaiThanhToan = "ChuaThu"
+                });
 
             await InsertChiTietAsync(conn, tx, hdCuId, chiTietDvCu);
             await khoanPhatSinhRepo.GanVaoHoaDonAsync(
@@ -187,29 +179,20 @@ public class ChuyenPhongService(
                 decimal tongDvMoi = chiTietDvMoi.Sum(d => d.ThanhTien);
                 decimal tongCongMoi = tienPhongMoi + tongDvMoi + noXuyen;
 
-                hdMoiHdId = await conn.ExecuteScalarAsync<int>("""
-                    INSERT INTO HoaDon
-                        (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
-                         TongCong, SoTienDaThu, TrangThaiThanhToan,
-                         SoNgayO, SoNgayTrongThang, TienNoKyTruoc)
-                    VALUES
-                        (@HopDongId, @Thang, @Nam, NOW(), @TienPhong, @TongDV,
-                         @TongCong, 0, 'ChuaThu',
-                         @SoNgayO, @SoNgayTrongThang, @NoXuyen);
-                    SELECT LAST_INSERT_ID();
-                    """,
-                    new
+                hdMoiHdId = await snapshotService.InsertHoaDonAsync(conn, tx, new HoaDon
                     {
                         HopDongId = hdMoiId,
                         Thang = thang,
                         Nam = nam,
+                        NgayLap = DateTime.Now,
                         TienPhong = tienPhongMoi,
-                        TongDV = tongDvMoi,
+                        TongTienDichVu = tongDvMoi,
                         TongCong = tongCongMoi,
-                        NoXuyen = noXuyen,
+                        TienNoKyTruoc = noXuyen,
                         SoNgayO = soNgayOMoi,
-                        SoNgayTrongThang = soNgayTrongThang
-                    }, tx);
+                        SoNgayTrongThang = soNgayTrongThang,
+                        TrangThaiThanhToan = "ChuaThu"
+                    });
 
                 await InsertChiTietAsync(conn, tx, hdMoiHdId.Value, chiTietDvMoi);
 
@@ -300,31 +283,24 @@ public class ChuyenPhongService(
         return result;
     }
 
-    private static async Task InsertChiTietAsync(
+    private async Task InsertChiTietAsync(
         MySqlConnection conn,
         MySqlTransaction tx,
         int hoaDonId,
         IEnumerable<ChiTietDichVuTam> chiTiet)
     {
-        const string sql = """
-            INSERT INTO ChiTietHoaDon
-                (HoaDonId, DichVuId, ChiSoDienNuocId, SoLuong, DonGia, ThanhTien)
-            VALUES
-                (@HoaDonId, @DichVuId, @ChiSoDienNuocId, @SoLuong, @DonGia, @ThanhTien)
-            """;
-
-        foreach (var ct in chiTiet)
-        {
-            await conn.ExecuteAsync(sql, new
+        await snapshotService.InsertChiTietAsync(
+            conn,
+            tx,
+            hoaDonId,
+            chiTiet.Select(ct => new ChiTietHoaDon
             {
-                HoaDonId = hoaDonId,
-                ct.DichVuId,
-                ct.ChiSoDienNuocId,
-                ct.SoLuong,
-                ct.DonGia,
-                ct.ThanhTien
-            }, tx);
-        }
+                DichVuId = ct.DichVuId,
+                ChiSoDienNuocId = ct.ChiSoDienNuocId,
+                SoLuong = ct.SoLuong,
+                DonGia = ct.DonGia,
+                ThanhTien = ct.ThanhTien
+            }));
     }
 
     private async Task<decimal> LayGiaPhongAsync(HopDong hd, int thang, int nam)

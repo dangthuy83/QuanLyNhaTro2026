@@ -8,9 +8,6 @@ public class ExcelService
     // ── Xuất phiếu thu 1 hóa đơn ─────────────────────────────────────────────
     public byte[] XuatPhieuThu(
         HoaDon hoaDon,
-        HopDong hopDong,
-        Phong phong,
-        IEnumerable<KhachThue> danhSachKhach,
         IEnumerable<ChiTietHoaDon> chiTiet,
         IEnumerable<KhoanPhatSinhHopDong> khoanPhatSinh,
         IEnumerable<ThanhToan> lichSuThanhToan)
@@ -29,12 +26,14 @@ public class ExcelService
 
         int row = 4;
         ws.Cell(row, 1).Value = "Phòng:";
-        ws.Cell(row, 2).Value = phong.TenPhong;
+        ws.Cell(row, 2).Value = hoaDon.TenPhongSnapshot;
         ws.Cell(row, 4).Value = "Ngày lập:";
         ws.Cell(row, 5).Value = hoaDon.NgayLap.ToString("dd/MM/yyyy");
         row++;
         ws.Cell(row, 1).Value = "Khách thuê:";
-        ws.Cell(row, 2).Value = string.Join(", ", danhSachKhach.Select(k => k.HoTen));
+        ws.Cell(row, 2).Value = hoaDon.TenKhachDaiDienSnapshot;
+        ws.Cell(row, 4).Value = "CCCD:";
+        ws.Cell(row, 5).Value = hoaDon.CccdKhachDaiDienSnapshot ?? "";
         row += 2;
 
         string[] headers = ["STT", "Dịch vụ / Mục", "ĐVT", "Số lượng", "Đơn giá", "Thành tiền"];
@@ -62,8 +61,8 @@ public class ExcelService
         foreach (var ct in chiTiet)
         {
             ws.Cell(row, 1).Value = stt++;
-            ws.Cell(row, 2).Value = ct.DichVu?.TenDichVu ?? $"DV #{ct.DichVuId}";
-            ws.Cell(row, 3).Value = ct.DichVu?.DonViTinh ?? "";
+            ws.Cell(row, 2).Value = ct.TenDichVuSnapshot;
+            ws.Cell(row, 3).Value = ct.DonViTinhSnapshot;
             ws.Cell(row, 4).Value = ct.SoLuong;
             ws.Cell(row, 5).Value = ct.DonGia;
             ws.Cell(row, 6).Value = ct.ThanhTien;
@@ -75,11 +74,11 @@ public class ExcelService
         foreach (var khoan in khoanPhatSinh)
         {
             ws.Cell(row, 1).Value = stt++;
-            ws.Cell(row, 2).Value = khoan.MoTa;
+            ws.Cell(row, 2).Value = khoan.MoTaTrenHoaDon;
             ws.Cell(row, 3).Value = khoan.LoaiKhoan;
             ws.Cell(row, 4).Value = 1;
-            ws.Cell(row, 5).Value = khoan.SoTienConLai > 0 ? khoan.SoTienConLai : khoan.SoTien;
-            ws.Cell(row, 6).Value = khoan.SoTienConLai > 0 ? khoan.SoTienConLai : khoan.SoTien;
+            ws.Cell(row, 5).Value = khoan.SoTienTrenHoaDon;
+            ws.Cell(row, 6).Value = khoan.SoTienTrenHoaDon;
             ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
             ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
             row++;

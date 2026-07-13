@@ -16,7 +16,8 @@ public class HoaDonService(
     ChiSoDienNuocRepository chiSoRepo,
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     LichSuThayDoiGiaRepository lichSuGiaRepo,
-    CongNoSettlementService congNoSettlementService)
+    CongNoSettlementService congNoSettlementService,
+    HoaDonSnapshotService snapshotService)
 {
     public async Task<decimal> LayGiaApDungAsync(
         string loaiDoiTuong,
@@ -75,20 +76,19 @@ public class HoaDonService(
             if (existingInTransaction != null)
                 throw new InvalidOperationException($"Hoa don ky {thang}/{nam} cua hop dong #{hopDongId} da ton tai.");
 
-            var hoaDonId = await hoaDonRepo.InsertAsync(conn, tx, hoaDon);
-
-            foreach (var ct in duKien.ChiTiet)
-            {
-                await chiTietRepo.InsertAsync(conn, tx, new ChiTietHoaDon
+            var hoaDonId = await snapshotService.InsertHoaDonAsync(conn, tx, hoaDon);
+            await snapshotService.InsertChiTietAsync(
+                conn,
+                tx,
+                hoaDonId,
+                duKien.ChiTiet.Select(ct => new ChiTietHoaDon
                 {
-                    HoaDonId = hoaDonId,
                     DichVuId = ct.DichVuId,
                     ChiSoDienNuocId = ct.ChiSoDienNuocId,
                     SoLuong = ct.SoLuong,
                     DonGia = ct.DonGia,
                     ThanhTien = ct.ThanhTien
-                });
-            }
+                }));
 
             await khoanPhatSinhRepo.GanVaoHoaDonAsync(
                 conn,

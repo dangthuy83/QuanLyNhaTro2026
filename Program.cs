@@ -56,6 +56,7 @@ builder.Services.AddScoped<TraPhongService>();
 builder.Services.AddScoped<GiaoDichCocService>();
 builder.Services.AddScoped<CongNoSettlementService>();
 builder.Services.AddScoped<GiaService>();
+builder.Services.AddScoped<HoaDonSnapshotService>();
 builder.Services.AddScoped<HinhThucDichVuService>();
 builder.Services.AddScoped<ChiSoService>();
 

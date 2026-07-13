@@ -93,7 +93,7 @@
 
     <div class="receipt-sheet shadow-sm">
         <div class="text-center mb-4">
-            <div class="text-uppercase fw-semibold">Quản lý nhà trọ</div>
+            <div class="text-uppercase fw-semibold">@Model.HoaDon.TenNhaSnapshot</div>
             <h4 class="receipt-title fw-bold mt-2 mb-1">PHIẾU THU TIỀN PHÒNG</h4>
             <div class="text-muted">Kỳ tháng @Model.HoaDon.Thang/@Model.HoaDon.Nam · Phiếu #@Model.HoaDon.Id</div>
         </div>
@@ -103,15 +103,19 @@
                 <table class="receipt-meta w-100">
                     <tr>
                         <td class="text-muted" style="width:120px">Phòng</td>
-                        <td class="fw-semibold">@Model.Phong.TenPhong</td>
+                        <td class="fw-semibold">@Model.HoaDon.TenPhongSnapshot</td>
                     </tr>
                     <tr>
                         <td class="text-muted">Khách thuê</td>
                         <td>@Model.TenKhach</td>
                     </tr>
                     <tr>
+                        <td class="text-muted">CCCD</td>
+                        <td>@(Model.HoaDon.CccdKhachDaiDienSnapshot ?? "—")</td>
+                    </tr>
+                    <tr>
                         <td class="text-muted">Hợp đồng</td>
-                        <td>#@Model.HopDong.Id, từ @Model.HopDong.NgayBatDau.ToString("dd/MM/yyyy")</td>
+                        <td>#@Model.HoaDon.HopDongId</td>
                     </tr>
                 </table>
             </div>
@@ -175,8 +179,8 @@
                     stt++;
                     <tr>
                         <td>@stt</td>
-                        <td>@(ct.DichVu?.TenDichVu ?? $"Dịch vụ #{ct.DichVuId}")</td>
-                        <td>@ct.DichVu?.DonViTinh</td>
+                        <td>@ct.TenDichVuSnapshot</td>
+                        <td>@ct.DonViTinhSnapshot</td>
                         <td class="text-end">@ct.SoLuong.ToString("N2")</td>
                         <td class="text-end">@ct.DonGia.ToString("N0")</td>
                         <td class="text-end fw-semibold">@ct.ThanhTien.ToString("N0")</td>
@@ -187,11 +191,11 @@
                     stt++;
                     <tr>
                         <td>@stt</td>
-                        <td>@khoan.MoTa</td>
+                        <td>@khoan.MoTaTrenHoaDon</td>
                         <td>@khoan.LoaiKhoan</td>
                         <td class="text-end">1</td>
-                        <td class="text-end">@khoan.SoTien.ToString("N0")</td>
-                        <td class="text-end fw-semibold">@khoan.SoTien.ToString("N0")</td>
+                        <td class="text-end">@khoan.SoTienTrenHoaDon.ToString("N0")</td>
+                        <td class="text-end fw-semibold">@khoan.SoTienTrenHoaDon.ToString("N0")</td>
                     </tr>
                 }
                 @if (Model.HoaDon.TienNoKyTruoc != 0)

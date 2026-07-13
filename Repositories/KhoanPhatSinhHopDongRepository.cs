@@ -104,9 +104,12 @@ public class KhoanPhatSinhHopDongRepository(IDbConnection db) : BaseRepository(d
             """
             UPDATE KhoanPhatSinhHopDong
             SET HoaDonId = @HoaDonId,
-                TrangThai = 'DaDuaVaoHoaDon'
+                TrangThai = 'DaDuaVaoHoaDon',
+                MoTaHoaDonSnapshot = MoTa,
+                SoTienHoaDonSnapshot = SoTien - SoTienDaXuLy
             WHERE Id IN @Ids
               AND TrangThai = 'ChuaXuLy'
+              AND SoTien > SoTienDaXuLy
             """,
             new { HoaDonId = hoaDonId, Ids = idList },
             tx);
@@ -134,7 +137,9 @@ public class KhoanPhatSinhHopDongRepository(IDbConnection db) : BaseRepository(d
             """
             UPDATE KhoanPhatSinhHopDong
             SET HoaDonId = NULL,
-                TrangThai = 'ChuaXuLy'
+                TrangThai = 'ChuaXuLy',
+                MoTaHoaDonSnapshot = NULL,
+                SoTienHoaDonSnapshot = NULL
             WHERE HoaDonId = @HoaDonId
               AND TrangThai = 'DaDuaVaoHoaDon'
             """,

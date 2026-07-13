@@ -9,7 +9,9 @@ public class ChiTietHoaDon
     public decimal SoLuong { get; set; }
     public decimal DonGia { get; set; }
     public decimal ThanhTien { get; set; }
+    public string TenDichVuSnapshot { get; set; } = string.Empty;
+    public string DonViTinhSnapshot { get; set; } = string.Empty;
 
-    public string TenDichVu => DichVu?.TenDichVu ?? "";
+    public string TenDichVu => TenDichVuSnapshot;
     public DichVu? DichVu { get; set; }
 }

@@ -8,26 +8,20 @@ public class ChiTietHoaDonRepository(IDbConnection db) : BaseRepository(db)
 {
     public async Task<IEnumerable<ChiTietHoaDon>> GetByHoaDonAsync(int hoaDonId)
     {
-        const string sql = """
-            SELECT ct.*, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh, dv.DonGiaMacDinh
-            FROM ChiTietHoaDon ct
-            INNER JOIN DichVu dv ON dv.Id = ct.DichVuId
-            WHERE ct.HoaDonId = @HoaDonId
-            """;
-        return await _db.QueryAsync<ChiTietHoaDon, DichVu, ChiTietHoaDon>(
-            sql,
-            (ct, dv) => { ct.DichVu = dv; return ct; },
-            new { HoaDonId = hoaDonId },
-            splitOn: "Id");
+        return await _db.QueryAsync<ChiTietHoaDon>(
+            "SELECT * FROM ChiTietHoaDon WHERE HoaDonId = @HoaDonId ORDER BY Id",
+            new { HoaDonId = hoaDonId });
     }
 
     public async Task InsertAsync(ChiTietHoaDon ct)
     {
         const string sql = """
             INSERT INTO ChiTietHoaDon
-                (HoaDonId, DichVuId, SoLuong, DonGia, ThanhTien, ChiSoDienNuocId)
+                (HoaDonId, DichVuId, SoLuong, DonGia, ThanhTien, ChiSoDienNuocId,
+                 TenDichVuSnapshot, DonViTinhSnapshot)
             VALUES
-                (@HoaDonId, @DichVuId, @SoLuong, @DonGia, @ThanhTien, @ChiSoDienNuocId)
+                (@HoaDonId, @DichVuId, @SoLuong, @DonGia, @ThanhTien, @ChiSoDienNuocId,
+                 @TenDichVuSnapshot, @DonViTinhSnapshot)
             """;
         await _db.ExecuteAsync(sql, ct);
     }
@@ -36,9 +30,11 @@ public class ChiTietHoaDonRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             INSERT INTO ChiTietHoaDon
-                (HoaDonId, DichVuId, SoLuong, DonGia, ThanhTien, ChiSoDienNuocId)
+                (HoaDonId, DichVuId, SoLuong, DonGia, ThanhTien, ChiSoDienNuocId,
+                 TenDichVuSnapshot, DonViTinhSnapshot)
             VALUES
-                (@HoaDonId, @DichVuId, @SoLuong, @DonGia, @ThanhTien, @ChiSoDienNuocId)
+                (@HoaDonId, @DichVuId, @SoLuong, @DonGia, @ThanhTien, @ChiSoDienNuocId,
+                 @TenDichVuSnapshot, @DonViTinhSnapshot)
             """;
         await conn.ExecuteAsync(sql, ct, transaction: tx);
     }

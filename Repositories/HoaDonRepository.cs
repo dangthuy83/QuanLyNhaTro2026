@@ -66,18 +66,12 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<HoaDon>> GetChuaThuAsync()
     {
         const string sql = """
-            SELECT hd.*, hdd.Id, hdd.PhongId, hdd.TrangThai,
-                   p.Id, p.TenPhong
+            SELECT hd.*
             FROM HoaDon hd
-            INNER JOIN HopDong hdd ON hdd.Id = hd.HopDongId
-            INNER JOIN Phong p ON p.Id = hdd.PhongId
             WHERE hd.TrangThaiThanhToan IN ('ChuaThu', 'ThuMotPhan')
-            ORDER BY hd.Nam, hd.Thang, p.TenPhong
+            ORDER BY hd.Nam, hd.Thang, hd.TenPhongSnapshot
             """;
-        return await _db.QueryAsync<HoaDon, HopDong, Phong, HoaDon>(
-            sql,
-            (hd, hdd, p) => { hdd.Phong = p; hd.HopDong = hdd; return hd; },
-            splitOn: "Id,Id");
+        return await _db.QueryAsync<HoaDon>(sql);
     }
 
     public async Task<int> InsertAsync(HoaDon hd)
@@ -86,11 +80,15 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
             INSERT INTO HoaDon
                 (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
                  TongTienPhatSinh, TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
-                 SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu)
+                 SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu,
+                 NhaIdSnapshot, TenNhaSnapshot, PhongIdSnapshot, TenPhongSnapshot,
+                 KhachDaiDienIdSnapshot, TenKhachDaiDienSnapshot, CccdKhachDaiDienSnapshot)
             VALUES
                 (@HopDongId, @Thang, @Nam, @NgayLap, @TienPhong, @TongTienDichVu,
                  @TongTienPhatSinh, @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
-                 @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu);
+                 @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu,
+                 @NhaIdSnapshot, @TenNhaSnapshot, @PhongIdSnapshot, @TenPhongSnapshot,
+                 @KhachDaiDienIdSnapshot, @TenKhachDaiDienSnapshot, @CccdKhachDaiDienSnapshot);
             SELECT LAST_INSERT_ID();
             """;
         return await _db.ExecuteScalarAsync<int>(sql, hd);
@@ -102,11 +100,15 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
             INSERT INTO HoaDon
                 (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
                  TongTienPhatSinh, TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
-                 SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu)
+                 SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu,
+                 NhaIdSnapshot, TenNhaSnapshot, PhongIdSnapshot, TenPhongSnapshot,
+                 KhachDaiDienIdSnapshot, TenKhachDaiDienSnapshot, CccdKhachDaiDienSnapshot)
             VALUES
                 (@HopDongId, @Thang, @Nam, @NgayLap, @TienPhong, @TongTienDichVu,
                  @TongTienPhatSinh, @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
-                 @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu);
+                 @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu,
+                 @NhaIdSnapshot, @TenNhaSnapshot, @PhongIdSnapshot, @TenPhongSnapshot,
+                 @KhachDaiDienIdSnapshot, @TenKhachDaiDienSnapshot, @CccdKhachDaiDienSnapshot);
             SELECT LAST_INSERT_ID();
             """;
         return await conn.ExecuteScalarAsync<int>(sql, hd, transaction: tx);
@@ -181,10 +183,10 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             SELECT
-                n.Id AS NhaId,
-                n.TenNha,
-                p.TenPhong,
-                COALESCE(k.HoTen, '(chưa có khách)') AS TenKhachChinh,
+                hd.NhaIdSnapshot AS NhaId,
+                hd.TenNhaSnapshot AS TenNha,
+                hd.TenPhongSnapshot AS TenPhong,
+                hd.TenKhachDaiDienSnapshot AS TenKhachChinh,
                 k.SoDienThoai,
                 hd.Id          AS HoaDonId,
                 hd.Thang,
@@ -200,18 +202,9 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
                 )) AS SoNgayQuaHan
             FROM HoaDon hd
             JOIN HopDong hop ON hd.HopDongId = hop.Id
-            JOIN Phong p     ON hop.PhongId  = p.Id
-            JOIN Nha n        ON p.NhaId      = n.Id
-            LEFT JOIN HopDongKhachThue hkt
-                   ON hkt.Id = (
-                        SELECT x.Id FROM HopDongKhachThue x
-                        WHERE x.HopDongId = hop.Id AND x.LaDaiDien = 1
-                          AND x.NgayBatDau <= LAST_DAY(STR_TO_DATE(CONCAT(hd.Nam, '-', LPAD(hd.Thang, 2, '0'), '-01'), '%Y-%m-%d'))
-                          AND (x.NgayKetThuc IS NULL OR x.NgayKetThuc >= STR_TO_DATE(CONCAT(hd.Nam, '-', LPAD(hd.Thang, 2, '0'), '-01'), '%Y-%m-%d'))
-                        ORDER BY x.NgayBatDau DESC, x.Id DESC LIMIT 1)
-            LEFT JOIN KhachThue k          ON hkt.KhachThueId = k.Id
+            LEFT JOIN KhachThue k ON k.Id = hd.KhachDaiDienIdSnapshot
             WHERE hd.SoTienDaThu < hd.TongCong AND hd.TongCong > 0
-            ORDER BY hop.TrangThai DESC, hd.Nam, hd.Thang, p.TenPhong
+            ORDER BY hop.TrangThai DESC, hd.Nam, hd.Thang, hd.TenPhongSnapshot
             """;
         return await _db.QueryAsync<BaoCaoCongNoViewModel>(sql);
     }

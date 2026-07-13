@@ -19,9 +19,13 @@ public class KhoanPhatSinhHopDong
     public string TrangThai { get; set; } = TrangThaiChuaXuLy;
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
+    public string? MoTaHoaDonSnapshot { get; set; }
+    public decimal? SoTienHoaDonSnapshot { get; set; }
 
     public decimal SoTienConLai => Math.Max(0, SoTien - SoTienDaXuLy);
     public bool ConPhaiXuLy => TrangThai == TrangThaiChuaXuLy && SoTienConLai > 0;
+    public string MoTaTrenHoaDon => MoTaHoaDonSnapshot ?? MoTa;
+    public decimal SoTienTrenHoaDon => SoTienHoaDonSnapshot ?? SoTienConLai;
 
     public HopDong? HopDong { get; set; }
     public HoaDon? HoaDon { get; set; }

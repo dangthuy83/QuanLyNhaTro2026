@@ -28,6 +28,15 @@ public class HoaDon
 
     public string? GhiChu { get; set; }
 
+    // Snapshot nhận diện — không đọc ngược từ hồ sơ hiện tại khi in/báo cáo.
+    public int NhaIdSnapshot { get; set; }
+    public string TenNhaSnapshot { get; set; } = string.Empty;
+    public int PhongIdSnapshot { get; set; }
+    public string TenPhongSnapshot { get; set; } = string.Empty;
+    public int KhachDaiDienIdSnapshot { get; set; }
+    public string TenKhachDaiDienSnapshot { get; set; } = string.Empty;
+    public string? CccdKhachDaiDienSnapshot { get; set; }
+
     // Navigation
     public HopDong? HopDong { get; set; }
     public List<ChiTietHoaDon> ChiTiet { get; set; } = [];

@@ -344,6 +344,13 @@ CREATE TABLE HoaDon (
     NgayLap DATE NOT NULL,
     NgayThuThucTe DATE NULL,
     GhiChu TEXT NULL,
+    NhaIdSnapshot INT NOT NULL,
+    TenNhaSnapshot VARCHAR(100) NOT NULL,
+    PhongIdSnapshot INT NOT NULL,
+    TenPhongSnapshot VARCHAR(50) NOT NULL,
+    KhachDaiDienIdSnapshot INT NOT NULL,
+    TenKhachDaiDienSnapshot VARCHAR(100) NOT NULL,
+    CccdKhachDaiDienSnapshot VARCHAR(20) NULL,
     CONSTRAINT FK_HoaDon_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_HoaDon_Ghep FOREIGN KEY (HoaDonGhepId) REFERENCES HoaDon(Id),
     CONSTRAINT UQ_HoaDon UNIQUE (HopDongId, Thang, Nam)
@@ -362,6 +369,8 @@ CREATE TABLE ChiTietHoaDon (
     SoLuong DECIMAL(10,2) NOT NULL DEFAULT 1,
     DonGia DECIMAL(12,2) NOT NULL,
     ThanhTien DECIMAL(12,0) NOT NULL,
+    TenDichVuSnapshot VARCHAR(100) NOT NULL,
+    DonViTinhSnapshot VARCHAR(30) NOT NULL,
     CONSTRAINT FK_CTHD_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
     CONSTRAINT FK_CTHD_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
     CONSTRAINT FK_CTHD_ChiSo FOREIGN KEY (ChiSoDienNuocId) REFERENCES ChiSoDienNuoc(Id)
@@ -428,11 +437,16 @@ CREATE TABLE KhoanPhatSinhHopDong (
     SoTienDaXuLy DECIMAL(12,0) NOT NULL DEFAULT 0,
     TrangThai VARCHAR(30) NOT NULL DEFAULT 'ChuaXuLy',
     GhiChu VARCHAR(255) NULL,
+    MoTaHoaDonSnapshot VARCHAR(500) NULL,
+    SoTienHoaDonSnapshot DECIMAL(12,0) NULL,
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_KhoanPhatSinh_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_KhoanPhatSinh_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
     CONSTRAINT CK_KhoanPhatSinh_Tien CHECK (SoTien > 0 AND SoTienDaXuLy >= 0 AND SoTienDaXuLy <= SoTien),
-    CONSTRAINT CK_KhoanPhatSinh_TrangThai CHECK (TrangThai IN ('ChuaXuLy', 'DaDuaVaoHoaDon', 'DaThu', 'DaTruCoc', 'DaHuy'))
+    CONSTRAINT CK_KhoanPhatSinh_TrangThai CHECK (TrangThai IN ('ChuaXuLy', 'DaDuaVaoHoaDon', 'DaThu', 'DaTruCoc', 'DaHuy')),
+    CONSTRAINT CK_KhoanPhatSinh_HoaDonSnapshot CHECK (
+        HoaDonId IS NULL OR (MoTaHoaDonSnapshot IS NOT NULL AND SoTienHoaDonSnapshot > 0)
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX IX_KhoanPhatSinh_HopDong_TrangThai

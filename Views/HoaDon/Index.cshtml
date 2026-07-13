@@ -63,7 +63,7 @@
                     var modalId = $"thuNhanhModal{hd.Id}";
                     <tr>
                         <td><a asp-action="Details" asp-route-id="@hd.Id" class="fw-semibold text-decoration-none">
-                            @hd.HopDong?.Phong?.TenPhong
+                            @hd.TenPhongSnapshot
                         </a></td>
                         <td class="text-end">@hd.TienPhong.ToString("N0")</td>
                         <td class="text-end">@hd.TongTienDichVu.ToString("N0")</td>
@@ -130,7 +130,7 @@
 
                                             <div class="modal-header">
                                                 <h6 class="modal-title" id="@($"{modalId}Label")">
-                                                    Thu tiền @hd.HopDong?.Phong?.TenPhong - @hd.Thang/@hd.Nam
+                                                    Thu tiền @hd.TenPhongSnapshot - @hd.Thang/@hd.Nam
                                                 </h6>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                                             </div>
