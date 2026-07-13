@@ -203,7 +203,10 @@ Các cột dễ nhầm:
 - Mỗi thời điểm tối đa một đại diện hiệu lực; đại diện phải thuộc một giai đoạn đang cư trú. Mọi thay đổi cư trú được serialize dưới khóa hợp đồng.
 - Chuyển phòng đóng giai đoạn cũ vào ngày chuyển và mở giai đoạn mới từ hôm sau. Trả phòng đóng mọi giai đoạn đang mở vào ngày trả. Hủy hợp đồng tương lai giữ nguyên các dòng để audit.
 - Tạo hợp đồng và thêm người ở tìm hồ sơ server-side theo tên/SĐT/CCCD/biển số, debounce và giới hạn 20 kết quả; không tải toàn bộ danh sách khách.
-- CCCD trùng bị chặn ở service/UI và hướng người vận hành về hồ sơ cũ. Cleanup/merge và unique DB cứng tiếp tục thuộc REVIEW-014.
+- CCCD sau `Trim`, nếu không rỗng, là duy nhất. REVIEW-014 chặn ở service/UI và bằng generated `KhachThue.CCCDNormalized` + unique DB để chống race; hồ sơ trùng hiện hữu chỉ được báo để xử lý thủ công, không tự merge/xóa/sửa CCCD.
+- SĐT sau `Trim` chỉ cảnh báo và liệt kê hồ sơ phù hợp; người vận hành có thể xác nhận lưu hồ sơ riêng vì SĐT có thể dùng chung hoặc tái sử dụng, nên không có unique DB cứng.
+- Ảnh CCCD chỉ nhận JPG/PNG/WEBP tối đa 5 MB, phải khớp magic bytes và decode được thành ảnh thật. Tên/path do server sinh trong upload root cấu hình; không tin hidden/request path, không xóa ngoài root. File mới được cleanup nếu DB lỗi; ảnh cũ chỉ xóa sau khi update DB commit thành công.
+- Khách đã có bất kỳ `HopDongKhachThue`/lịch sử cư trú không được xóa cứng. Chỉ hồ sơ hoàn toàn chưa sử dụng được xóa; file ảnh được xóa sau khi DB delete commit thành công.
 
 ### 4.4.3 Dịch vụ đăng ký theo hợp đồng
 

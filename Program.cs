@@ -15,6 +15,8 @@ if (builder.Configuration.GetValue<bool>("UseEphemeralDataProtection"))
 
 // ── MVC ──────────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
+builder.Services.Configure<TenantPhotoOptions>(
+    builder.Configuration.GetSection(TenantPhotoOptions.SectionName));
 
 // ── Database (Dapper + MySqlConnector) ───────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -59,6 +61,7 @@ builder.Services.AddScoped<GiaService>();
 builder.Services.AddScoped<HoaDonSnapshotService>();
 builder.Services.AddScoped<HinhThucDichVuService>();
 builder.Services.AddScoped<ChiSoService>();
+builder.Services.AddScoped<TenantPhotoStorage>();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();

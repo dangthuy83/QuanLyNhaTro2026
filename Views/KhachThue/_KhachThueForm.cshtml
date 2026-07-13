@@ -9,6 +9,23 @@
     </div>
 }
 
+@if (ViewBag.HoSoTrungSoDienThoai is IReadOnlyList<QuanLyNhaTro.Models.KhachThue> hoSoTrungSdt && hoSoTrungSdt.Count > 0)
+{
+    <div class="alert alert-warning">
+        <div class="fw-semibold mb-1">Số điện thoại này đang có trong hồ sơ:</div>
+        <ul class="mb-2">
+            @foreach (var item in hoSoTrungSdt)
+            {
+                <li><a asp-controller="KhachThue" asp-action="Details" asp-route-id="@item.Id" class="alert-link">@item.HoTen (#@item.Id)</a></li>
+            }
+        </ul>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="true" id="confirmDuplicatePhone" name="confirmDuplicatePhone" required />
+            <label class="form-check-label" for="confirmDuplicatePhone">Tôi đã kiểm tra và vẫn muốn lưu thành hồ sơ riêng.</label>
+        </div>
+    </div>
+}
+
 <div class="mb-3">
     <label asp-for="HoTen" class="form-label fw-semibold">
         Họ tên <span class="text-danger">*</span>
@@ -25,6 +42,7 @@
     <div class="col-md-6">
         <label asp-for="SoDienThoai" class="form-label fw-semibold">Điện thoại</label>
         <input asp-for="SoDienThoai" class="form-control" />
+        <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
     </div>
 </div>
 
@@ -88,7 +106,6 @@
                  alt="CCCD mặt trước"
                  class="mt-2 rounded"
                  style="max-height:120px;" />
-            <input type="hidden" asp-for="AnhCCCDMatTruoc" />
         }
     </div>
 
@@ -106,7 +123,6 @@
                  alt="CCCD mặt sau"
                  class="mt-2 rounded"
                  style="max-height:120px;" />
-            <input type="hidden" asp-for="AnhCCCDMatSau" />
         }
     </div>
 </div>

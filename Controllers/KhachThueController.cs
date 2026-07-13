@@ -9,13 +9,8 @@ public class KhachThueController(
     KhachThueRepository khachThueRepo,
     HopDongKhachThueRepository cuTruRepo,
     PhongRepository phongRepo,
-    KhachThueService khachThueService,
-    IWebHostEnvironment environment) : Controller
+    KhachThueService khachThueService) : Controller
 {
-    private const long MaxImageSize = 5 * 1024 * 1024;
-    private static readonly HashSet<string> AllowedImageExtensions =
-        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
-    // GET /KhachThue
     public async Task<IActionResult> Index(string? tuKhoa, string? trangThai, int? phongId)
     {
         ViewData["ActiveMenu"] = "khachthue";
@@ -40,7 +35,6 @@ public class KhachThueController(
         }));
     }
 
-    // GET /KhachThue/Details/5
     public async Task<IActionResult> Details(int id)
     {
         ViewData["ActiveMenu"] = "khachthue";
@@ -50,135 +44,144 @@ public class KhachThueController(
         return View(khach);
     }
 
-    // GET /KhachThue/Create
     public IActionResult Create()
     {
         ViewData["ActiveMenu"] = "khachthue";
-        return View();
+        return View(new KhachThue());
     }
 
-    // POST /KhachThue/Create
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(KhachThue khach, IFormFile? anhCCCDMatTruoc, IFormFile? anhCCCDMatSau)
+    public async Task<IActionResult> Create(
+        KhachThue khach,
+        IFormFile? anhCCCDMatTruoc,
+        IFormFile? anhCCCDMatSau,
+        bool confirmDuplicatePhone = false,
+        CancellationToken cancellationToken = default)
     {
+        khach.AnhCCCDMatTruoc = null;
+        khach.AnhCCCDMatSau = null;
         if (!ModelState.IsValid) return View(khach);
 
-        var trungCccd = await khachThueService.TimHoSoTrungCccdAsync(khach.CCCD);
-        if (trungCccd != null)
+        try
         {
-            ViewBag.HoSoTrungCccd = trungCccd;
-            ModelState.AddModelError(nameof(KhachThue.CCCD),
-                "CCCD đã thuộc một hồ sơ cũ. Hãy mở hồ sơ đó và tái sử dụng thay vì tạo mới.");
-            return View(khach);
+            var id = await khachThueService.CreateAsync(
+                khach, anhCCCDMatTruoc, anhCCCDMatSau, confirmDuplicatePhone, cancellationToken);
+            TempData["Success"] = "Đã thêm khách thuê.";
+            return RedirectToAction(nameof(Details), new { id });
         }
-
-        if (!await TryLuuAnhAsync(khach, anhCCCDMatTruoc, anhCCCDMatSau))
-            return View(khach);
-
-        await khachThueRepo.InsertAsync(khach);
-        TempData["Success"] = "Đã thêm khách thuê.";
-        return RedirectToAction(nameof(Index));
+        catch (DuplicateCccdException ex)
+        {
+            ShowDuplicateCccd(ex.ExistingProfile);
+        }
+        catch (DuplicatePhoneConfirmationException ex)
+        {
+            ShowDuplicatePhones(ex.MatchingProfiles);
+        }
+        catch (TenantPhotoValidationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ModelState.AddModelError(string.Empty, "Không thể lưu ảnh CCCD. Vui lòng kiểm tra thư mục upload hoặc thử lại.");
+        }
+        return View(khach);
     }
 
-    // GET /KhachThue/Edit/5
     public async Task<IActionResult> Edit(int id)
     {
         ViewData["ActiveMenu"] = "khachthue";
         var khach = await khachThueRepo.GetByIdAsync(id);
-        if (khach == null) return NotFound();
-        return View(khach);
+        return khach == null ? NotFound() : View(khach);
     }
 
-    // POST /KhachThue/Edit/5
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, KhachThue khach, IFormFile? anhCCCDMatTruoc, IFormFile? anhCCCDMatSau)
-    {
-        if (id != khach.Id) return BadRequest();
-        if (!ModelState.IsValid) return View(khach);
-
-        var trungCccd = await khachThueService.TimHoSoTrungCccdAsync(khach.CCCD, id);
-        if (trungCccd != null)
-        {
-            ViewBag.HoSoTrungCccd = trungCccd;
-            ModelState.AddModelError(nameof(KhachThue.CCCD),
-                "CCCD đã thuộc một hồ sơ khác. Hãy dùng hồ sơ cũ; hệ thống không tự động gộp hồ sơ.");
-            return View(khach);
-        }
-
-        if (!await TryLuuAnhAsync(khach, anhCCCDMatTruoc, anhCCCDMatSau))
-            return View(khach);
-
-        await khachThueRepo.UpdateAsync(khach);
-        TempData["Success"] = "Đã cập nhật thông tin khách thuê.";
-        return RedirectToAction(nameof(Index));
-    }
-
-    // POST /KhachThue/Delete/5
-    [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(int id)
-    {
-        await khachThueRepo.DeleteAsync(id);
-        TempData["Success"] = "Đã xoá khách thuê.";
-        return RedirectToAction(nameof(Index));
-    }
-
-    // ── Helper ──────────────────────────────────────────────────────────────
-    private async Task<bool> TryLuuAnhAsync(
+    public async Task<IActionResult> Edit(
+        int id,
         KhachThue khach,
         IFormFile? anhCCCDMatTruoc,
-        IFormFile? anhCCCDMatSau)
+        IFormFile? anhCCCDMatSau,
+        bool confirmDuplicatePhone = false,
+        CancellationToken cancellationToken = default)
     {
-        if (!ValidateImage(anhCCCDMatTruoc, "Ảnh CCCD mặt trước")
-            || !ValidateImage(anhCCCDMatSau, "Ảnh CCCD mặt sau"))
-            return false;
+        if (id != khach.Id) return BadRequest();
+        if (!ModelState.IsValid)
+            return await RenderEditWithTrustedPhotosAsync(id, khach);
 
         try
         {
-            if (anhCCCDMatTruoc is { Length: > 0 })
-                khach.AnhCCCDMatTruoc = await LuuAnhAsync(anhCCCDMatTruoc);
-            if (anhCCCDMatSau is { Length: > 0 })
-                khach.AnhCCCDMatSau = await LuuAnhAsync(anhCCCDMatSau);
-            return true;
+            await khachThueService.UpdateAsync(
+                id, khach, anhCCCDMatTruoc, anhCCCDMatSau, confirmDuplicatePhone, cancellationToken);
+            TempData["Success"] = "Đã cập nhật thông tin khách thuê.";
+            return RedirectToAction(nameof(Details), new { id });
         }
-        catch (IOException)
+        catch (DuplicateCccdException ex)
         {
-            ModelState.AddModelError(string.Empty, "Không thể lưu ảnh CCCD. Vui lòng kiểm tra quyền ghi thư mục uploads hoặc thử lại.");
-            return false;
+            ShowDuplicateCccd(ex.ExistingProfile);
         }
-        catch (UnauthorizedAccessException)
+        catch (DuplicatePhoneConfirmationException ex)
         {
-            ModelState.AddModelError(string.Empty, "Ứng dụng không có quyền ghi ảnh vào thư mục uploads.");
-            return false;
+            ShowDuplicatePhones(ex.MatchingProfiles);
         }
+        catch (TenantPhotoValidationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ModelState.AddModelError(string.Empty, "Không thể lưu ảnh CCCD. Ảnh cũ vẫn được giữ nguyên; vui lòng thử lại.");
+        }
+        return await RenderEditWithTrustedPhotosAsync(id, khach);
     }
 
-    private bool ValidateImage(IFormFile? file, string label)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        if (file == null || file.Length == 0) return true;
-        if (file.Length > MaxImageSize)
+        try
         {
-            ModelState.AddModelError(string.Empty, $"{label} không được vượt quá 5 MB.");
-            return false;
+            var result = await khachThueService.DeleteAsync(id, cancellationToken);
+            TempData["Success"] = "Đã xóa hồ sơ khách thuê chưa sử dụng.";
+            if (!result.PhotoCleanupComplete)
+                TempData["Warning"] = "Hồ sơ đã xóa nhưng có ảnh không thể dọn an toàn; hệ thống không xóa file ngoài thư mục upload.";
         }
-
-        var extension = Path.GetExtension(file.FileName);
-        if (!AllowedImageExtensions.Contains(extension))
+        catch (TenantInUseException ex)
         {
-            ModelState.AddModelError(string.Empty, $"{label} chỉ chấp nhận JPG, PNG hoặc WEBP.");
-            return false;
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Details), new { id });
         }
-        return true;
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        return RedirectToAction(nameof(Index));
     }
 
-    private async Task<string> LuuAnhAsync(IFormFile file)
+    private async Task<IActionResult> RenderEditWithTrustedPhotosAsync(int id, KhachThue submitted)
     {
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var fileName = $"{Guid.NewGuid():N}{extension}";
-        var uploadDirectory = Path.Combine(environment.WebRootPath, "uploads");
-        Directory.CreateDirectory(uploadDirectory);
-        var path = Path.Combine(uploadDirectory, fileName);
-        await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        await file.CopyToAsync(stream);
-        return $"/uploads/{fileName}";
+        var trusted = await khachThueRepo.GetByIdAsync(id);
+        if (trusted == null) return NotFound();
+        submitted.AnhCCCDMatTruoc = trusted.AnhCCCDMatTruoc;
+        submitted.AnhCCCDMatSau = trusted.AnhCCCDMatSau;
+        ViewData["ActiveMenu"] = "khachthue";
+        return View("Edit", submitted);
+    }
+
+    private void ShowDuplicateCccd(KhachThue profile)
+    {
+        ViewBag.HoSoTrungCccd = profile;
+        ModelState.AddModelError(nameof(KhachThue.CCCD),
+            "CCCD đã thuộc một hồ sơ cũ. Hãy mở hồ sơ đó và tái sử dụng; hệ thống không tự động gộp hồ sơ.");
+    }
+
+    private void ShowDuplicatePhones(IReadOnlyList<KhachThue> profiles)
+    {
+        ViewBag.HoSoTrungSoDienThoai = profiles;
+        ViewBag.RequirePhoneConfirmation = true;
+        ModelState.AddModelError(nameof(KhachThue.SoDienThoai),
+            "Số điện thoại đang xuất hiện ở hồ sơ khác. Kiểm tra danh sách bên dưới trước khi lưu hồ sơ riêng.");
     }
 }

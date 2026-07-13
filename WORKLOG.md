@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 2: REVIEW-013 đã hoàn tất; REVIEW-014 đến REVIEW-016 còn lại |
-| Build | Phiên 59: `dotnet build --no-restore` pass 0 error; 1 warning `NU1900` do sandbox không truy cập vulnerability feed |
+| Giai đoạn | Phase 2: REVIEW-014 đã hoàn tất; REVIEW-015/016 còn lại |
+| Build | Phiên 60: `dotnet build --no-restore` pass 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 59 dry-run REVIEW-013 sạch; apply-once snapshot hóa đơn đã chạy trên DB vận hành, hậu kiểm đủ 11 cột/1 constraint. Schema/migration/service/Excel smoke pass và DB tạm drop trong `finally`. |
+| Database | Phiên 60 dry-run REVIEW-014 sạch; apply-once unique CCCD sau Trim đã chạy trên DB vận hành, hậu kiểm đủ 1 generated column/1 unique constraint. Schema/migration/security/service/concurrency smoke pass và DB tạm drop trong `finally`. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-013 đã xong; REVIEW-014 đến REVIEW-016 còn lại | Đang làm Phase 2 |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-014 đã xong; REVIEW-015/016 còn lại | Đang làm Phase 2 |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,46 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 60 - REVIEW-014: chống trùng hồ sơ khách và vòng đời ảnh CCCD an toàn
+
+Đã triển khai:
+
+- CCCD được `Trim`, rỗng thành `NULL`, chặn trùng ở service/UI và bằng generated `CCCDNormalized` + unique DB; lỗi race duplicate key được trả về hồ sơ cũ. Không merge/xóa/sửa CCCD tự động.
+- SĐT trùng chỉ hiển thị cảnh báo và danh sách link hồ sơ; muốn lưu hồ sơ riêng phải xác nhận, không thêm unique DB cứng.
+- `TenantPhotoStorage` dùng tên GUID do server sinh trong upload root cấu hình, giới hạn 5 MB, kiểm tra extension, magic bytes, kích thước pixel và decode ảnh thật bằng ImageSharp 2.1.13.
+- Service không tin hidden/request path. File mới được cleanup nếu create/update DB lỗi; update lỗi giữ ảnh cũ; update thành công chỉ xóa ảnh cũ sau commit.
+- Delete khóa hồ sơ, chặn mọi khách có `HopDongKhachThue` bằng lỗi nghiệp vụ; hồ sơ chưa dùng được xóa DB trước rồi mới cleanup ảnh an toàn. Path traversal/đường dẫn ngoài root bị từ chối.
+- Thêm apply-once `Database/updates/20260713_tenant_identity_photo_lifecycle.sql`, cập nhật schema baseline, README và cấu hình mẫu.
+
+Dry-run/apply DB vận hành:
+
+```text
+REAL_DRY_RUN TotalKhachThue=13;BlankOrNullCCCD=0;DuplicateCCCDGroups=0;DuplicatePhoneGroups=0;ProfilesWithPhotoPath=0;DuplicatePhotoPaths=0;MissingReferencedPhotos=0;OrphanFiles=0
+REAL_MIGRATION_APPLIED
+REAL_DRY_RUN ...;NormalizedColumns=1;UniqueConstraints=1
+```
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore: pass, 0 warning, 0 error
+SCHEMA_SMOKE_PASS
+MIGRATION_RERUN_PASS
+MIGRATION_DUPLICATE_BLOCKER_PASS Rows=2
+IMAGE_SECURITY_PASS Text=True;FakeDecode=True;Oversize=True;Traversal=True
+CREATE_DB_FAILURE_CLEANUP_PASS
+EDIT_PHOTO_LIFECYCLE_PASS TrustedPath=True;FailureKeepsOld=True;SuccessCleansOld=True
+DUPLICATE_RULES_PASS CccdBlocked=True;PhoneWarningOnly=True
+DELETE_GUARDS_PASS UsedBlocked=True;UnusedDeleted=True;PhotoClean=True
+CONCURRENT_CCCD_PASS Results=OK|BLOCKED
+REVIEW_014_SMOKE_PASS
+TEMP_DATABASES_DROPPED
+```
+
+Browser QA Create/Edit/Delete trên database tạm pass: CCCD trùng hiện link hồ sơ cũ; Edit không có hidden path ảnh; khách có lịch sử bị chặn xóa thân thiện; khách chưa dùng xóa thành công; console không có warning/error. Database/browser process tạm đã dọn.
+
+Phạm vi giữ nguyên: không làm REVIEW-015/016, không redesign rộng, không merge/cleanup hồ sơ hoặc file vận hành.
 
 ### Phiên 59 - REVIEW-013: snapshot nhận diện chứng từ hóa đơn
 

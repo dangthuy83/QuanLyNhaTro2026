@@ -1,5 +1,9 @@
 # Database updates
 
+REVIEW-014 apply-once:
+
+- `20260713_tenant_identity_photo_lifecycle.sql`: báo cáo nhóm CCCD/SĐT/đường dẫn ảnh trùng trước khi thêm generated `CCCDNormalized` và unique CCCD sau `TRIM`. Script dừng nếu còn nhóm CCCD trùng, không merge/sửa/xóa hồ sơ hoặc file. Dry-run vận hành phải bổ sung đối chiếu filesystem để báo ảnh thiếu và file mồ côi trước khi apply.
+
 Baseline hiện hành được tạo trực tiếp từ `Database/schema.sql` sau đợt chuẩn hóa ngày 10/07/2026.
 
 - Database mới: chỉ chạy toàn bộ `Database/schema.sql`.

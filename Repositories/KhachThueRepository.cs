@@ -1,5 +1,6 @@
 using Dapper;
 using System.Data;
+using System.Data.Common;
 using QuanLyNhaTro.Models;
 
 namespace QuanLyNhaTro.Repositories;
@@ -94,14 +95,46 @@ public class KhachThueRepository(IDbConnection db) : BaseRepository(db)
         => await _db.QueryFirstOrDefaultAsync<KhachThue>(
             """
             SELECT * FROM KhachThue
-            WHERE CCCD = @CCCD AND (@ExcludeId IS NULL OR Id <> @ExcludeId)
+            WHERE NULLIF(TRIM(CCCD), '') = @CCCD AND (@ExcludeId IS NULL OR Id <> @ExcludeId)
             ORDER BY Id LIMIT 1
             """,
             new { CCCD = cccd.Trim(), ExcludeId = excludeId });
 
+    public async Task<IEnumerable<KhachThue>> GetByPhoneAsync(string phone, int? excludeId = null)
+        => await _db.QueryAsync<KhachThue>(
+            """
+            SELECT * FROM KhachThue
+            WHERE NULLIF(TRIM(SoDienThoai), '') = @Phone
+              AND (@ExcludeId IS NULL OR Id <> @ExcludeId)
+            ORDER BY HoTen, Id
+            """,
+            new { Phone = phone.Trim(), ExcludeId = excludeId });
+
     public async Task<KhachThue?> GetByIdAsync(int id)
         => await _db.QueryFirstOrDefaultAsync<KhachThue>(
             "SELECT * FROM KhachThue WHERE Id = @Id", new { Id = id });
+
+    public async Task<KhachThue?> GetByIdForUpdateAsync(int id, DbTransaction transaction)
+        => await transaction.Connection!.QueryFirstOrDefaultAsync<KhachThue>(
+            "SELECT * FROM KhachThue WHERE Id = @Id FOR UPDATE", new { Id = id }, transaction);
+
+    public async Task<KhachThue?> GetByCccdAsync(
+        string cccd,
+        int? excludeId,
+        DbTransaction transaction)
+        => await transaction.Connection!.QueryFirstOrDefaultAsync<KhachThue>(
+            """
+            SELECT * FROM KhachThue
+            WHERE NULLIF(TRIM(CCCD), '') = @CCCD
+              AND (@ExcludeId IS NULL OR Id <> @ExcludeId)
+            ORDER BY Id LIMIT 1
+            """,
+            new { CCCD = cccd.Trim(), ExcludeId = excludeId }, transaction);
+
+    public async Task<bool> HasBusinessUsageAsync(int id, DbTransaction transaction)
+        => await transaction.Connection!.ExecuteScalarAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM HopDongKhachThue WHERE KhachThueId=@Id)",
+            new { Id = id }, transaction);
 
     public async Task<IEnumerable<KhachThue>> GetByHopDongAsync(int hopDongId)
     {
@@ -128,6 +161,20 @@ public class KhachThueRepository(IDbConnection db) : BaseRepository(db)
         return await _db.ExecuteScalarAsync<int>(sql, khach);
     }
 
+    public async Task<int> InsertAsync(KhachThue khach, DbTransaction transaction)
+    {
+        const string sql = """
+            INSERT INTO KhachThue
+                (HoTen, CCCD, SoDienThoai, NgaySinh, NgayCapCCCD, NgheNghiep, LoaiXe, BienSoXe,
+                 QueQuan, AnhCCCDMatTruoc, AnhCCCDMatSau, GhiChu, NgayTao)
+            VALUES
+                (@HoTen, @CCCD, @SoDienThoai, @NgaySinh, @NgayCapCCCD, @NgheNghiep, @LoaiXe, @BienSoXe,
+                 @QueQuan, @AnhCCCDMatTruoc, @AnhCCCDMatSau, @GhiChu, NOW());
+            SELECT LAST_INSERT_ID();
+            """;
+        return await transaction.Connection!.ExecuteScalarAsync<int>(sql, khach, transaction);
+    }
+
     public async Task UpdateAsync(KhachThue khach)
     {
         const string sql = """
@@ -149,6 +196,23 @@ public class KhachThueRepository(IDbConnection db) : BaseRepository(db)
         await _db.ExecuteAsync(sql, khach);
     }
 
+    public async Task UpdateAsync(KhachThue khach, DbTransaction transaction)
+    {
+        const string sql = """
+            UPDATE KhachThue SET
+                HoTen=@HoTen, CCCD=@CCCD, SoDienThoai=@SoDienThoai, NgaySinh=@NgaySinh,
+                NgayCapCCCD=@NgayCapCCCD, NgheNghiep=@NgheNghiep, LoaiXe=@LoaiXe,
+                BienSoXe=@BienSoXe, QueQuan=@QueQuan, AnhCCCDMatTruoc=@AnhCCCDMatTruoc,
+                AnhCCCDMatSau=@AnhCCCDMatSau, GhiChu=@GhiChu
+            WHERE Id=@Id
+            """;
+        await transaction.Connection!.ExecuteAsync(sql, khach, transaction);
+    }
+
     public async Task DeleteAsync(int id)
         => await _db.ExecuteAsync("DELETE FROM KhachThue WHERE Id = @Id", new { Id = id });
+
+    public async Task DeleteAsync(int id, DbTransaction transaction)
+        => await transaction.Connection!.ExecuteAsync(
+            "DELETE FROM KhachThue WHERE Id = @Id", new { Id = id }, transaction);
 }

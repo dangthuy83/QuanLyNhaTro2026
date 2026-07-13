@@ -11,7 +11,21 @@
     <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-auto">
         <i class="bi bi-pencil me-1"></i>Sửa
     </a>
+    <form asp-action="Delete" asp-route-id="@Model.Id" method="post"
+          onsubmit="return confirm('Chỉ hồ sơ hoàn toàn chưa sử dụng mới được xóa. Bạn chắc chắn muốn tiếp tục?');">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Xóa</button>
+    </form>
 </div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
 
 <div class="row g-3">
     <div class="col-md-5">
