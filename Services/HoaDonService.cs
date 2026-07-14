@@ -131,6 +131,9 @@ public class HoaDonService(
         int? hoaDonGhepId = null,
         string? ghiChu = null)
     {
+        if (!BusinessDataLimits.IsValidPeriod(thang, nam))
+            throw new InvalidOperationException("Ky hoa don phai nam trong dai 01/2000 den 12/2100.");
+
         var result = new HoaDonDuKien
         {
             HopDongId = hopDongId,

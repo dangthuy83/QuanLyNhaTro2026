@@ -1,5 +1,9 @@
 # Database updates
 
+REVIEW-016 apply-once:
+
+- `20260714_financial_time_invariants.sql`: báo cáo dry-run và dừng trước DDL nếu có dữ liệu vi phạm; thêm 32 CHECK cho dải năm nghiệp vụ `2000-2100`, tiền/công thức/trạng thái/hình thức thanh toán, đổi `ThanhToan.HinhThuc` thành bắt buộc và tạo 4 trigger chống overlap bằng khóa dòng cha. Script không sửa dữ liệu nghiệp vụ và chạy lại an toàn.
+
 REVIEW-014 apply-once:
 
 - `20260713_tenant_identity_photo_lifecycle.sql`: báo cáo nhóm CCCD/SĐT/đường dẫn ảnh trùng trước khi thêm generated `CCCDNormalized` và unique CCCD sau `TRIM`. Script dừng nếu còn nhóm CCCD trùng, không merge/sửa/xóa hồ sơ hoặc file. Dry-run vận hành phải bổ sung đối chiếu filesystem để báo ảnh thiếu và file mồ côi trước khi apply.

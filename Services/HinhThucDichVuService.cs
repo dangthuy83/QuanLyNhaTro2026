@@ -102,7 +102,8 @@ public class HinhThucDichVuService(
 
     private static void ValidateValues(ThayDoiHinhThucDichVuViewModel vm)
     {
-        if (vm.ThangApDung is < 1 or > 12 || vm.NamApDung < 2000) throw new ArgumentException("Kỳ áp dụng không hợp lệ.");
+        if (!BusinessDataLimits.IsValidPeriod(vm.ThangApDung, vm.NamApDung))
+            throw new ArgumentException("Kỳ áp dụng không hợp lệ.");
         if (string.IsNullOrWhiteSpace(vm.LyDo)) throw new ArgumentException("Lý do là bắt buộc.");
         if (vm.LoaiTinhPhiMoi is not (DichVu.LoaiCoDinh or DichVu.LoaiTheoChiSo)) throw new ArgumentException("Loại tính phí không hợp lệ.");
         if (vm.CachTinhCoDinhMoi is not (DichVu.CachTinhTheoPhong or DichVu.CachTinhTheoNguoi)) throw new ArgumentException("Cách tính cố định không hợp lệ.");

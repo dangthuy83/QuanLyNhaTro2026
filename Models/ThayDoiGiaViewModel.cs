@@ -15,7 +15,7 @@ public class ThayDoiGiaViewModel
     [Required, Range(1, 12)]
     public int ThangApDung { get; set; }
 
-    [Required, Range(2024, 2099)]
+    [Required, Range(BusinessDataLimits.MinYear, BusinessDataLimits.MaxYear)]
     public int NamApDung { get; set; }
 
     [MaxLength(255)]

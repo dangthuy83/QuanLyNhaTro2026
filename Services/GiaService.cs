@@ -125,7 +125,7 @@ public class GiaService(IDbConnection db)
     {
         if (loaiDoiTuong is not ("HopDong" or "DichVu"))
             throw new InvalidOperationException("Loại đối tượng giá không hợp lệ.");
-        if (doiTuongId <= 0 || thang is < 1 or > 12 || nam is < 2024 or > 2099)
+        if (doiTuongId <= 0 || !BusinessDataLimits.IsValidPeriod(thang, nam))
             throw new InvalidOperationException("Đối tượng hoặc kỳ áp dụng không hợp lệ.");
     }
 

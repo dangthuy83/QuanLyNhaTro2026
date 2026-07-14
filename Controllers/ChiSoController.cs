@@ -194,7 +194,7 @@ public class ChiSoController(
     {
         ViewData["ActiveMenu"] = "chiso";
 
-        if (model.Thang < 1 || model.Thang > 12 || model.Nam < 2000 || model.Nam > 2099)
+        if (!BusinessDataLimits.IsValidPeriod(model.Thang, model.Nam))
         {
             TempData["Error"] = "Ky nhap chi so khong hop le.";
             return RedirectToAction(nameof(NhapHangLoat), new { thang = DateTime.Today.Month, nam = DateTime.Today.Year });

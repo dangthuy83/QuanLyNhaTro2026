@@ -51,6 +51,10 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   - `DangSuaChua` là trạng thái vận hành duy nhất được đặt thủ công. Không cho đặt khi phòng có hợp đồng hiệu lực theo ngày hoặc bất kỳ hợp đồng tương lai `ChoHieuLuc/DangHieuLuc`; lịch sử đã kết thúc nhưng chưa quyết toán không tự nó chặn sửa chữa.
   - Phòng đã có bất kỳ hợp đồng, chỉ số, thu chi hoặc lịch sử nghiệp vụ liên quan không được đổi `NhaId`; phải tạo phòng mới tại Nhà đích để lịch sử Nhà–Phòng không bị viết lại. Chỉ phòng hoàn toàn chưa sử dụng mới được chuyển Nhà.
   - REVIEW-015 cung cấp màn reconcile chỉ đọc: đối chiếu snapshot với hợp đồng theo ngày và báo mismatch, overlap, xung đột sửa chữa, trạng thái lạ và phòng bị khóa đổi Nhà; không có thao tác tự sửa hay ghi dữ liệu.
+- REVIEW-016 dùng dải năm nghiệp vụ `2000-2100` cho kỳ hóa đơn/chỉ số/giá và các ngày hợp đồng, cư trú, chỉ số, hóa đơn, thanh toán, cọc, khoản phát sinh, thu chi. Dải này không áp cho ngày sinh hay ngày cấp CCCD.
+  - Giá và số tiền gốc không âm; tiền thuê thỏa thuận, thanh toán, thu chi và khoản phát sinh phải lớn hơn `0`. Hóa đơn không cho thu vượt, tổng tiền phải đúng công thức snapshot và trạng thái `ChuaThu/ThuMotPhan/DaThu` phải khớp số đã thu. Chi tiết hóa đơn phải khớp `ROUND(SoLuong * DonGia, 0)`.
+  - Các mã trạng thái/loại/hình thức thanh toán chỉ nhận tập giá trị đã được model nghiệp vụ sử dụng. `ThanhToan.HinhThuc` bắt buộc; giao dịch cọc giữ quy tắc dấu theo loại và chỉ `TruNo` được liên kết hóa đơn. Hoàn cọc nội bộ khi trả phòng vẫn có thể không có phương thức tiền.
+  - MySQL không có exclusion constraint nên overlap hợp đồng và đại diện cư trú được enforce bằng trigger `BEFORE INSERT/UPDATE`. Trigger khóa dòng cha `Phong` hoặc `HopDong` bằng `SELECT ... FOR UPDATE` trước khi kiểm tra khoảng đóng `[bat dau, ket thuc]`; update nhiều cha khóa theo thứ tự ID để giảm deadlock. Service guard vẫn được giữ để trả lỗi nghiệp vụ sớm.
 - Trước khi có quyết định triển khai khác, ứng dụng chỉ chạy localhost; Phase 1 không mở rộng auth/multi-user.
 
 Các dòng tương ứng trong bảng `Mục Chưa Chốt` phía trên được giữ lại làm dấu vết câu hỏi của phiên review; nội dung tại mục này là quyết định mới nhất và có hiệu lực.
@@ -477,4 +481,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 58 - 13/07/2026. REVIEW-012 đã triển khai; dry-run giá database vận hành sạch, build, schema/service/concurrency/rollback smoke và Browser QA màn lịch sử giá đều pass. Không cần migration vì không đổi schema và không có dữ liệu giá lệch cần sửa.
+Cập nhật lần cuối: Phiên 62 - 14/07/2026. REVIEW-016 đã triển khai bằng CHECK và trigger khóa cha; dry-run DB vận hành sạch, apply-once/rerun/blocker và service/concurrency smoke pass.

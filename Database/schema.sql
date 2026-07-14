@@ -35,7 +35,9 @@ CREATE TABLE Phong (
     GhiChu TEXT NULL,
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_Phong_Nha FOREIGN KEY (NhaId) REFERENCES Nha(Id),
-    CONSTRAINT UQ_Phong_TenPhong UNIQUE (NhaId, TenPhong)
+    CONSTRAINT UQ_Phong_TenPhong UNIQUE (NhaId, TenPhong),
+    CONSTRAINT CK_Phong_GiaThue CHECK (GiaThueMacDinh >= 0),
+    CONSTRAINT CK_Phong_TrangThai CHECK (TrangThai IN ('Trong', 'DangThue', 'DangSuaChua'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -79,6 +81,7 @@ CREATE TABLE DichVu (
     DonGiaMacDinh DECIMAL(12,2) NOT NULL DEFAULT 0,
     BatBuocKhiThue BIT NOT NULL DEFAULT 0,
     DonViTinh VARCHAR(20) NULL,
+    CONSTRAINT CK_DichVu_DonGia CHECK (DonGiaMacDinh >= 0),
     CONSTRAINT CK_DichVu_LoaiTinhPhi CHECK (LoaiTinhPhi IN ('CoDinh', 'TheoChiSo')),
     CONSTRAINT CK_DichVu_CachTinhCoDinh CHECK (CachTinhCoDinh IN ('TheoPhong', 'TheoNguoi'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -98,6 +101,7 @@ CREATE TABLE LichSuHinhThucDichVu (
     CONSTRAINT FK_LichSuHinhThuc_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
     CONSTRAINT UQ_LichSuHinhThuc_DichVuKy UNIQUE (DichVuId, KyApDung),
     CONSTRAINT CK_LichSuHinhThuc_Ky CHECK (DAY(KyApDung) = 1),
+    CONSTRAINT CK_LichSuHinhThuc_Nam CHECK (YEAR(KyApDung) BETWEEN 2000 AND 2100),
     CONSTRAINT CK_LichSuHinhThuc_LoaiCu CHECK (LoaiTinhPhiCu IN ('CoDinh', 'TheoChiSo')),
     CONSTRAINT CK_LichSuHinhThuc_LoaiMoi CHECK (LoaiTinhPhiMoi IN ('CoDinh', 'TheoChiSo')),
     CONSTRAINT CK_LichSuHinhThuc_CachCu CHECK (CachTinhCoDinhCu IN ('TheoPhong', 'TheoNguoi')),
@@ -130,7 +134,8 @@ CREATE TABLE PhongDichVu (
     DangApDung BIT NOT NULL DEFAULT 1,
     CONSTRAINT FK_PhongDichVu_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
     CONSTRAINT FK_PhongDichVu_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
-    CONSTRAINT UQ_Phong_DichVu UNIQUE (PhongId, DichVuId)
+    CONSTRAINT UQ_Phong_DichVu UNIQUE (PhongId, DichVuId),
+    CONSTRAINT CK_PhongDichVu_DonGia CHECK (DonGia >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -160,7 +165,21 @@ CREATE TABLE HopDong (
     CONSTRAINT FK_HopDong_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
     CONSTRAINT FK_HopDong_Truoc FOREIGN KEY (HopDongTruocId) REFERENCES HopDong(Id),
     CONSTRAINT CK_HopDong_KhoangNgay CHECK (NgayKetThuc IS NULL OR NgayKetThuc >= NgayBatDau),
-    CONSTRAINT CK_HopDong_TrangThai CHECK (TrangThai IN ('ChoHieuLuc', 'DangHieuLuc', 'DaKetThuc', 'DaHuy', 'DaChuyenPhong'))
+    CONSTRAINT CK_HopDong_TrangThai CHECK (TrangThai IN ('ChoHieuLuc', 'DangHieuLuc', 'DaKetThuc', 'DaHuy', 'DaChuyenPhong')),
+    CONSTRAINT CK_HopDong_NamNghiepVu CHECK (
+        YEAR(NgayBatDau) BETWEEN 2000 AND 2100
+        AND (NgayKetThuc IS NULL OR YEAR(NgayKetThuc) BETWEEN 2000 AND 2100)
+        AND (NgayTraPhongThucTe IS NULL OR (
+            YEAR(NgayTraPhongThucTe) BETWEEN 2000 AND 2100
+            AND NgayTraPhongThucTe >= NgayBatDau
+        ))
+    ),
+    CONSTRAINT CK_HopDong_Tien CHECK (
+        TienThueThoaThuan > 0
+        AND TienCoc >= 0
+        AND (TienCocHoanLai IS NULL OR TienCocHoanLai >= 0)
+    ),
+    CONSTRAINT CK_HopDong_NgayThanhToan CHECK (NgayThanhToanHangThang BETWEEN 1 AND 31)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX IX_HopDong_Phong_KhoangNgay
@@ -183,6 +202,11 @@ CREATE TABLE HopDongKhachThue (
     CONSTRAINT CK_HDKT_KhoangNgay CHECK (
         (NgayKetThucDuKien IS NULL OR NgayKetThucDuKien >= NgayBatDau)
         AND (NgayKetThuc IS NULL OR NgayKetThuc >= NgayBatDau)
+    ),
+    CONSTRAINT CK_HDKT_NamNghiepVu CHECK (
+        YEAR(NgayBatDau) BETWEEN 2000 AND 2100
+        AND (NgayKetThucDuKien IS NULL OR YEAR(NgayKetThucDuKien) BETWEEN 2000 AND 2100)
+        AND (NgayKetThuc IS NULL OR YEAR(NgayKetThuc) BETWEEN 2000 AND 2100)
     ),
     CONSTRAINT UQ_HDKT_GiaiDoan UNIQUE (HopDongId, KhachThueId, NgayBatDau)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -210,6 +234,10 @@ CREATE TABLE HopDongDichVu (
     CONSTRAINT CK_HopDongDichVu_Ky CHECK (
         DAY(KyBatDau) = 1
         AND (KyKetThuc IS NULL OR (DAY(KyKetThuc) = 1 AND KyKetThuc > KyBatDau))
+    ),
+    CONSTRAINT CK_HopDongDichVu_Nam CHECK (
+        YEAR(KyBatDau) BETWEEN 2000 AND 2100
+        AND (KyKetThuc IS NULL OR YEAR(KyKetThuc) BETWEEN 2000 AND 2100)
     ),
     CONSTRAINT UQ_HopDongDichVu_Ky UNIQUE (HopDongId, PhongDichVuId, KyBatDau)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -244,6 +272,13 @@ CREATE TABLE ChiSoDienNuoc (
     CONSTRAINT FK_ChiSo_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
     CONSTRAINT FK_ChiSo_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
     CONSTRAINT CK_ChiSo_LoaiGhiNhan CHECK (LoaiGhiNhan IN ('BinhThuong', 'Reset')),
+    CONSTRAINT CK_ChiSo_Ky CHECK (Thang BETWEEN 1 AND 12 AND Nam BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_ChiSo_NgayDoc CHECK (
+        NgayDoc IS NOT NULL
+        AND YEAR(NgayDoc) BETWEEN 2000 AND 2100
+        AND MONTH(NgayDoc) = Thang
+        AND YEAR(NgayDoc) = Nam
+    ),
     CONSTRAINT CK_ChiSo_KhongAmTrenDongHo CHECK (
         ChiSoDau >= 0
         AND ChiSoCuoi >= 0
@@ -296,6 +331,7 @@ CREATE TABLE ChiSoNgoaiHopDong (
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_ChiSoNgoaiHopDong_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
     CONSTRAINT FK_ChiSoNgoaiHopDong_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
+    CONSTRAINT CK_ChiSoNgoaiHopDong_Nam CHECK (YEAR(NgayGhiNhan) BETWEEN 2000 AND 2100),
     CONSTRAINT CK_ChiSoNgoaiHopDong_KhongAm CHECK (TuChiSo >= 0 AND DenChiSo >= 0),
     CONSTRAINT CK_ChiSoNgoaiHopDong_SanLuong CHECK (DenChiSo >= TuChiSo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -355,7 +391,38 @@ CREATE TABLE HoaDon (
     CccdKhachDaiDienSnapshot VARCHAR(20) NULL,
     CONSTRAINT FK_HoaDon_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_HoaDon_Ghep FOREIGN KEY (HoaDonGhepId) REFERENCES HoaDon(Id),
-    CONSTRAINT UQ_HoaDon UNIQUE (HopDongId, Thang, Nam)
+    CONSTRAINT UQ_HoaDon UNIQUE (HopDongId, Thang, Nam),
+    CONSTRAINT CK_HoaDon_Ky CHECK (Thang BETWEEN 1 AND 12 AND Nam BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_HoaDon_NgayNghiepVu CHECK (
+        YEAR(NgayLap) BETWEEN 2000 AND 2100
+        AND (NgayThuThucTe IS NULL OR YEAR(NgayThuThucTe) BETWEEN 2000 AND 2100)
+    ),
+    CONSTRAINT CK_HoaDon_Tien CHECK (
+        TienPhong >= 0
+        AND TongTienDichVu >= 0
+        AND TongTienPhatSinh >= 0
+        AND TienNoKyTruoc >= 0
+        AND TongCong >= 0
+        AND SoTienDaThu >= 0
+        AND SoTienDaThu <= TongCong
+        AND TongCong = TienPhong + TongTienDichVu + TongTienPhatSinh + TienNoKyTruoc
+    ),
+    CONSTRAINT CK_HoaDon_TrangThai CHECK (
+        (SoTienDaThu = 0 AND TrangThaiThanhToan = 'ChuaThu')
+        OR (SoTienDaThu > 0 AND SoTienDaThu < TongCong AND TrangThaiThanhToan = 'ThuMotPhan')
+        OR (SoTienDaThu = TongCong AND SoTienDaThu > 0 AND TrangThaiThanhToan = 'DaThu')
+    ),
+    CONSTRAINT CK_HoaDon_SoNgay CHECK (
+        (SoNgayO IS NULL AND SoNgayTrongThang IS NULL)
+        OR (
+            SoNgayO > 0
+            AND SoNgayTrongThang BETWEEN 28 AND 31
+            AND SoNgayO <= SoNgayTrongThang
+            AND SoNgayTrongThang = DAY(LAST_DAY(STR_TO_DATE(
+                CONCAT(Nam, '-', LPAD(Thang, 2, '0'), '-01'), '%Y-%m-%d'
+            )))
+        )
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -375,7 +442,13 @@ CREATE TABLE ChiTietHoaDon (
     DonViTinhSnapshot VARCHAR(30) NOT NULL,
     CONSTRAINT FK_CTHD_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
     CONSTRAINT FK_CTHD_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
-    CONSTRAINT FK_CTHD_ChiSo FOREIGN KEY (ChiSoDienNuocId) REFERENCES ChiSoDienNuoc(Id)
+    CONSTRAINT FK_CTHD_ChiSo FOREIGN KEY (ChiSoDienNuocId) REFERENCES ChiSoDienNuoc(Id),
+    CONSTRAINT CK_CTHD_Tien CHECK (
+        SoLuong >= 0
+        AND DonGia >= 0
+        AND ThanhTien >= 0
+        AND ThanhTien = ROUND(SoLuong * DonGia, 0)
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -387,10 +460,13 @@ CREATE TABLE ThanhToan (
     HoaDonId INT NOT NULL,
     SoTien DECIMAL(12,0) NOT NULL,
     NgayThu DATE NOT NULL,
-    HinhThuc VARCHAR(20) NULL,
+    HinhThuc VARCHAR(20) NOT NULL,
     GhiChu VARCHAR(255) NULL,
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT FK_ThanhToan_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id)
+    CONSTRAINT FK_ThanhToan_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
+    CONSTRAINT CK_ThanhToan_Tien CHECK (SoTien > 0),
+    CONSTRAINT CK_ThanhToan_HinhThuc CHECK (HinhThuc IN ('TienMat', 'ChuyenKhoan', 'KetChuyenNo', 'TruCoc')),
+    CONSTRAINT CK_ThanhToan_Ngay CHECK (YEAR(NgayThu) BETWEEN 2000 AND 2100)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -416,7 +492,14 @@ CREATE TABLE GiaoDichCoc (
     CONSTRAINT FK_GiaoDichCoc_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
     CONSTRAINT CK_GiaoDichCoc_Loai CHECK (LoaiGiaoDich IN ('ThuCoc', 'ThuThemCoc', 'HoanCoc', 'TruNo', 'DieuChinh')),
     CONSTRAINT CK_GiaoDichCoc_PhuongThuc CHECK (PhuongThuc IS NULL OR PhuongThuc IN ('TienMat', 'ChuyenKhoan')),
-    CONSTRAINT CK_GiaoDichCoc_SoDu CHECK (SoDuSauGiaoDich >= 0)
+    CONSTRAINT CK_GiaoDichCoc_SoDu CHECK (SoDuSauGiaoDich >= 0),
+    CONSTRAINT CK_GiaoDichCoc_SoTien CHECK (
+        (LoaiGiaoDich IN ('ThuCoc', 'ThuThemCoc') AND SoTien > 0)
+        OR (LoaiGiaoDich IN ('HoanCoc', 'TruNo') AND SoTien < 0)
+        OR (LoaiGiaoDich = 'DieuChinh' AND SoTien <> 0)
+    ),
+    CONSTRAINT CK_GiaoDichCoc_Ngay CHECK (YEAR(NgayGiaoDich) BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_GiaoDichCoc_LienKet CHECK (HoaDonId IS NULL OR LoaiGiaoDich = 'TruNo')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX IX_GiaoDichCoc_HopDong ON GiaoDichCoc(HopDongId, NgayGiaoDich, Id);
@@ -444,6 +527,7 @@ CREATE TABLE KhoanPhatSinhHopDong (
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_KhoanPhatSinh_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_KhoanPhatSinh_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
+    CONSTRAINT CK_KhoanPhatSinh_Nam CHECK (YEAR(NgayPhatSinh) BETWEEN 2000 AND 2100),
     CONSTRAINT CK_KhoanPhatSinh_Tien CHECK (SoTien > 0 AND SoTienDaXuLy >= 0 AND SoTienDaXuLy <= SoTien),
     CONSTRAINT CK_KhoanPhatSinh_TrangThai CHECK (TrangThai IN ('ChuaXuLy', 'DaDuaVaoHoaDon', 'DaThu', 'DaTruCoc', 'DaHuy')),
     CONSTRAINT CK_KhoanPhatSinh_HoaDonSnapshot CHECK (
@@ -470,7 +554,10 @@ CREATE TABLE ThuChi (
     NoiDung VARCHAR(500) NULL,
     PhongId INT NULL,
     GhiChu TEXT NULL,
-    CONSTRAINT FK_ThuChi_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id)
+    CONSTRAINT FK_ThuChi_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
+    CONSTRAINT CK_ThuChi_Loai CHECK (LoaiGiaoDich IN ('Thu', 'Chi')),
+    CONSTRAINT CK_ThuChi_Tien CHECK (SoTien > 0),
+    CONSTRAINT CK_ThuChi_Ngay CHECK (YEAR(NgayPhatSinh) BETWEEN 2000 AND 2100)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -502,8 +589,121 @@ CREATE TABLE LichSuThayDoiGia (
     NamApDung SMALLINT NOT NULL,
     LyDo VARCHAR(255) NULL,
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT UQ_LichSuGia_DoiTuongKy UNIQUE (LoaiDoiTuong, DoiTuongId, ThangApDung, NamApDung)
+    CONSTRAINT UQ_LichSuGia_DoiTuongKy UNIQUE (LoaiDoiTuong, DoiTuongId, ThangApDung, NamApDung),
+    CONSTRAINT CK_LichSuGia_Loai CHECK (LoaiDoiTuong IN ('HopDong', 'DichVu', 'PhongLegacy')),
+    CONSTRAINT CK_LichSuGia_Ky CHECK (ThangApDung BETWEEN 1 AND 12 AND NamApDung BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_LichSuGia_Tien CHECK (GiaCu >= 0 AND GiaMoi > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- MySQL khong co exclusion constraint. Hai trigger duoi day khoa dong cha
+-- truoc khi kiem tra khoang de serialize ca ghi truc tiep/import va service.
+CREATE TRIGGER TR_HopDong_NoOverlap_Insert
+BEFORE INSERT ON HopDong
+FOR EACH ROW
+BEGIN
+    DECLARE LockedRoomId INT;
+    DECLARE OverlapCount INT DEFAULT 0;
+
+    SELECT Id INTO LockedRoomId FROM Phong WHERE Id = NEW.PhongId FOR UPDATE;
+    IF NEW.TrangThai <> 'DaHuy' THEN
+        SELECT COUNT(*) INTO OverlapCount
+        FROM HopDong
+        WHERE PhongId = NEW.PhongId
+          AND TrangThai <> 'DaHuy'
+          AND NgayBatDau <= COALESCE(NEW.NgayKetThuc, '9999-12-31')
+          AND COALESCE(NgayKetThuc, '9999-12-31') >= NEW.NgayBatDau;
+        IF OverlapCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'REVIEW-016: hop dong chong khoang thoi gian cua phong.';
+        END IF;
+    END IF;
+END;
+
+CREATE TRIGGER TR_HopDong_NoOverlap_Update
+BEFORE UPDATE ON HopDong
+FOR EACH ROW
+BEGIN
+    DECLARE LockedRoomId INT;
+    DECLARE OverlapCount INT DEFAULT 0;
+
+    IF OLD.PhongId <= NEW.PhongId THEN
+        SELECT Id INTO LockedRoomId FROM Phong WHERE Id = OLD.PhongId FOR UPDATE;
+        IF NEW.PhongId <> OLD.PhongId THEN
+            SELECT Id INTO LockedRoomId FROM Phong WHERE Id = NEW.PhongId FOR UPDATE;
+        END IF;
+    ELSE
+        SELECT Id INTO LockedRoomId FROM Phong WHERE Id = NEW.PhongId FOR UPDATE;
+        SELECT Id INTO LockedRoomId FROM Phong WHERE Id = OLD.PhongId FOR UPDATE;
+    END IF;
+
+    IF NEW.TrangThai <> 'DaHuy' THEN
+        SELECT COUNT(*) INTO OverlapCount
+        FROM HopDong
+        WHERE PhongId = NEW.PhongId
+          AND Id <> OLD.Id
+          AND TrangThai <> 'DaHuy'
+          AND NgayBatDau <= COALESCE(NEW.NgayKetThuc, '9999-12-31')
+          AND COALESCE(NgayKetThuc, '9999-12-31') >= NEW.NgayBatDau;
+        IF OverlapCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'REVIEW-016: hop dong chong khoang thoi gian cua phong.';
+        END IF;
+    END IF;
+END;
+
+CREATE TRIGGER TR_HDKT_RepresentativeOverlap_Insert
+BEFORE INSERT ON HopDongKhachThue
+FOR EACH ROW
+BEGIN
+    DECLARE LockedContractId INT;
+    DECLARE OverlapCount INT DEFAULT 0;
+
+    SELECT Id INTO LockedContractId FROM HopDong WHERE Id = NEW.HopDongId FOR UPDATE;
+    IF NEW.LaDaiDien = 1 THEN
+        SELECT COUNT(*) INTO OverlapCount
+        FROM HopDongKhachThue
+        WHERE HopDongId = NEW.HopDongId
+          AND LaDaiDien = 1
+          AND NgayBatDau <= COALESCE(NEW.NgayKetThuc, '9999-12-31')
+          AND COALESCE(NgayKetThuc, '9999-12-31') >= NEW.NgayBatDau;
+        IF OverlapCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'REVIEW-016: hai dai dien chong thoi gian trong hop dong.';
+        END IF;
+    END IF;
+END;
+
+CREATE TRIGGER TR_HDKT_RepresentativeOverlap_Update
+BEFORE UPDATE ON HopDongKhachThue
+FOR EACH ROW
+BEGIN
+    DECLARE LockedContractId INT;
+    DECLARE OverlapCount INT DEFAULT 0;
+
+    IF OLD.HopDongId <= NEW.HopDongId THEN
+        SELECT Id INTO LockedContractId FROM HopDong WHERE Id = OLD.HopDongId FOR UPDATE;
+        IF NEW.HopDongId <> OLD.HopDongId THEN
+            SELECT Id INTO LockedContractId FROM HopDong WHERE Id = NEW.HopDongId FOR UPDATE;
+        END IF;
+    ELSE
+        SELECT Id INTO LockedContractId FROM HopDong WHERE Id = NEW.HopDongId FOR UPDATE;
+        SELECT Id INTO LockedContractId FROM HopDong WHERE Id = OLD.HopDongId FOR UPDATE;
+    END IF;
+
+    IF NEW.LaDaiDien = 1 THEN
+        SELECT COUNT(*) INTO OverlapCount
+        FROM HopDongKhachThue
+        WHERE HopDongId = NEW.HopDongId
+          AND Id <> OLD.Id
+          AND LaDaiDien = 1
+          AND NgayBatDau <= COALESCE(NEW.NgayKetThuc, '9999-12-31')
+          AND COALESCE(NgayKetThuc, '9999-12-31') >= NEW.NgayBatDau;
+        IF OverlapCount > 0 THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'REVIEW-016: hai dai dien chong thoi gian trong hop dong.';
+        END IF;
+    END IF;
+END;
 
 -- ============================================================
 -- DỮ LIỆU MẪU BAN ĐẦU CHO DICHVU (tùy chỉnh lại đơn giá theo thực tế)

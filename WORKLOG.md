@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 2: REVIEW-015 đã hoàn tất; REVIEW-016 còn lại |
-| Build | Phiên 61: `dotnet build --no-restore` pass 0 warning, 0 error |
+| Giai đoạn | Phase 2: REVIEW-016 đã hoàn tất |
+| Build | Phiên 62: build app và REVIEW-016 smoke pass; chỉ có `NU1900` do vulnerability feed NuGet không truy cập được trong môi trường |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 61 dry-run REVIEW-015 chỉ đọc sạch (`TotalRooms=11`, mọi nhóm lệch/xung đột/lịch sử/trạng thái lạ bằng 0); không đổi schema, không có migration và không sửa dữ liệu vận hành. Schema/service/concurrency/reconcile smoke pass, DB tạm drop trong `finally`. |
+| Database | Phiên 62 dry-run REVIEW-016 chỉ đọc sạch; apply-once đã áp trên DB vận hành, hậu kiểm 32 CHECK, 4 trigger, `ThanhToan.HinhThuc NOT NULL`. Fresh schema/migration blocker-rerun/service-concurrency smoke pass; DB tạm drop trong `finally`. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-015 đã xong; REVIEW-016 còn lại | Đang làm Phase 2 |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-016 đã xong | Hoàn tất batch hiện tại |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,51 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 62 - REVIEW-016: constraint tài chính/thời gian và overlap ở DB
+
+Đã chốt và triển khai riêng REVIEW-016:
+
+- Dải năm nghiệp vụ `2000-2100` cho kỳ và ngày nghiệp vụ; không áp vào ngày sinh/ngày cấp CCCD. Thêm `BusinessDataLimits` và dùng ở các đường nhập kỳ/ngày chính để trả lỗi trước DB.
+- Thêm 32 CHECK cho giá/tiền, kỳ/ngày, công thức tổng hóa đơn và chi tiết, trạng thái thanh toán, loại giao dịch và hình thức thanh toán. `ThanhToan.HinhThuc` chuyển thành `NOT NULL`.
+- Thêm bốn trigger `BEFORE INSERT/UPDATE` chặn overlap hợp đồng và overlap đại diện. Trigger khóa dòng cha `Phong`/`HopDong` trước khi query overlap; update khóa cha theo thứ tự ID.
+- Tạo apply-once `Database/updates/20260714_financial_time_invariants.sql`: dry-run theo nhóm, blocker trước mọi DDL, thêm constraint theo tên nếu thiếu, tạo lại trigger an toàn và không có câu lệnh sửa/xóa dữ liệu nghiệp vụ.
+
+Dry-run DB vận hành trước triển khai, chỉ đọc:
+
+```text
+Nha=1; Phong=11
+HopDong/HopDongKhachThue/ChiSo/HoaDon/ChiTiet/ThanhToan/GiaoDichCoc/KhoanPhatSinh/ThuChi/LichSuGia=0
+Mọi nhóm vi phạm năm-tháng, ngày, tiền, công thức, trạng thái, overlap, đại diện và tổng thanh toán=0
+ExistingCheckConstraints=23
+```
+
+Apply/hậu kiểm DB vận hành:
+
+```text
+REAL_MIGRATION_APPLIED Checks=32;Triggers=4;HinhThucNullable=NO
+```
+
+Kết quả kiểm tra:
+
+```text
+Build succeeded (0 error; NU1900 chỉ do vulnerability feed bị chặn)
+FRESH_SCHEMA_CHECK_PASS Checks=32;Triggers=4;HinhThucNullable=NO
+SERVICE_OVERLAP_PASS FirstContract=1;Second=BLOCKED
+REPRESENTATIVE_TRIGGER_PASS Overlap=BLOCKED
+CONCURRENT_CONTRACT_TRIGGER_PASS Results=OK|BLOCKED
+CONCURRENT_REPRESENTATIVE_TRIGGER_PASS Results=OK|BLOCKED
+MIGRATION_BLOCKER_PASS DataUnchanged=True;SchemaUnchanged=True
+MIGRATION_RERUN_PASS Checks=32;Triggers=4;HinhThucNullable=NO
+REVIEW_016_SMOKE_PASS
+TEMP_DATABASES_DROPPED
+```
+
+Không có thay đổi UI nên Browser QA không áp dụng. Không sửa hoặc chạy lại dữ liệu/file REVIEW-014/015; không làm review khác và không tự sửa dữ liệu vận hành.
+
+Git baseline đầu phiên: `78a4f59`, khớp `origin/main`. Chưa push.
+
+---
 
 ### Phiên 61 - REVIEW-015: đồng bộ trạng thái Phòng và bảo toàn lịch sử Nhà–Phòng
 

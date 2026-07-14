@@ -277,7 +277,7 @@ public class HopDongController(
         int thang,
         int nam)
     {
-        if (thang is < 1 or > 12 || nam < 2000)
+        if (!BusinessDataLimits.IsValidPeriod(thang, nam))
         {
             thang = DateTime.Today.Month;
             nam = DateTime.Today.Year;

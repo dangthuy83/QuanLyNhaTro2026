@@ -137,7 +137,7 @@ public class HopDongService(
         int thangApDung,
         int namApDung)
     {
-        if (thangApDung is < 1 or > 12 || namApDung < 2000)
+        if (!BusinessDataLimits.IsValidPeriod(thangApDung, namApDung))
             throw new InvalidOperationException("Ky ap dung khong hop le.");
 
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId)
@@ -313,8 +313,16 @@ public class HopDongService(
 
     private static void ValidateThongTinHopDong(HopDong hopDong, int[] khachThueIds, int? khachChinhId)
     {
+        if (!BusinessDataLimits.IsValidBusinessDate(hopDong.NgayBatDau)
+            || (hopDong.NgayKetThuc.HasValue
+                && !BusinessDataLimits.IsValidBusinessDate(hopDong.NgayKetThuc.Value)))
+            throw new InvalidOperationException("Ngay hop dong phai nam trong dai 2000-2100.");
         if (hopDong.NgayKetThuc.HasValue && hopDong.NgayKetThuc.Value.Date < hopDong.NgayBatDau.Date)
             throw new InvalidOperationException("Ngay ket thuc khong duoc truoc ngay bat dau.");
+        if (hopDong.TienThueThoaThuan <= 0)
+            throw new InvalidOperationException("Tien thue thoa thuan phai lon hon 0.");
+        if (hopDong.TienCoc < 0)
+            throw new InvalidOperationException("Tien coc khong duoc am.");
         var selected = khachThueIds.Distinct().ToHashSet();
         if (selected.Count == 0)
             throw new InvalidOperationException("Hợp đồng phải có ít nhất một khách cư trú.");
