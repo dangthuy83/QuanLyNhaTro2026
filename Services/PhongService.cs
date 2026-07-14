@@ -10,8 +10,8 @@ namespace QuanLyNhaTro.Services;
 public class PhongService(
     IDbConnection db,
     PhongRepository phongRepo,
-    HopDongRepository hopDongRepo,
-    PhongDichVuRepository phongDichVuRepo)
+    PhongDichVuRepository phongDichVuRepo,
+    PhongLifecycleService phongLifecycle)
 {
     public async Task<int> TaoPhongAsync(
         Phong phong,
@@ -40,7 +40,8 @@ public class PhongService(
     public async Task SuaPhongAsync(
         Phong phong,
         int[] dichVuIds,
-        decimal[] donGias)
+        decimal[] donGias,
+        bool dangSuaChua)
     {
         var prices = await BuildSelectedPricesAsync(dichVuIds, donGias);
         var existing = (await phongDichVuRepo.GetAllByPhongAsync(phong.Id))
@@ -55,7 +56,41 @@ public class PhongService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
-            await phongRepo.UpdateAsync(conn, tx, phong);
+            var banGoc = await phongLifecycle.KhoaPhongAsync(conn, tx, phong.Id);
+            var nhaIdYeuCau = phong.NhaId > 0 ? phong.NhaId : banGoc.NhaId;
+            if (nhaIdYeuCau != banGoc.NhaId)
+            {
+                var nhaTonTai = await conn.ExecuteScalarAsync<bool>(
+                    "SELECT EXISTS(SELECT 1 FROM Nha WHERE Id = @NhaId)",
+                    new { NhaId = nhaIdYeuCau },
+                    tx);
+                if (!nhaTonTai)
+                    throw new InvalidOperationException("Nhà đã chọn không tồn tại.");
+
+                if (await CoDuLieuNghiepVuAsync(conn, tx, phong.Id))
+                    throw new InvalidOperationException(
+                        "Không thể đổi Nhà vì phòng đã có dữ liệu nghiệp vụ hoặc lịch sử. " +
+                        "Hãy tạo phòng mới tại Nhà đích để bảo toàn lịch sử.");
+
+                await phongRepo.UpdateNhaAsync(conn, tx, phong.Id, nhaIdYeuCau);
+            }
+
+            var coHopDongHieuLuc = await PhongLifecycleService.CoHopDongHieuLucTheoNgayAsync(
+                conn, tx, phong.Id, DateTime.Today);
+            var coHopDongTuongLai = await PhongLifecycleService.CoHopDongTuongLaiAsync(
+                conn, tx, phong.Id, DateTime.Today);
+            if (dangSuaChua && (coHopDongHieuLuc || coHopDongTuongLai))
+                throw new InvalidOperationException(
+                    "Không thể đặt phòng sang Đang sửa khi đang có hợp đồng hiệu lực hoặc hợp đồng tương lai.");
+
+            phong.NhaId = nhaIdYeuCau;
+            phong.TrangThai = coHopDongHieuLuc
+                ? "DangThue"
+                : dangSuaChua
+                    ? "DangSuaChua"
+                    : "Trong";
+            await phongRepo.UpdateThongTinAsync(conn, tx, phong);
+            await phongRepo.UpdateTrangThaiAsync(conn, tx, phong.Id, phong.TrangThai);
             await phongDichVuRepo.SyncForPhongAsync(conn, tx, phong.Id, prices);
             await tx.CommitAsync();
         }
@@ -118,19 +153,68 @@ public class PhongService(
         }
     }
 
-    /// <summary>Sau khi ký hợp đồng mới → cập nhật phòng sang DangThue.</summary>
-    public async Task XuLyKyHopDongAsync(int phongId)
-        => await phongRepo.UpdateTrangThaiAsync(phongId, "DangThue");
-
-    /// <summary>
-    /// Sau khi kết thúc / huỷ hợp đồng:
-    /// kiểm tra không còn hợp đồng DangHieuLuc nào thì chuyển phòng về Trong.
-    /// </summary>
-    public async Task XuLyKetThucHopDongAsync(int phongId)
+    public async Task<bool> CoDuLieuNghiepVuAsync(int phongId)
     {
-        var con = await hopDongRepo.GetDangHieuLucByPhongAsync(phongId);
-        if (con == null)
-            await phongRepo.UpdateTrangThaiAsync(phongId, "Trong");
+        var conn = (MySqlConnection)db;
+        if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+        return await CoDuLieuNghiepVuAsync(conn, null, phongId);
+    }
+
+    public async Task<PhongReconcileViewModel> ReconcileReadOnlyAsync(DateTime ngay)
+    {
+        const string sql = """
+            SELECT
+                p.Id AS PhongId,
+                p.NhaId,
+                n.TenNha,
+                p.TenPhong,
+                p.TrangThai AS TrangThaiSnapshot,
+                (
+                    SELECT COUNT(*) FROM HopDong hd
+                    WHERE hd.PhongId = p.Id
+                      AND hd.TrangThai IN ('ChoHieuLuc', 'DangHieuLuc')
+                      AND hd.NgayBatDau <= @Ngay
+                      AND (hd.NgayKetThuc IS NULL OR hd.NgayKetThuc >= @Ngay)
+                ) AS SoHopDongHieuLuc,
+                (
+                    SELECT COUNT(*) FROM HopDong hd
+                    WHERE hd.PhongId = p.Id
+                      AND hd.TrangThai IN ('ChoHieuLuc', 'DangHieuLuc')
+                      AND hd.NgayBatDau > @Ngay
+                ) AS SoHopDongTuongLai,
+                EXISTS(
+                    SELECT 1
+                    FROM HopDong h1
+                    INNER JOIN HopDong h2
+                        ON h2.PhongId = h1.PhongId AND h2.Id > h1.Id
+                    WHERE h1.PhongId = p.Id
+                      AND h1.TrangThai <> 'DaHuy'
+                      AND h2.TrangThai <> 'DaHuy'
+                      AND h1.NgayBatDau <= COALESCE(h2.NgayKetThuc, '9999-12-31')
+                      AND COALESCE(h1.NgayKetThuc, '9999-12-31') >= h2.NgayBatDau
+                ) AS CoOverlapHopDong,
+                (
+                    EXISTS(SELECT 1 FROM HopDong hd WHERE hd.PhongId = p.Id)
+                  + EXISTS(SELECT 1 FROM ChiSoDienNuoc cs WHERE cs.PhongId = p.Id)
+                  + EXISTS(SELECT 1 FROM ChiSoNgoaiHopDong csn WHERE csn.PhongId = p.Id)
+                  + EXISTS(SELECT 1 FROM ThuChi tc WHERE tc.PhongId = p.Id)
+                  + EXISTS(SELECT 1 FROM ChiSoDauChuyenDoiDichVu cd WHERE cd.PhongId = p.Id)
+                  + EXISTS(
+                        SELECT 1 FROM LichSuThayDoiGia ls
+                        INNER JOIN PhongDichVu pdv ON pdv.Id = ls.DoiTuongId
+                        WHERE ls.LoaiDoiTuong = 'DichVu' AND pdv.PhongId = p.Id)
+                ) > 0 AS CoDuLieuNghiepVu
+            FROM Phong p
+            INNER JOIN Nha n ON n.Id = p.NhaId
+            ORDER BY n.TenNha, p.TenPhong
+            """;
+
+        var rows = (await db.QueryAsync<PhongReconcileRow>(sql, new { Ngay = ngay.Date })).ToList();
+        return new PhongReconcileViewModel
+        {
+            NgayDoiChieu = ngay.Date,
+            Rows = rows
+        };
     }
 
     /// <summary>Tính tổng nợ còn lại của hợp đồng (dùng khi trả phòng, hoàn cọc).</summary>
@@ -156,6 +240,28 @@ public class PhongService(
             throw new InvalidOperationException("Phai chon day du cac dich vu bat buoc khi tao hoac sua phong.");
         return result;
     }
+
+    private static async Task<bool> CoDuLieuNghiepVuAsync(
+        IDbConnection conn,
+        IDbTransaction? tx,
+        int phongId)
+        => await conn.ExecuteScalarAsync<int>(
+            """
+            SELECT
+                EXISTS(SELECT 1 FROM HopDong WHERE PhongId = @PhongId)
+              + EXISTS(SELECT 1 FROM ChiSoDienNuoc WHERE PhongId = @PhongId)
+              + EXISTS(SELECT 1 FROM ChiSoNgoaiHopDong WHERE PhongId = @PhongId)
+              + EXISTS(SELECT 1 FROM ThuChi WHERE PhongId = @PhongId)
+              + EXISTS(SELECT 1 FROM ChiSoDauChuyenDoiDichVu WHERE PhongId = @PhongId)
+              + EXISTS(
+                    SELECT 1
+                    FROM LichSuThayDoiGia ls
+                    INNER JOIN PhongDichVu pdv ON pdv.Id = ls.DoiTuongId
+                    WHERE ls.LoaiDoiTuong = 'DichVu'
+                      AND pdv.PhongId = @PhongId)
+            """,
+            new { PhongId = phongId },
+            tx) > 0;
 
     private sealed class PhongDeletionBlockers
     {

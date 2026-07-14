@@ -8,6 +8,7 @@
     var danhSachDichVu = ViewBag.DanhSachDichVu as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? [];
     var dichVuTheoId = dichVuPhong.ToDictionary(x => x.DichVuId);
     var coNha = danhSachNha.Any();
+    var khoaDoiNha = ViewBag.KhoaDoiNha == true;
 }
 
 <div class="d-flex align-items-center mb-3 gap-2">
@@ -24,7 +25,7 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Nhà <span class="text-danger">*</span></label>
-                <select asp-for="NhaId" class="form-select" required disabled="@(!coNha)">
+                <select asp-for="NhaId" class="form-select" required disabled="@(!coNha || khoaDoiNha)">
                     <option value="">-- Chọn nhà --</option>
                     @foreach (var nha in danhSachNha)
                     {
@@ -32,6 +33,10 @@
                     }
                 </select>
                 <span asp-validation-for="NhaId" class="text-danger small"></span>
+                @if (khoaDoiNha)
+                {
+                    <div class="form-text">Phòng đã có dữ liệu nghiệp vụ nên không thể chuyển sang Nhà khác.</div>
+                }
             </div>
 
             <div class="mb-3">
@@ -56,7 +61,12 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Trạng thái phòng</label>
-                <select asp-for="TrangThai" class="form-select">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="dangSuaChua"
+                           name="dangSuaChua" value="true" checked="@(Model.TrangThai == "DangSuaChua")" />
+                    <label class="form-check-label" for="dangSuaChua">Chỉ đặt tay khi phòng đang sửa chữa</label>
+                </div>
+                <select asp-for="TrangThai" class="form-select" disabled>
                     <option value="Trong">Trống</option>
                     <option value="DangThue">Đang thuê</option>
                     <option value="DangSuaChua">Đang sửa chữa</option>

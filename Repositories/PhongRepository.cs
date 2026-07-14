@@ -55,6 +55,42 @@ public class PhongRepository(IDbConnection db) : BaseRepository(db)
         return phong.FirstOrDefault();
     }
 
+    public async Task<IEnumerable<Phong>> GetAllTheoTrangThaiHieuLucAsync(DateTime ngay)
+    {
+        const string sql = """
+            SELECT p.Id, p.NhaId, p.TenPhong, p.DienTich, p.GiaThueMacDinh,
+                   CASE
+                       WHEN EXISTS(
+                           SELECT 1 FROM HopDong hd
+                           WHERE hd.PhongId = p.Id
+                             AND hd.TrangThai IN ('ChoHieuLuc', 'DangHieuLuc')
+                             AND hd.NgayBatDau <= @Ngay
+                             AND (hd.NgayKetThuc IS NULL OR hd.NgayKetThuc >= @Ngay))
+                           THEN 'DangThue'
+                       WHEN p.TrangThai = 'DangSuaChua' THEN 'DangSuaChua'
+                       ELSE 'Trong'
+                   END AS TrangThai,
+                   p.GhiChu, p.NgayTao,
+                   n.Id AS NhaSplitId, n.Id, n.TenNha, n.DiaChi, n.GhiChu, n.NgayTao
+            FROM Phong p
+            INNER JOIN Nha n ON n.Id = p.NhaId
+            ORDER BY n.TenNha, p.TenPhong
+            """;
+
+        return await _db.QueryAsync<Phong, Nha, Phong>(
+            sql,
+            (phong, nha) =>
+            {
+                phong.Nha = nha;
+                return phong;
+            },
+            new { Ngay = ngay.Date },
+            splitOn: "NhaSplitId");
+    }
+
+    public async Task<Phong?> GetByIdTheoTrangThaiHieuLucAsync(int id, DateTime ngay)
+        => (await GetAllTheoTrangThaiHieuLucAsync(ngay)).FirstOrDefault(x => x.Id == id);
+
     public async Task<int> InsertAsync(Phong phong)
     {
         const string sql = """
@@ -75,30 +111,21 @@ public class PhongRepository(IDbConnection db) : BaseRepository(db)
         return await conn.ExecuteScalarAsync<int>(sql, phong, transaction: tx);
     }
 
-    public async Task UpdateAsync(Phong phong)
-    {
-        const string sql = """
-            UPDATE Phong SET NhaId = @NhaId, TenPhong = @TenPhong, DienTich = @DienTich,
-                GiaThueMacDinh = @GiaThueMacDinh, TrangThai = @TrangThai, GhiChu = @GhiChu
+    public async Task UpdateThongTinAsync(IDbConnection conn, IDbTransaction tx, Phong phong)
+        => await conn.ExecuteAsync(
+            """
+            UPDATE Phong SET TenPhong = @TenPhong, DienTich = @DienTich,
+                GiaThueMacDinh = @GiaThueMacDinh, GhiChu = @GhiChu
             WHERE Id = @Id
-            """;
-        await _db.ExecuteAsync(sql, phong);
-    }
+            """,
+            phong,
+            transaction: tx);
 
-    public async Task UpdateAsync(IDbConnection conn, IDbTransaction tx, Phong phong)
-    {
-        const string sql = """
-            UPDATE Phong SET NhaId = @NhaId, TenPhong = @TenPhong, DienTich = @DienTich,
-                GiaThueMacDinh = @GiaThueMacDinh, TrangThai = @TrangThai, GhiChu = @GhiChu
-            WHERE Id = @Id
-            """;
-        await conn.ExecuteAsync(sql, phong, transaction: tx);
-    }
-
-    public async Task UpdateTrangThaiAsync(int id, string trangThai)
-        => await _db.ExecuteAsync(
-            "UPDATE Phong SET TrangThai = @TrangThai WHERE Id = @Id",
-            new { Id = id, TrangThai = trangThai });
+    public async Task UpdateNhaAsync(IDbConnection conn, IDbTransaction tx, int phongId, int nhaId)
+        => await conn.ExecuteAsync(
+            "UPDATE Phong SET NhaId = @NhaId WHERE Id = @PhongId",
+            new { PhongId = phongId, NhaId = nhaId },
+            transaction: tx);
 
     public async Task UpdateTrangThaiAsync(IDbConnection conn, IDbTransaction tx, int id, string trangThai)
         => await conn.ExecuteAsync(
@@ -113,7 +140,17 @@ public class PhongRepository(IDbConnection db) : BaseRepository(db)
 
     public async Task<IEnumerable<Phong>> GetPhongTrongAsync()
         => await _db.QueryAsync<Phong>(
-            "SELECT * FROM Phong WHERE TrangThai='Trong' ORDER BY TenPhong");
+            """
+            SELECT *
+            FROM Phong p
+            WHERE p.TrangThai IN ('Trong', 'DangThue')
+              AND NOT EXISTS(
+                  SELECT 1
+                  FROM HopDong hd
+                  WHERE hd.PhongId = p.Id
+                    AND hd.TrangThai IN ('ChoHieuLuc', 'DangHieuLuc'))
+            ORDER BY TenPhong
+            """);
 
     public async Task CapNhatGiaThueMacDinhAsync(int phongId, decimal giaMoi)
         => await _db.ExecuteAsync(

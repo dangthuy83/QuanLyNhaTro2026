@@ -12,11 +12,13 @@ public class HopDongService(
     HopDongKhachThueRepository hdKhachRepo,
     PhongDichVuRepository phongDichVuRepo,
     HopDongDichVuRepository hopDongDichVuRepo,
-    PhongRepository phongRepo,
-    GiaoDichCocService giaoDichCocService)
+    GiaoDichCocService giaoDichCocService,
+    PhongLifecycleService phongLifecycle)
 {
     public async Task HuyHopDongAsync(int hopDongId, DateTime ngayHuy)
     {
+        var thongTin = await hopDongRepo.GetByIdAsync(hopDongId)
+            ?? throw new InvalidOperationException("Khong tim thay hop dong.");
         var conn = (MySqlConnection)db;
         if (conn.State != ConnectionState.Open)
             await conn.OpenAsync();
@@ -24,10 +26,13 @@ public class HopDongService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
+            await phongLifecycle.KhoaPhongAsync(conn, tx, thongTin.PhongId);
             var hopDong = await conn.QueryFirstOrDefaultAsync<HopDong>(
                 "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
                 new { Id = hopDongId },
                 tx) ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+            if (hopDong.PhongId != thongTin.PhongId)
+                throw new InvalidOperationException("Phong cua hop dong da thay doi. Vui long tai lai du lieu.");
 
             if (hopDong.TrangThai is not ("ChoHieuLuc" or "DangHieuLuc"))
                 throw new InvalidOperationException("Chi duoc huy hop dong cho hieu luc hoac dang hieu luc.");
@@ -59,21 +64,8 @@ public class HopDongService(
                 new { Id = hopDongId },
                 tx);
 
-            var conHopDongChiemPhong = await conn.ExecuteScalarAsync<int>(
-                """
-                SELECT COUNT(*)
-                FROM HopDong
-                WHERE PhongId = @PhongId
-                  AND Id <> @Id
-                  AND TrangThai = 'DangHieuLuc'
-                  AND NgayBatDau <= @Ngay
-                  AND (NgayKetThuc IS NULL OR NgayKetThuc >= @Ngay)
-                """,
-                new { hopDong.PhongId, Id = hopDongId, Ngay = ngayHuy.Date },
-                tx);
-
-            if (conHopDongChiemPhong == 0)
-                await phongRepo.UpdateTrangThaiAsync(conn, tx, hopDong.PhongId, "Trong");
+            await PhongLifecycleService.DongBoTrangThaiTheoNgayAsync(
+                conn, tx, hopDong.PhongId, DateTime.Today);
 
             await tx.CommitAsync();
         }
@@ -102,11 +94,8 @@ public class HopDongService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
-            var phongTonTai = await conn.ExecuteScalarAsync<int?>(
-                "SELECT Id FROM Phong WHERE Id = @PhongId FOR UPDATE",
-                new { hopDong.PhongId }, tx);
-            if (!phongTonTai.HasValue)
-                throw new InvalidOperationException("Khong tim thay phong.");
+            var phongDaKhoa = await phongLifecycle.KhoaPhongAsync(conn, tx, hopDong.PhongId);
+            PhongLifecycleService.DamBaoKhongDangSua(phongDaKhoa);
             if (await hopDongRepo.CoChongKhoangAsync(
                     conn, tx, hopDong.PhongId, hopDong.NgayBatDau, hopDong.NgayKetThuc))
                 throw new InvalidOperationException("Phong da co hop dong chiem dung trong khoang thoi gian nay.");
@@ -122,8 +111,8 @@ public class HopDongService(
                 hopDongId,
                 dichVuDaChon.Select(x => x.Id),
                 hopDong.NgayBatDau);
-            if (hopDong.TrangThai == "DangHieuLuc")
-                await phongRepo.UpdateTrangThaiAsync(conn, tx, hopDong.PhongId, "DangThue");
+            await PhongLifecycleService.DongBoTrangThaiTheoNgayAsync(
+                conn, tx, hopDong.PhongId, DateTime.Today);
             await giaoDichCocService.GhiNhanThuCocBanDauAsync(
                 conn,
                 tx,
@@ -200,6 +189,8 @@ public class HopDongService(
 
     public async Task SuaHopDongAsync(HopDong hopDong, int[] khachThueIds, int? khachChinhId)
     {
+        var thongTin = await hopDongRepo.GetByIdAsync(hopDong.Id)
+            ?? throw new InvalidOperationException("Khong tim thay hop dong.");
         var conn = (MySqlConnection)db;
         if (conn.State != ConnectionState.Open)
             await conn.OpenAsync();
@@ -207,11 +198,14 @@ public class HopDongService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
+            await phongLifecycle.KhoaPhongAsync(conn, tx, thongTin.PhongId);
             var banGoc = await conn.QueryFirstOrDefaultAsync<HopDong>(
                 "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
                 new { hopDong.Id },
                 transaction: tx)
                 ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+            if (banGoc.PhongId != thongTin.PhongId)
+                throw new InvalidOperationException("Phong cua hop dong da thay doi. Vui long tai lai du lieu.");
 
             var coDuLieu = await CoDuLieuNghiepVuAsync(conn, tx, hopDong.Id);
             if (coDuLieu)
@@ -227,9 +221,6 @@ public class HopDongService(
                 hopDong.HopDongTruocId = banGoc.HopDongTruocId;
                 hopDong.DaXuLyChenhLechCoc = banGoc.DaXuLyChenhLechCoc;
 
-                await conn.ExecuteScalarAsync<int>(
-                    "SELECT Id FROM Phong WHERE Id = @PhongId FOR UPDATE",
-                    new { banGoc.PhongId }, tx);
                 if (await hopDongRepo.CoChongKhoangAsync(
                         conn, tx, banGoc.PhongId, hopDong.NgayBatDau, hopDong.NgayKetThuc, hopDong.Id))
                     throw new InvalidOperationException("Khoang thoi gian sua bi chong voi hop dong khac cua phong.");
@@ -264,24 +255,33 @@ public class HopDongService(
         var conn = (MySqlConnection)db;
         if (conn.State != ConnectionState.Open) await conn.OpenAsync();
 
-        var ids = (await conn.QueryAsync<int>(
-            "SELECT Id FROM HopDong WHERE TrangThai = 'ChoHieuLuc' AND NgayBatDau <= @Ngay ORDER BY NgayBatDau, Id",
+        var candidates = (await conn.QueryAsync<HopDong>(
+            "SELECT Id, PhongId FROM HopDong WHERE TrangThai = 'ChoHieuLuc' AND NgayBatDau <= @Ngay ORDER BY NgayBatDau, Id",
             new { Ngay = ngay.Date })).ToArray();
         var count = 0;
-        foreach (var id in ids)
+        foreach (var candidate in candidates)
         {
             await using var tx = await conn.BeginTransactionAsync();
             try
             {
+                var phongDaKhoa = await phongLifecycle.KhoaPhongAsync(conn, tx, candidate.PhongId);
                 var hd = await conn.QueryFirstOrDefaultAsync<HopDong>(
-                    "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE", new { Id = id }, tx);
+                    "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE", new { candidate.Id }, tx);
                 if (hd == null || hd.TrangThai != "ChoHieuLuc" || hd.NgayBatDau.Date > ngay.Date)
                 {
                     await tx.RollbackAsync();
                     continue;
                 }
-                await conn.ExecuteScalarAsync<int>(
-                    "SELECT Id FROM Phong WHERE Id = @PhongId FOR UPDATE", new { hd.PhongId }, tx);
+                if (hd.PhongId != candidate.PhongId)
+                {
+                    await tx.RollbackAsync();
+                    continue;
+                }
+                if (phongDaKhoa.TrangThai == "DangSuaChua")
+                {
+                    await tx.RollbackAsync();
+                    continue;
+                }
                 if (await hopDongRepo.CoChongKhoangAsync(
                         conn, tx, hd.PhongId, hd.NgayBatDau, hd.NgayKetThuc, hd.Id))
                 {
@@ -290,7 +290,8 @@ public class HopDongService(
                 }
                 await conn.ExecuteAsync(
                     "UPDATE HopDong SET TrangThai = 'DangHieuLuc' WHERE Id = @Id", new { hd.Id }, tx);
-                await phongRepo.UpdateTrangThaiAsync(conn, tx, hd.PhongId, "DangThue");
+                await PhongLifecycleService.DongBoTrangThaiTheoNgayAsync(
+                    conn, tx, hd.PhongId, ngay);
                 await tx.CommitAsync();
                 count++;
             }

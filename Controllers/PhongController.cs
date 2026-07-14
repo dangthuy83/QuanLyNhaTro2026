@@ -19,8 +19,14 @@ public class PhongController(
     {
         await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "phong";
-        var danhSach = await phongRepo.GetAllAsync();
+        var danhSach = await phongRepo.GetAllTheoTrangThaiHieuLucAsync(DateTime.Today);
         return View(danhSach);
+    }
+
+    public async Task<IActionResult> Reconcile()
+    {
+        ViewData["ActiveMenu"] = "phong";
+        return View(await phongService.ReconcileReadOnlyAsync(DateTime.Today));
     }
 
     public async Task<IActionResult> GanDichVuHangLoat(
@@ -75,7 +81,7 @@ public class PhongController(
     {
         await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "phong";
-        var phong = await phongRepo.GetByIdAsync(id);
+        var phong = await phongRepo.GetByIdTheoTrangThaiHieuLucAsync(id, DateTime.Today);
         if (phong == null) return NotFound();
 
         var hopDong = await hopDongRepo.GetDangHieuLucByPhongAsync(id);
@@ -138,24 +144,26 @@ public class PhongController(
         int id,
         Phong phong,
         int[] dichVuIds,
-        decimal[] donGias)
+        decimal[] donGias,
+        bool dangSuaChua)
     {
         if (id != phong.Id) return BadRequest();
-        await ValidateNhaAsync(phong.NhaId);
 
         if (!ModelState.IsValid)
         {
+            await RestoreTrustedFieldsAsync(phong);
             await LoadPhongFormDataAsync(id);
             return View(phong);
         }
 
         try
         {
-            await phongService.SuaPhongAsync(phong, dichVuIds, donGias);
+            await phongService.SuaPhongAsync(phong, dichVuIds, donGias, dangSuaChua);
         }
         catch (InvalidOperationException ex)
         {
             ModelState.AddModelError(string.Empty, ex.Message);
+            await RestoreTrustedFieldsAsync(phong);
             await LoadPhongFormDataAsync(id);
             return View(phong);
         }
@@ -187,6 +195,7 @@ public class PhongController(
         if (phongId.HasValue)
         {
             ViewBag.DichVuPhong = await phongDichVuRepo.GetAllByPhongAsync(phongId.Value);
+            ViewBag.KhoaDoiNha = await phongService.CoDuLieuNghiepVuAsync(phongId.Value);
         }
     }
 
@@ -236,5 +245,16 @@ public class PhongController(
         {
             ModelState.AddModelError(nameof(Phong.NhaId), "Nha da chon khong ton tai.");
         }
+    }
+
+    private async Task RestoreTrustedFieldsAsync(Phong phong)
+    {
+        var banGoc = await phongRepo.GetByIdAsync(phong.Id);
+        if (banGoc == null) return;
+
+        phong.NhaId = banGoc.NhaId;
+        phong.TrangThai = banGoc.TrangThai;
+        ModelState.Remove(nameof(Phong.NhaId));
+        ModelState.Remove(nameof(Phong.TrangThai));
     }
 }

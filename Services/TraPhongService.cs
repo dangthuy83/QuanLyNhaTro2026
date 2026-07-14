@@ -16,7 +16,8 @@ public class TraPhongService(
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     GiaoDichCocService giaoDichCocService,
     CongNoSettlementService congNoSettlementService,
-    HoaDonSnapshotService snapshotService)
+    HoaDonSnapshotService snapshotService,
+    PhongLifecycleService phongLifecycle)
 {
     public async Task<TraPhongViewModel> TinhPreviewAsync(int hopDongId, DateTime ngayTraPhong)
     {
@@ -119,6 +120,14 @@ public class TraPhongService(
 
         try
         {
+            await phongLifecycle.KhoaPhongAsync(conn, tx, hd.PhongId);
+            var hdDaKhoa = await conn.QueryFirstOrDefaultAsync<HopDong>(
+                "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
+                new { Id = hopDongId },
+                tx) ?? throw new InvalidOperationException("Khong tim thay hop dong.");
+            if (hdDaKhoa.TrangThai != "DangHieuLuc")
+                throw new InvalidOperationException("Hop dong khong con hieu luc de tra phong.");
+
             int? hoaDonCuoiId = null;
             List<KhoanPhatSinhHopDong> khoanPhatSinhChuaXuLy = [];
 
@@ -198,10 +207,8 @@ public class TraPhongService(
                 },
                 tx);
 
-            await conn.ExecuteAsync(
-                "UPDATE Phong SET TrangThai = 'Trong' WHERE Id = @Id",
-                new { Id = hd.PhongId },
-                tx);
+            await PhongLifecycleService.DongBoTrangThaiTheoNgayAsync(
+                conn, tx, hd.PhongId, DateTime.Today);
 
             decimal tongNoHoaDonTruocXuLyCoc = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
             if (!canSinhHd)

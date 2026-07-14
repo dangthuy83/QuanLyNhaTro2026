@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 2: REVIEW-014 đã hoàn tất; REVIEW-015/016 còn lại |
-| Build | Phiên 60: `dotnet build --no-restore` pass 0 warning, 0 error |
+| Giai đoạn | Phase 2: REVIEW-015 đã hoàn tất; REVIEW-016 còn lại |
+| Build | Phiên 61: `dotnet build --no-restore` pass 0 warning, 0 error |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 60 dry-run REVIEW-014 sạch; apply-once unique CCCD sau Trim đã chạy trên DB vận hành, hậu kiểm đủ 1 generated column/1 unique constraint. Schema/migration/security/service/concurrency smoke pass và DB tạm drop trong `finally`. |
+| Database | Phiên 61 dry-run REVIEW-015 chỉ đọc sạch (`TotalRooms=11`, mọi nhóm lệch/xung đột/lịch sử/trạng thái lạ bằng 0); không đổi schema, không có migration và không sửa dữ liệu vận hành. Schema/service/concurrency/reconcile smoke pass, DB tạm drop trong `finally`. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-014 đã xong; REVIEW-015/016 còn lại | Đang làm Phase 2 |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-015 đã xong; REVIEW-016 còn lại | Đang làm Phase 2 |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,51 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 61 - REVIEW-015: đồng bộ trạng thái Phòng và bảo toàn lịch sử Nhà–Phòng
+
+Đã triển khai:
+
+- Giữ `Phong.TrangThai` làm snapshot/cache; danh sách phòng, Details, dashboard và query gán dịch vụ suy trạng thái thuê theo hợp đồng tại ngày hiện tại. Danh sách phòng trống không còn tin riêng snapshot và loại cả phòng sửa chữa lẫn phòng có hợp đồng hiện tại/tương lai.
+- Thêm `PhongLifecycleService` dùng chung để khóa phòng, kiểm tra hợp đồng hiệu lực/tương lai và đồng bộ snapshot. Tạo, kích hoạt, hủy, chuyển và trả hợp đồng chạy guard trong transaction với thứ tự khóa ổn định.
+- Edit phòng chỉ cho đặt tay `DangSuaChua`; chặn khi có hợp đồng hiệu lực hoặc tương lai. Service tải lại dòng đã khóa, không tin `NhaId/TrangThai` từ request và chặn đổi Nhà nếu đã có hợp đồng, chỉ số, thu chi hoặc lịch sử nghiệp vụ; phòng chưa sử dụng vẫn đổi Nhà/sửa chữa được.
+- Thêm `/Phong/Reconcile` chỉ đọc, báo trạng thái snapshot/theo hợp đồng, hợp đồng hiệu lực/tương lai, overlap, xung đột sửa chữa, trạng thái lạ và khóa đổi Nhà. Màn hình không có lệnh sửa hay ghi dữ liệu.
+
+Dry-run DB vận hành trước triển khai, không ghi dữ liệu:
+
+```text
+TotalRooms=11
+ActiveButSnapshotNotDangThue=0
+NoActiveButSnapshotDangThue=0
+RepairWithActiveOrFutureContract=0
+RoomsWithMultipleActiveContractsToday=0
+HistoryRoomsStillMovableViaUiService=0
+UnknownRoomStatuses=0
+```
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore: pass, 0 warning, 0 error
+SCHEMA_SMOKE_PASS; Tables=19; Constraints=80; SeedServices=7
+REVIEW_015_SMOKE_PASS
+REVIEW_010_SMOKE_PASS
+ACTIVE_CANNOT_MANUAL_EMPTY / ACTIVE_CANNOT_REPAIR
+FUTURE_STAYS_EMPTY_BEFORE_START / FUTURE_CONTRACT_NOT_TRANSFER_TARGET
+DUE_CONTRACT_ACTIVATED / CANCEL_SYNCS_ROOM_EMPTY / RETURN_SYNCS_ROOM_EMPTY
+USED_ROOM_HOUSE_BLOCKED / UNUSED_ROOM_CAN_MOVE_AND_REPAIR
+STATUS_TAMPER_IGNORED / CONCURRENT_CREATE_REPAIR_SERIALIZED
+RECONCILE_DETECTS_MISMATCH / RECONCILE_READ_ONLY
+TEMP_DATABASES_DROPPED
+```
+
+Browser QA Create/Edit/Details/Index/Reconcile và dashboard trên DB tạm pass; phòng có lịch sử khóa chọn Nhà, request sửa chữa xung đột trả lỗi thân thiện, phòng chưa dùng đổi Nhà và đặt sửa chữa được, trạng thái/count theo hợp đồng đúng và console không có warning/error. App/cổng/DB browser tạm đã dọn.
+
+Không đổi schema nên không tạo apply-once và không sửa `Database/updates/README.md`. Không làm REVIEW-016, không sửa hoặc chạy lại dữ liệu/file REVIEW-014 và không tự reconcile dữ liệu vận hành.
+
+Git baseline đầu phiên: `d51fd53`; user đã commit/push thủ công trước REVIEW-015.
+
+---
 
 ### Phiên 60 - REVIEW-014: chống trùng hồ sơ khách và vòng đời ảnh CCCD an toàn
 

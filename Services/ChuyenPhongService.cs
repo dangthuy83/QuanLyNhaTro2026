@@ -16,7 +16,8 @@ public class ChuyenPhongService(
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     GiaoDichCocService giaoDichCocService,
     CongNoSettlementService congNoSettlementService,
-    HoaDonSnapshotService snapshotService)
+    HoaDonSnapshotService snapshotService,
+    PhongLifecycleService phongLifecycle)
 {
     public async Task<(int HopDongMoiId, int HoaDonCuId, int? HoaDonMoiId)> ThucHienAsync(
         ChuyenPhongViewModel vm)
@@ -60,41 +61,33 @@ public class ChuyenPhongService(
 
         try
         {
+            var phongIds = new[] { hdCu.PhongId, vm.PhongMoiId }.Distinct().OrderBy(x => x).ToArray();
+            foreach (var phongId in phongIds)
+            {
+                await phongLifecycle.KhoaPhongAsync(conn, tx, phongId);
+            }
+
             var hdCuDaKhoa = await conn.QueryFirstOrDefaultAsync<HopDong>(
                 "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
                 new { Id = vm.HopDongCuId }, tx)
                 ?? throw new InvalidOperationException("Khong tim thay hop dong.");
             if (hdCuDaKhoa.TrangThai != "DangHieuLuc")
                 throw new InvalidOperationException("Hop dong khong con hieu luc de chuyen phong.");
+            if (hdCuDaKhoa.PhongId != hdCu.PhongId)
+                throw new InvalidOperationException("Phong cua hop dong da thay doi. Vui long tai lai du lieu.");
 
-            var phongIds = new[] { hdCuDaKhoa.PhongId, vm.PhongMoiId }.Distinct().OrderBy(x => x).ToArray();
-            foreach (var phongId in phongIds)
-            {
-                var locked = await conn.ExecuteScalarAsync<int?>(
-                    "SELECT Id FROM Phong WHERE Id = @Id FOR UPDATE", new { Id = phongId }, tx);
-                if (!locked.HasValue) throw new InvalidOperationException("Khong tim thay phong can khoa.");
-            }
-
-            var biChong = await conn.ExecuteScalarAsync<bool>(
-                """
-                SELECT EXISTS(
-                    SELECT 1 FROM HopDong
-                    WHERE PhongId = @PhongId
-                      AND TrangThai <> 'DaHuy'
-                      AND NgayBatDau <= '9999-12-31'
-                      AND COALESCE(NgayKetThuc, '9999-12-31') >= @NgayBatDau)
-                """,
-                new { PhongId = vm.PhongMoiId, NgayBatDau = vm.NgayBatDauMoi.Date }, tx);
-            if (biChong)
+            var phongMoiDaKhoa = await phongLifecycle.KhoaPhongAsync(conn, tx, vm.PhongMoiId);
+            PhongLifecycleService.DamBaoKhongDangSua(phongMoiDaKhoa);
+            if (await hopDongRepo.CoChongKhoangAsync(
+                    conn, tx, vm.PhongMoiId, vm.NgayBatDauMoi, null))
                 throw new InvalidOperationException("Phong moi da co hop dong chiem dung trong khoang thoi gian nay.");
 
             await conn.ExecuteAsync(
                 "UPDATE HopDong SET TrangThai='DaChuyenPhong', NgayKetThuc=@Ngay WHERE Id=@Id",
                 new { Ngay = vm.NgayChuyenDi, Id = vm.HopDongCuId }, tx);
 
-            await conn.ExecuteAsync(
-                "UPDATE Phong SET TrangThai='Trong' WHERE Id=@Id",
-                new { Id = hdCu.PhongId }, tx);
+            await PhongLifecycleService.DongBoTrangThaiTheoNgayAsync(
+                conn, tx, hdCuDaKhoa.PhongId, DateTime.Today);
 
             var trangThaiHopDongMoi = vm.NgayBatDauMoi.Date > DateTime.Today
                 ? "ChoHieuLuc"
@@ -135,12 +128,8 @@ public class ChuyenPhongService(
             await hopDongDichVuRepo.InsertManyAsync(
                 conn, tx, hdMoiId, selectedIds, vm.NgayBatDauMoi);
 
-            if (trangThaiHopDongMoi == "DangHieuLuc")
-            {
-                await conn.ExecuteAsync(
-                    "UPDATE Phong SET TrangThai='DangThue' WHERE Id=@Id",
-                    new { Id = vm.PhongMoiId }, tx);
-            }
+            await PhongLifecycleService.DongBoTrangThaiTheoNgayAsync(
+                conn, tx, vm.PhongMoiId, DateTime.Today);
 
             var dichVuTinhChoPhongCu = chuyenCuoiThang
                 ? dvCu

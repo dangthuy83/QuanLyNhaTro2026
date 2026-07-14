@@ -25,7 +25,7 @@
                     <dt class="col-5">Giá niêm yết</dt><dd class="col-7">@Model.GiaThueMacDinh.ToString("N0") đ</dd>
                     <dt class="col-5">Trạng thái</dt>
                     <dd class="col-7">
-                        @(Model.TrangThai switch {
+                        @Html.Raw(Model.TrangThai switch {
                             "DangThue"    => "<span class='badge bg-success'>Đang thuê</span>",
                             "DangSuaChua" => "<span class='badge bg-warning text-dark'>Đang sửa</span>",
                             _             => "<span class='badge bg-secondary'>Trống</span>"
@@ -53,6 +53,10 @@
                     </dl>
                     <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong.Id"
                        class="btn btn-sm btn-outline-primary mt-2">Xem hợp đồng</a>
+                }
+                else if (Model.TrangThai == "DangSuaChua")
+                {
+                    <p class="text-warning mb-0">Phòng đang sửa chữa và chưa thể nhận hợp đồng.</p>
                 }
                 else
                 {

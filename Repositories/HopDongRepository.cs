@@ -39,8 +39,16 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
     /// <summary>Hợp đồng đang hiệu lực của 1 phòng</summary>
     public async Task<HopDong?> GetDangHieuLucByPhongAsync(int phongId)
         => await _db.QueryFirstOrDefaultAsync<HopDong>(
-            "SELECT * FROM HopDong WHERE PhongId = @PhongId AND TrangThai = 'DangHieuLuc' LIMIT 1",
-            new { PhongId = phongId });
+            """
+            SELECT * FROM HopDong
+            WHERE PhongId = @PhongId
+              AND TrangThai IN ('ChoHieuLuc', 'DangHieuLuc')
+              AND NgayBatDau <= @Ngay
+              AND (NgayKetThuc IS NULL OR NgayKetThuc >= @Ngay)
+            ORDER BY NgayBatDau DESC, Id DESC
+            LIMIT 1
+            """,
+            new { PhongId = phongId, Ngay = DateTime.Today });
 
     public async Task<HopDong?> GetDangHieuLucByPhongAsync(
         IDbConnection conn,

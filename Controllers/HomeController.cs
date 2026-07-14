@@ -21,7 +21,7 @@ public class HomeController(
         var nam   = DateTime.Today.Year;
 
         // ── Thống kê phòng ───────────────────────────────────────────────────
-        var tatCaPhong = (await phongRepo.GetAllAsync()).ToList();
+        var tatCaPhong = (await phongRepo.GetAllTheoTrangThaiHieuLucAsync(DateTime.Today)).ToList();
 
         // ── Hóa đơn kỳ này ──────────────────────────────────────────────────
         // Query thẳng DB cho gọn, tránh N+1

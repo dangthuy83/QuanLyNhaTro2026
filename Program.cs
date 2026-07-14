@@ -52,6 +52,7 @@ builder.Services.AddScoped<ThuChiRepository>();
 builder.Services.AddScoped<HoaDonService>();
 builder.Services.AddScoped<HopDongService>();
 builder.Services.AddScoped<PhongService>();
+builder.Services.AddScoped<PhongLifecycleService>();
 builder.Services.AddScoped<ExcelService>();
 builder.Services.AddScoped<ChuyenPhongService>();
 builder.Services.AddScoped<TraPhongService>();

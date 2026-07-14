@@ -1,0 +1,65 @@
+@model QuanLyNhaTro.Models.PhongReconcileViewModel
+@{
+    ViewData["Title"] = "Đối chiếu trạng thái phòng";
+    ViewData["ActiveMenu"] = "phong";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+        <h5 class="mb-1">Đối chiếu trạng thái phòng</h5>
+        <div class="text-muted small">Ngày đối chiếu: @Model.NgayDoiChieu.ToString("dd/MM/yyyy"). Báo cáo chỉ đọc, không tự sửa dữ liệu.</div>
+    </div>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Quay lại danh sách phòng</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Tổng phòng</div><div class="fs-5 fw-semibold">@Model.TongSoPhong</div></div></div>
+    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Lệch trạng thái</div><div class="fs-5 fw-semibold text-danger">@Model.SoPhongLechTrangThai</div></div></div>
+    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Sửa chữa xung đột</div><div class="fs-5 fw-semibold text-danger">@Model.SoPhongDangSuaXungDot</div></div></div>
+    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Overlap/nhiều HĐ</div><div class="fs-5 fw-semibold text-danger">@Model.SoPhongNhieuHopDong</div></div></div>
+    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Có lịch sử</div><div class="fs-5 fw-semibold">@Model.SoPhongCoLichSu</div></div></div>
+</div>
+
+@if (!Model.CoBatThuong)
+{
+    <div class="alert alert-success py-2">Không phát hiện lệch trạng thái, xung đột sửa chữa, overlap hay giá trị lạ.</div>
+}
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nhà / phòng</th>
+                    <th>Snapshot</th>
+                    <th>Theo hợp đồng</th>
+                    <th>Hợp đồng</th>
+                    <th>Lịch sử</th>
+                    <th>Kết quả</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr class="@(row.CanXuLy ? "table-warning" : "")">
+                    <td><div class="text-muted small">@row.TenNha</div><a asp-action="Details" asp-route-id="@row.PhongId" class="fw-semibold text-decoration-none">@row.TenPhong</a></td>
+                    <td><code>@row.TrangThaiSnapshot</code></td>
+                    <td><code>@row.TrangThaiTheoNgay</code></td>
+                    <td>
+                        <div>Hiệu lực: @row.SoHopDongHieuLuc</div>
+                        <div class="small text-muted">Tương lai: @row.SoHopDongTuongLai</div>
+                        @if (row.CoOverlapHopDong) { <span class="badge bg-danger">Có overlap</span> }
+                    </td>
+                    <td>@(row.CoDuLieuNghiepVu ? "Đã có - khóa đổi Nhà" : "Chưa có")</td>
+                    <td>
+                        @if (row.TrangThaiLa) { <span class="badge bg-danger">Trạng thái lạ</span> }
+                        @if (row.LechTrangThai) { <span class="badge bg-warning text-dark">Lệch snapshot</span> }
+                        @if (row.DangSuaXungDot) { <span class="badge bg-danger">Sửa chữa xung đột</span> }
+                        @if (!row.CanXuLy) { <span class="badge bg-success">Khớp</span> }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

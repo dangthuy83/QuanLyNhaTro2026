@@ -142,6 +142,21 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
         string trangThai)
     {
         const string sql = """
+            WITH phong_hieu_luc AS (
+                SELECT p.Id, p.NhaId, p.TenPhong,
+                       CASE
+                           WHEN EXISTS(
+                               SELECT 1 FROM HopDong hdx
+                               WHERE hdx.PhongId = p.Id
+                                 AND hdx.TrangThai IN ('ChoHieuLuc', 'DangHieuLuc')
+                                 AND hdx.NgayBatDau <= CURDATE()
+                                 AND (hdx.NgayKetThuc IS NULL OR hdx.NgayKetThuc >= CURDATE()))
+                               THEN 'DangThue'
+                           WHEN p.TrangThai = 'DangSuaChua' THEN 'DangSuaChua'
+                           ELSE 'Trong'
+                       END AS TrangThai
+                FROM Phong p
+            )
             SELECT
                 p.Id AS PhongId,
                 n.TenNha,
@@ -152,11 +167,13 @@ public class PhongDichVuRepository(IDbConnection db) : BaseRepository(db)
                 pdv.Id AS PhongDichVuId,
                 pdv.DonGia AS DonGiaHienTai,
                 COALESCE(pdv.DangApDung, 0) AS DangApDung
-            FROM Phong p
+            FROM phong_hieu_luc p
             INNER JOIN Nha n ON n.Id = p.NhaId
             LEFT JOIN HopDong hd
                 ON hd.PhongId = p.Id
-               AND hd.TrangThai = 'DangHieuLuc'
+               AND hd.TrangThai IN ('ChoHieuLuc', 'DangHieuLuc')
+               AND hd.NgayBatDau <= CURDATE()
+               AND (hd.NgayKetThuc IS NULL OR hd.NgayKetThuc >= CURDATE())
             LEFT JOIN HopDongKhachThue hdkt
                 ON hdkt.HopDongId = hd.Id
                AND hdkt.NgayBatDau <= CURDATE()

@@ -47,6 +47,10 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - Hợp đồng tương lai dùng trạng thái `ChoHieuLuc`; chỉ chuyển `DangHieuLuc` khi đến ngày bắt đầu và không chồng kỳ.
   - Triển khai REVIEW-006 khóa dòng `Phong` trong transaction trước khi tạo/chuyển/kích hoạt hợp đồng và kiểm tra giao nhau trên toàn bộ khoảng `[NgayBatDau, NgayKetThuc]`, không suy từ trạng thái phòng. Hợp đồng tương lai không đổi phòng sang `DangThue`; các màn hợp đồng, dashboard, phòng và kiểm tra dữ liệu kích hoạt hợp đồng đến hạn qua cùng service guard.
   - Triển khai REVIEW-007 không tin `PhongId`, `TrangThai` hoặc giá gốc từ request Edit. Bản gốc được khóa/tải lại trong transaction; hợp đồng đã có dữ liệu nghiệp vụ chỉ cho sửa `GhiChu`. Danh sách khách được giữ nguyên khi đã phát sinh dữ liệu; lịch sử hiệu lực nhân khẩu vẫn thuộc REVIEW-008.
+- `Phong.TrangThai` tiếp tục được lưu như snapshot/cache phục vụ vận hành; trạng thái thuê `DangThue/Trong` phải được suy ra và đồng bộ từ hợp đồng theo ngày. Không dùng riêng snapshot này để cho phép tạo, chuyển hoặc kích hoạt hợp đồng.
+  - `DangSuaChua` là trạng thái vận hành duy nhất được đặt thủ công. Không cho đặt khi phòng có hợp đồng hiệu lực theo ngày hoặc bất kỳ hợp đồng tương lai `ChoHieuLuc/DangHieuLuc`; lịch sử đã kết thúc nhưng chưa quyết toán không tự nó chặn sửa chữa.
+  - Phòng đã có bất kỳ hợp đồng, chỉ số, thu chi hoặc lịch sử nghiệp vụ liên quan không được đổi `NhaId`; phải tạo phòng mới tại Nhà đích để lịch sử Nhà–Phòng không bị viết lại. Chỉ phòng hoàn toàn chưa sử dụng mới được chuyển Nhà.
+  - REVIEW-015 cung cấp màn reconcile chỉ đọc: đối chiếu snapshot với hợp đồng theo ngày và báo mismatch, overlap, xung đột sửa chữa, trạng thái lạ và phòng bị khóa đổi Nhà; không có thao tác tự sửa hay ghi dữ liệu.
 - Trước khi có quyết định triển khai khác, ứng dụng chỉ chạy localhost; Phase 1 không mở rộng auth/multi-user.
 
 Các dòng tương ứng trong bảng `Mục Chưa Chốt` phía trên được giữ lại làm dấu vết câu hỏi của phiên review; nội dung tại mục này là quyết định mới nhất và có hiệu lực.
