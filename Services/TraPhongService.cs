@@ -41,8 +41,18 @@ public class TraPhongService(
             throw new InvalidOperationException("Hop dong khong co ngay o trong ky tra phong.");
 
         var hdThangNay = await hoaDonRepo.GetByHopDongThangNamAsync(hopDongId, thang, nam);
-        ValidateHoaDonKyTraPhong(hdThangNay, soNgayO, soNgayTrongThang);
-        bool canSinhHd = hdThangNay == null;
+        var danhGiaHoaDon = DanhGiaHoaDonKyTraPhong(hdThangNay, soNgayO, soNgayTrongThang);
+        bool canSinhHd = danhGiaHoaDon == KetQuaDanhGiaHoaDonKyTraPhong.TaoMoi;
+        string? lyDoChanTraPhong = null;
+
+        if (danhGiaHoaDon == KetQuaDanhGiaHoaDonKyTraPhong.BiChan)
+        {
+            await using var policyConn = new MySqlConnection(config.GetConnectionString("DefaultConnection"));
+            await policyConn.OpenAsync();
+            var deletion = await HoaDonDeletionPolicy.EvaluateAsync(
+                policyConn, null, hdThangNay!, lockRelatedRows: false);
+            lyDoChanTraPhong = TaoThongBaoHoaDonKhongKhop(hdThangNay!, deletion);
+        }
 
         decimal tienPhongProRata = 0;
         decimal tongDichVuThangCuoi = 0;
@@ -73,6 +83,9 @@ public class TraPhongService(
             TenKhachChinh = khach?.HoTen ?? "(chua co khach)",
             TienCoc = soDuCoc,
             NgayTraPhong = ngayTraPhong,
+            CoTheTraPhong = danhGiaHoaDon != KetQuaDanhGiaHoaDonKyTraPhong.BiChan,
+            LyDoChanTraPhong = lyDoChanTraPhong,
+            HoaDonKyTraPhongId = hdThangNay?.Id,
             CanSinhHoaDonMoi = canSinhHd,
             SoNgayO = soNgayO,
             SoNgayTrongThang = soNgayTrongThang,
@@ -104,15 +117,6 @@ public class TraPhongService(
 
         int thang = ngayTraPhong.Month;
         int nam = ngayTraPhong.Year;
-        int soNgayTrongThang = BillingPeriodCalculator.GetDaysInMonth(thang, nam);
-        int soNgayO = BillingPeriodCalculator.CountOccupiedDays(thang, nam, hd.NgayBatDau, ngayTraPhong);
-
-        if (soNgayO <= 0)
-            throw new InvalidOperationException("Hop dong khong co ngay o trong ky tra phong.");
-
-        var hdThangNay = await hoaDonRepo.GetByHopDongThangNamAsync(hopDongId, thang, nam);
-        ValidateHoaDonKyTraPhong(hdThangNay, soNgayO, soNgayTrongThang);
-        bool canSinhHd = hdThangNay == null;
 
         await using var conn = new MySqlConnection(config.GetConnectionString("DefaultConnection"));
         await conn.OpenAsync();
@@ -128,17 +132,40 @@ public class TraPhongService(
             if (hdDaKhoa.TrangThai != "DangHieuLuc")
                 throw new InvalidOperationException("Hop dong khong con hieu luc de tra phong.");
 
+            if (ngayTraPhong.Date < hdDaKhoa.NgayBatDau.Date)
+                throw new InvalidOperationException("Ngay tra phong khong duoc truoc ngay bat dau hop dong.");
+
+            int soNgayTrongThang = BillingPeriodCalculator.GetDaysInMonth(thang, nam);
+            int soNgayO = BillingPeriodCalculator.CountOccupiedDays(
+                thang, nam, hdDaKhoa.NgayBatDau, ngayTraPhong);
+            if (soNgayO <= 0)
+                throw new InvalidOperationException("Hop dong khong co ngay o trong ky tra phong.");
+
+            var hdThangNay = await hoaDonRepo.GetByHopDongKyForUpdateAsync(
+                conn, tx, hopDongId, thang, nam);
+            var danhGiaHoaDon = DanhGiaHoaDonKyTraPhong(
+                hdThangNay, soNgayO, soNgayTrongThang);
+            if (danhGiaHoaDon == KetQuaDanhGiaHoaDonKyTraPhong.BiChan)
+            {
+                var deletion = await HoaDonDeletionPolicy.EvaluateAsync(
+                    conn, tx, hdThangNay!, lockRelatedRows: true);
+                throw new InvalidOperationException(TaoThongBaoHoaDonKhongKhop(hdThangNay!, deletion));
+            }
+
+            bool canSinhHd = danhGiaHoaDon == KetQuaDanhGiaHoaDonKyTraPhong.TaoMoi;
+
             int? hoaDonCuoiId = null;
             List<KhoanPhatSinhHopDong> khoanPhatSinhChuaXuLy = [];
 
             if (canSinhHd)
             {
-                decimal giaPhong = await LayGiaPhongAsync(hd, thang, nam);
+                decimal giaPhong = await LayGiaPhongAsync(hdDaKhoa, thang, nam);
                 decimal tienPhong = BillingPeriodCalculator.CalculateRoomCharge(giaPhong, soNgayO, soNgayTrongThang);
 
                 decimal noKyTruoc = await TinhNoKyTruocAsync(conn, tx, hopDongId, thang, nam);
 
-                var chiTietDv = await TinhChiTietDichVuAsync(conn, tx, hd.PhongId, hopDongId, dvPhong, thang, nam);
+                var chiTietDv = await TinhChiTietDichVuAsync(
+                    conn, tx, hdDaKhoa.PhongId, hopDongId, dvPhong, thang, nam);
                 decimal tongDv = chiTietDv.Sum(d => d.ThanhTien);
                 khoanPhatSinhChuaXuLy = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(conn, tx, hopDongId, ngayTraPhong);
                 decimal tongPhatSinh = khoanPhatSinhChuaXuLy.Sum(x => x.SoTienConLai);
@@ -157,8 +184,8 @@ public class TraPhongService(
                         TongTienDichVu = tongDv,
                         TongTienPhatSinh = tongPhatSinh,
                         TongCong = tongCong,
-                        SoNgayO = soNgayO,
-                        SoNgayTrongThang = soNgayTrongThang,
+                        SoNgayO = soNgayO == soNgayTrongThang ? null : soNgayO,
+                        SoNgayTrongThang = soNgayO == soNgayTrongThang ? null : soNgayTrongThang,
                         TienNoKyTruoc = noKyTruoc,
                         TrangThaiThanhToan = "ChuaThu",
                         GhiChu = $"Tra phong ngay {ngayTraPhong:dd/MM/yyyy}. {ghiChu}".Trim()
@@ -208,7 +235,7 @@ public class TraPhongService(
                 tx);
 
             await PhongLifecycleService.DongBoTrangThaiTheoNgayAsync(
-                conn, tx, hd.PhongId, DateTime.Today);
+                conn, tx, hdDaKhoa.PhongId, DateTime.Today);
 
             decimal tongNoHoaDonTruocXuLyCoc = await TinhTongNoConLaiAsync(conn, tx, hopDongId);
             if (!canSinhHd)
@@ -219,7 +246,7 @@ public class TraPhongService(
             var ketQuaCoc = await giaoDichCocService.TatToanCocKhiTraPhongAsync(
                 conn,
                 tx,
-                hd,
+                hdDaKhoa,
                 hoaDonCuoiId,
                 tongNoTruocXuLyCoc,
                 ngayTraPhong,
@@ -269,8 +296,8 @@ public class TraPhongService(
 
             return new KetQuaTraPhongViewModel
             {
-                PhongId = hd.PhongId,
-                TenPhong = phong?.TenPhong ?? $"Phong #{hd.PhongId}",
+                PhongId = hdDaKhoa.PhongId,
+                TenPhong = phong?.TenPhong ?? $"Phong #{hdDaKhoa.PhongId}",
                 TenKhachChinh = khach?.HoTen ?? "",
                 NgayTraPhong = ngayTraPhong,
                 HoaDonCuoiId = hoaDonCuoiId,
@@ -410,16 +437,51 @@ public class TraPhongService(
             new { HopDongId = hopDongId },
             tx);
 
-    private static void ValidateHoaDonKyTraPhong(HoaDon? hoaDon, int soNgayO, int soNgayTrongThang)
+    private static KetQuaDanhGiaHoaDonKyTraPhong DanhGiaHoaDonKyTraPhong(
+        HoaDon? hoaDon,
+        int soNgayO,
+        int soNgayTrongThang)
     {
-        if (hoaDon == null || soNgayO == soNgayTrongThang)
-            return;
+        if (hoaDon == null)
+            return KetQuaDanhGiaHoaDonKyTraPhong.TaoMoi;
 
-        if (hoaDon.SoNgayO != soNgayO || hoaDon.SoNgayTrongThang != soNgayTrongThang)
+        bool kyTraPhongDuThang = soNgayO == soNgayTrongThang;
+        bool hoaDonNullNull = hoaDon.SoNgayO == null && hoaDon.SoNgayTrongThang == null;
+        bool hoaDonDuThangRoRang = hoaDon.SoNgayO == soNgayTrongThang
+            && hoaDon.SoNgayTrongThang == soNgayTrongThang;
+
+        if (kyTraPhongDuThang)
         {
-            throw new InvalidOperationException(
-                "Ky tra phong da co hoa don khong khop ngay tra. Hay xoa/huy va lap lai hoa don dung so ngay o truoc khi tra phong.");
+            return hoaDonNullNull || hoaDonDuThangRoRang
+                ? KetQuaDanhGiaHoaDonKyTraPhong.SuDungHienCo
+                : KetQuaDanhGiaHoaDonKyTraPhong.BiChan;
         }
+
+        return hoaDon.SoNgayO == soNgayO && hoaDon.SoNgayTrongThang == soNgayTrongThang
+            ? KetQuaDanhGiaHoaDonKyTraPhong.SuDungHienCo
+            : KetQuaDanhGiaHoaDonKyTraPhong.BiChan;
+    }
+
+    private static string TaoThongBaoHoaDonKhongKhop(
+        HoaDon hoaDon,
+        HoaDonDeletionAssessment deletion)
+    {
+        if (deletion.CanDelete)
+        {
+            return $"Hóa đơn #{hoaDon.Id} của kỳ trả phòng không khớp số ngày ở. "
+                + "Hãy xóa hóa đơn này, lập lại đúng kỳ/ngày ở, rồi thực hiện trả phòng.";
+        }
+
+        return $"Hóa đơn #{hoaDon.Id} của kỳ trả phòng không khớp số ngày ở và không thể xóa vì "
+            + $"{deletion.BlockReason}. Phase hiện tại không dùng credit note và không tự điều chỉnh; "
+            + "không thể tiếp tục trả phòng.";
+    }
+
+    private enum KetQuaDanhGiaHoaDonKyTraPhong
+    {
+        TaoMoi,
+        SuDungHienCo,
+        BiChan
     }
 
     private static async Task<decimal> TinhNoKyTruocAsync(

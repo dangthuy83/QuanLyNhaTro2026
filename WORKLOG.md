@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 2: REVIEW-017 đã hoàn tất |
-| Build | Phiên 63: build app sạch và REVIEW-017 fresh-schema/service/concurrency/migration/Excel smoke pass |
+| Giai đoạn | Phase 3: REVIEW-018 đã hoàn tất |
+| Build | Phiên 64: build app sạch và REVIEW-018 fresh-schema service/concurrency smoke pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 63 dry-run REVIEW-017 chỉ đọc có `HopDong=0`, `HoaDon=0`; apply-once đã áp trên DB vận hành, hậu kiểm `HoaDon.NgayDenHan DATE NOT NULL`, due-date CHECK bằng 1. Fresh schema/migration blocker-rerun/service-concurrency/Browser QA pass; DB tạm drop trong `finally`. |
+| Database | Phiên 64 dry-run REVIEW-018 chỉ đọc có `HopDong=0`, `HoaDon=0`; không đổi schema hay dữ liệu vận hành. Fresh-schema service/concurrency và Browser QA pass; DB tạm drop trong `finally`, cleanup hậu kiểm `Dropped=0`. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-017 đã xong | Hoàn tất batch hiện tại |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-018 đã xong | Hoàn tất batch hiện tại |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,45 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 64 - REVIEW-018: invariant hóa đơn kỳ trả phòng
+
+Đã phân tích, tái hiện và triển khai riêng REVIEW-018 sau khi được duyệt phương án:
+
+- Preview và execute dùng chung invariant kỳ/ngày ở. Kỳ trả chưa có hóa đơn thì sinh hóa đơn kỳ cuối; hóa đơn khớp thì không sinh trùng; hóa đơn không khớp bị chặn trước mọi thay đổi hợp đồng, phòng, cọc hoặc công nợ.
+- Hóa đơn đủ tháng `SoNgayO/SoNgayTrongThang = NULL/NULL` được xem là khớp khi trả cuối tháng và không khớp khi trả giữa tháng. Cặp số đúng `N/N` được chấp nhận; metadata khác bị chặn. Hóa đơn prorata phải khớp chính xác số ngày ở và số ngày trong tháng.
+- Execute khóa phòng, hợp đồng và hóa đơn kỳ trả rồi tính/kiểm tra lại trong transaction. Hai request đồng thời chỉ một request hoàn tất; request còn lại rollback sạch.
+- Chính sách xóa hóa đơn được dùng chung giữa `HoaDonService` và trả phòng. Hóa đơn không khớp chỉ được hướng dẫn xóa/reissue khi chưa có thanh toán/settlement; phase hiện tại không dùng credit note hay tự điều chỉnh. Hóa đơn kỳ trả đã kết thúc hợp đồng không được xóa ngược.
+- `TraPhong/Confirm` hiển thị lý do chặn, link hóa đơn và vô hiệu hóa nút xác nhận; hóa đơn khớp hiển thị rõ không sinh trùng.
+
+Dry-run DB vận hành trước triển khai, chỉ đọc:
+
+```text
+HopDong=0; HoaDon=0; CandidateContracts=0; CandidateInvoices=0
+Transaction kết thúc bằng ROLLBACK; không có câu lệnh ghi.
+```
+
+Kết quả kiểm tra:
+
+```text
+CASE_1_NO_INVOICE_PRORATA_PASS Days=10/30
+CASE_2_FULL_NULL_NULL_PASS Invoice=2;Count=1
+CASE_3_MID_NULL_NULL_PASS Preview=BLOCKED;Execute=BLOCKED;StateUnchanged=True
+CASE_4_PRORATA_MATCH_PASS Count=1
+CASE_5_PRORATA_MISMATCH_PASS Preview=BLOCKED;Execute=BLOCKED;StateUnchanged=True
+CASE_5B_FULL_WRONG_METADATA_PASS Preview=BLOCKED;Execute=BLOCKED;StateUnchanged=True
+CASE_6_PAID_SETTLEMENT_BLOCK_PASS Guidance=True;StateUnchanged=True
+CASE_7_CONCURRENT_RETURN_PASS Results=OK|BLOCKED;Invoices=1
+CASE_8_DELETE_REISSUE_SERIALIZATION_PASS FinalInvoiceProtected=True
+REVIEW_018_SMOKE_PASS
+TEMP_DATABASES_DROPPED
+```
+
+Browser QA `TraPhong/Confirm` pass cho hóa đơn đủ tháng `NULL/NULL` bị chặn khi trả giữa tháng, đổi ngày sang cuối tháng thì được phép, và hóa đơn prorata khớp được phép. Không có overlay, console warning/error sạch. Host dừng sạch với marker `BROWSER_QA_TEMP_DATABASE_DROPPED`; cleanup độc lập xác nhận `Dropped=0`.
+
+Không đổi schema/migration và không sửa/chạy lại dữ liệu/file REVIEW-014 đến REVIEW-017.
+
+---
 
 ### Phiên 63 - REVIEW-017: snapshot ngày đến hạn và báo quá hạn
 

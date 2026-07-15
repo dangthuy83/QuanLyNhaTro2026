@@ -24,11 +24,24 @@
         <div class="card shadow-sm">
             <div class="card-header fw-semibold">Thông tin thanh toán cuối</div>
             <div class="card-body">
-                @if (Model.CanSinhHoaDonMoi)
+                @if (!Model.CoTheTraPhong)
+                {
+                    <div class="alert alert-danger py-2 small">
+                        <i class="bi bi-x-octagon me-1"></i>
+                        <strong>Chưa thể trả phòng.</strong> @Model.LyDoChanTraPhong
+                        @if (Model.HoaDonKyTraPhongId.HasValue)
+                        {
+                            <a asp-controller="HoaDon" asp-action="Details"
+                               asp-route-id="@Model.HoaDonKyTraPhongId.Value"
+                               class="alert-link ms-1">Mở hóa đơn #@Model.HoaDonKyTraPhongId.Value</a>
+                        }
+                    </div>
+                }
+                else if (Model.CanSinhHoaDonMoi)
                 {
                     <div class="alert alert-warning py-2 small">
                         <i class="bi bi-exclamation-triangle"></i>
-                        Trả giữa tháng — sẽ sinh hóa đơn tháng cuối tính
+                        Sẽ sinh hóa đơn kỳ cuối tính
                         <strong>@Model.SoNgayO / @Model.SoNgayTrongThang ngày</strong>.
                     </div>
                 }
@@ -36,7 +49,7 @@
                 {
                     <div class="alert alert-info py-2 small">
                         <i class="bi bi-info-circle"></i>
-                        Trả cuối tháng hoặc đã có HD tháng này — không sinh hóa đơn mới.
+                        Hóa đơn kỳ trả phòng hiện hữu đã khớp số ngày ở — không sinh hóa đơn mới.
                     </div>
                 }
                 <table class="table table-sm">
@@ -89,10 +102,19 @@
                         <input name="ghiChu" class="form-control" placeholder="VD: Thỏa thuận hoàn 50%..." />
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-danger"
-                                onclick="return confirm('Xác nhận trả phòng ngày @Model.NgayTraPhong.ToString("dd/MM/yyyy")? Không thể hoàn tác.')">
-                            <i class="bi bi-door-open"></i> Xác nhận trả phòng
-                        </button>
+                        @if (Model.CoTheTraPhong)
+                        {
+                            <button class="btn btn-danger"
+                                    onclick="return confirm('Xác nhận trả phòng ngày @Model.NgayTraPhong.ToString("dd/MM/yyyy")? Không thể hoàn tác.')">
+                                <i class="bi bi-door-open"></i> Xác nhận trả phòng
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-danger" type="button" disabled>
+                                <i class="bi bi-lock"></i> Chưa thể trả phòng
+                            </button>
+                        }
                         <a asp-controller="HopDong" asp-action="Details"
                            asp-route-id="@Model.HopDongId" class="btn btn-outline-secondary">Hủy</a>
                     </div>

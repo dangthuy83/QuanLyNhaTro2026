@@ -295,14 +295,13 @@ Dry-run DB vận hành có `HopDong=0`, `HoaDon=0`, không có dòng backfill. M
 
 #### REVIEW-018 - Hóa đơn đã tồn tại khi trả giữa tháng chưa có chính sách điều chỉnh
 
-- **Mức độ / loại:** Medium - khoảng trống nghiệp vụ.
-- **Module:** K, G.
-- **Hiện trạng:** nếu đã có hóa đơn tháng trả, `TraPhongService` không sinh/điều chỉnh hóa đơn dù ngày trả giữa tháng; vẫn đóng hợp đồng.
-- **Bằng chứng:** `TraPhongService` điều kiện `hdThangNay == null`.
-- **Tái hiện:** chốt hóa đơn đủ tháng trước, sau đó khách trả ngày 10.
-- **Hậu quả:** có thể thu đủ tháng hoặc cần hoàn/điều chỉnh nhưng hệ thống không thể hiện chính sách.
-- **Sửa nhỏ nhất:** chặn trả cho tới khi hủy/reissue hoặc tạo credit/debit adjustment theo quyết định.
-- **Cần user quyết định:** Có.
+**Trạng thái: RESOLVED trong Phiên 64.** Quyết định đã chốt là xóa/reissue nếu hóa đơn không khớp và còn đủ điều kiện xóa; phase hiện tại không dùng credit note.
+
+`TraPhongService` dùng chung một invariant cho preview và execute. Không có hóa đơn kỳ trả thì sinh hóa đơn kỳ cuối; hóa đơn hiện hữu khớp thì không sinh trùng; hóa đơn không khớp bị chặn trước mọi thay đổi trạng thái hợp đồng, phòng, cọc hoặc công nợ. Execute khóa phòng, hợp đồng và hóa đơn kỳ trả, rồi tính/kiểm tra lại từ dữ liệu đã khóa để tránh TOCTOU. `HoaDonService` và flow trả phòng dùng chung chính sách xác định hóa đơn có thể xóa; hóa đơn kỳ trả đã được dùng để kết thúc hợp đồng không thể bị xóa ngược.
+
+Hóa đơn đủ tháng bình thường có `SoNgayO/SoNgayTrongThang = NULL/NULL`; cặp này được phép khi trả đúng cuối tháng nhưng bị chặn khi trả giữa tháng. Cặp số đúng `N/N` cũng được chấp nhận cho dữ liệu cũ/flow trả phòng; metadata khác bị xem là không khớp. Màn `TraPhong/Confirm` hiển thị lý do và link hóa đơn, vô hiệu hóa nút xác nhận khi bị chặn.
+
+Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ liệu liên quan và kết thúc bằng rollback. Không đổi schema. Fresh-schema service/concurrency smoke đủ các ca missing/full-month/prorata/mismatch/settlement/two-request pass; Browser QA trạng thái chặn và cho phép pass, console sạch; mọi DB tạm được drop trong `finally`.
 
 #### REVIEW-019 - Chỉ số ngoài hợp đồng có thể phá chuỗi audit
 
@@ -413,7 +412,7 @@ Dry-run DB vận hành có `HopDong=0`, `HoaDon=0`, không có dòng backfill. M
 
 - **Phạm vi file:** `ChuyenPhongService/View`, `TraPhongService/View`, `HoaDonService`, `KiemTraDuLieuRepository`,
   `KhoanPhatSinhHopDongRepository`.
-- **Schema:** tùy quyết định adjustment/credit và due date; có thể cần `NgayDenHan`, trạng thái hủy/thay thế hóa đơn.
+- **Schema:** REVIEW-017 đã thêm snapshot `NgayDenHan`; REVIEW-018 không thêm trạng thái hóa đơn hay credit note và không cần đổi schema. Các mục Phase 3 còn lại chỉ đổi schema khi có quyết định riêng.
 - **DB hiện tại:** cần update nếu thêm cột/bảng.
 - **Smoke:** chuyển cuối tháng/nhiều lần; trả giữa tháng có hóa đơn; khoản phát sinh trước/sau trả; cọc thiếu;
   hợp đồng kết thúc chưa quyết toán phải hiện trên dashboard kiểm tra.

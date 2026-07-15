@@ -48,6 +48,17 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
             new { HopDongId = hopDongId, Thang = thang, Nam = nam },
             transaction: tx);
 
+    public async Task<HoaDon?> GetByHopDongKyForUpdateAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int hopDongId,
+        int thang,
+        int nam)
+        => await conn.QueryFirstOrDefaultAsync<HoaDon>(
+            "SELECT * FROM HoaDon WHERE HopDongId = @HopDongId AND Thang = @Thang AND Nam = @Nam FOR UPDATE",
+            new { HopDongId = hopDongId, Thang = thang, Nam = nam },
+            transaction: tx);
+
     /// <summary>Hóa đơn kỳ trước (dùng lấy nợ tồn)</summary>
     public async Task<HoaDon?> GetKyTruocAsync(int hopDongId, int thang, int nam)
     {

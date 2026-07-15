@@ -15,6 +15,9 @@ public class TraPhongViewModel
     public string? GhiChu { get; set; }
 
     // Preview
+    public bool CoTheTraPhong { get; set; } = true;
+    public string? LyDoChanTraPhong { get; set; }
+    public int? HoaDonKyTraPhongId { get; set; }
     public bool CanSinhHoaDonMoi { get; set; }
     public int SoNgayO { get; set; }
     public int SoNgayTrongThang { get; set; }

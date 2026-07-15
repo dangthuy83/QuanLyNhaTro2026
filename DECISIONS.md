@@ -11,7 +11,6 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 | # | Vấn đề | Ngữ cảnh | Ưu tiên |
 |---|---|---|---|
 | 1 | `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay có trường hợp hủy sau khi đã nhận phòng? | Vòng đời hợp đồng; phân biệt Hủy và Trả phòng | Cao |
-| 4 | Hóa đơn đủ tháng đã chốt nhưng khách trả giữa tháng: giữ nguyên, hủy/reissue hay tạo khoản điều chỉnh/credit? | Trả phòng và snapshot hóa đơn | Cao |
 | 5 | Có cho khách trả dư/ứng trước không; nếu có số dư thuộc hợp đồng, chuỗi khách qua chuyển phòng hay hồ sơ khách? | Thanh toán, công nợ, chuyển phòng | Cao |
 | 6 | Ngày đến hạn của hóa đơn kỳ N là ngày nào trong tháng N+1; nếu cấu hình ngày 29-31 nhưng tháng ngắn hơn thì xử lý thế nào? | Báo cáo công nợ và nhắc nợ | Cao |
 | 7 | Giao dịch cọc thủ công có cho backdate/điều chỉnh không; có cần lưu phương thức thu/hoàn và chứng từ? | Ledger cọc và audit tiền thật | Cao |
@@ -31,6 +30,9 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - `HopDong.TienThueThoaThuan` là giá gốc riêng của hợp đồng. Thay đổi giá thuê giữa hợp đồng được lưu theo scope `HopDong`; `Phong.GiaThueMacDinh` chỉ là giá gợi ý cho hợp đồng mới và không mang lịch sử giá hợp đồng cũ sang hợp đồng mới.
   - Triển khai REVIEW-003 dùng `LichSuThayDoiGia.LoaiDoiTuong = 'HopDong'`, `DoiTuongId = HopDong.Id`. Sửa thông tin hợp đồng không đổi giá gốc; tăng/giảm giá giữa kỳ phải đi qua màn lịch sử giá thuê của hợp đồng.
 - Nếu kỳ trả phòng chưa có hóa đơn thì luôn preview/tạo hóa đơn kỳ cuối, kể cả trả đúng ngày cuối tháng. Nếu đã có hóa đơn đủ tháng nhưng trả giữa tháng và số ngày không khớp, phải xóa/hủy rồi lập lại đúng trước khi trả phòng; Phase 1 chưa dùng credit note.
+  - Triển khai REVIEW-018 dùng cùng một invariant cho preview và execute, đồng thời khóa hợp đồng/hóa đơn rồi kiểm tra lại trong transaction trước mọi thay đổi trạng thái, cọc hoặc công nợ.
+  - Hóa đơn đủ tháng thông thường được biểu diễn chuẩn bằng `SoNgayO = NULL`, `SoNgayTrongThang = NULL`; cặp số đúng `N/N` vẫn được chấp nhận cho dữ liệu cũ hoặc hóa đơn sinh từ flow trả phòng. Hóa đơn đủ tháng có metadata khác `NULL/NULL` hoặc `N/N`, và hóa đơn không trọn tháng không khớp đúng số ngày ở, đều bị xem là không khớp.
+  - Hóa đơn không khớp chỉ có thể xóa/reissue khi chưa có thanh toán/settlement và thỏa chính sách xóa hiện hành. Hóa đơn không thể xóa vẫn chặn trả phòng, không tự điều chỉnh và không dùng credit note trong phase hiện tại.
 - Khi chuyển phòng, khoản phát sinh chưa xử lý có `NgayPhatSinh <= NgayChuyenDi` thuộc hóa đơn hợp đồng/phòng cũ; hóa đơn ghép chỉ là cách trình bày, không đổi scope dữ liệu. Nếu chuyển ngày cuối tháng, hợp đồng mới bắt đầu ngày đầu tháng sau, dịch vụ cố định tháng cũ tính trên hóa đơn phòng cũ và không tạo hóa đơn 0 ngày cho phòng mới trong tháng cũ; nợ cũ chưa settlement sẽ được cơ chế hóa đơn đầu tiên của hợp đồng mới mang sang.
 - Hóa đơn chưa có thanh toán/settlement được phép xóa vật lý trong transaction; khoản phát sinh phải được trả về `ChuaXuLy` và liên kết hóa đơn ghép phải được tháo an toàn. Hóa đơn đã có thanh toán, `KetChuyenNo`, `TruCoc` hoặc đang mang `TienNoKyTruoc` không được xóa.
   - Triển khai REVIEW-011 khóa dòng `HoaDon` trước khi kiểm tra/xóa; kiểm tra trực tiếp mọi dòng `ThanhToan` và `GiaoDichCoc` thay vì chỉ tin số tổng hợp. Khoản phát sinh chỉ được hoàn tác nếu còn `DaDuaVaoHoaDon`; trạng thái đã xử lý khác làm thao tác xóa bị chặn và rollback.
@@ -373,9 +375,9 @@ Sinh 2 hóa đơn liên kết qua `HoaDonGhepId`:
 
 ### Trả phòng
 
-- Trả cuối tháng: không sinh hóa đơn mới.
-- Trả giữa tháng hoặc kỳ không trọn tháng và chưa có hóa đơn tháng đó: sinh hóa đơn pro-rata.
-- Trả giữa tháng hoặc kỳ không trọn tháng nhưng đã có hóa đơn tháng đó: không sinh hóa đơn mới.
+- Nếu kỳ trả phòng chưa có hóa đơn: preview và sinh hóa đơn kỳ cuối; kỳ đủ tháng lưu `SoNgayO/SoNgayTrongThang = NULL/NULL`, kỳ không trọn tháng lưu số ngày pro-rata.
+- Nếu hóa đơn hiện hữu khớp kỳ/ngày ở: cho trả phòng và không sinh hóa đơn trùng. Với kỳ đủ tháng, `NULL/NULL` hoặc đúng `N/N` đều là khớp; với kỳ không trọn tháng phải đúng chính xác `SoNgayO/SoNgayTrongThang`.
+- Nếu hóa đơn hiện hữu không khớp: chặn cả preview và execute trước mọi thay đổi trạng thái/cọc/công nợ; hướng dẫn xóa/reissue nếu hóa đơn đủ điều kiện xóa. Không dùng credit note hoặc tự điều chỉnh trong phase hiện tại.
 - Hóa đơn trả phòng tính dịch vụ `TheoChiSo` theo chỉ số, dịch vụ `CoDinh` thu trọn một lần nếu hóa đơn tháng cuối được sinh.
 - `TienHoanCoc = SoDuCocThucTe - TongNoConLai`; nếu âm thì khách còn nợ thêm.
 - `TongNoConLai` khi trả phòng gồm nợ hóa đơn còn lại và khoản phát sinh chưa xử lý tới ngày trả phòng.

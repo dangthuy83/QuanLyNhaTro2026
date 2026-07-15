@@ -332,6 +332,9 @@ public class HoaDonService(
 
     public async Task XoaHoaDonAsync(int hoaDonId)
     {
+        var hoaDonBanDau = await hoaDonRepo.GetByIdAsync(hoaDonId)
+            ?? throw new KeyNotFoundException($"Khong tim thay hoa don #{hoaDonId}.");
+
         var conn = (MySqlConnection)db;
         if (conn.State != ConnectionState.Open)
             await conn.OpenAsync();
@@ -339,23 +342,26 @@ public class HoaDonService(
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
+            var hopDong = await conn.QueryFirstOrDefaultAsync<HopDong>(
+                "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE",
+                new { Id = hoaDonBanDau.HopDongId },
+                tx) ?? throw new InvalidOperationException("Khong tim thay hop dong cua hoa don.");
+
             var hoaDon = await hoaDonRepo.GetByIdForUpdateAsync(conn, tx, hoaDonId)
                 ?? throw new KeyNotFoundException($"Khong tim thay hoa don #{hoaDonId}.");
 
-            var coThanhToan = (await conn.QueryAsync<int>(
-                "SELECT Id FROM ThanhToan WHERE HoaDonId = @HoaDonId FOR UPDATE",
-                new { HoaDonId = hoaDonId }, tx)).Any();
-            if (hoaDon.SoTienDaThu > 0 || coThanhToan)
-                throw new InvalidOperationException("Khong the xoa hoa don da co giao dich thu tien.");
+            if (hopDong.TrangThai == "DaKetThuc"
+                && hopDong.NgayTraPhongThucTe.HasValue
+                && hoaDon.Thang == hopDong.NgayTraPhongThucTe.Value.Month
+                && hoaDon.Nam == hopDong.NgayTraPhongThucTe.Value.Year)
+            {
+                throw new InvalidOperationException(
+                    "Khong the xoa hoa don ky tra phong sau khi hop dong da ket thuc.");
+            }
 
-            if (hoaDon.TienNoKyTruoc > 0)
-                throw new InvalidOperationException("Khong the xoa hoa don dang mang no ky truoc da ket chuyen.");
-
-            var coGiaoDichCoc = (await conn.QueryAsync<int>(
-                "SELECT Id FROM GiaoDichCoc WHERE HoaDonId = @HoaDonId FOR UPDATE",
-                new { HoaDonId = hoaDonId }, tx)).Any();
-            if (coGiaoDichCoc)
-                throw new InvalidOperationException("Khong the xoa hoa don da co giao dich coc lien quan.");
+            var deletion = await HoaDonDeletionPolicy.EvaluateAsync(conn, tx, hoaDon, lockRelatedRows: true);
+            if (!deletion.CanDelete)
+                throw new InvalidOperationException($"Khong the xoa hoa don vi {deletion.BlockReason}.");
 
             await khoanPhatSinhRepo.TraVeChuaXuLyAsync(conn, tx, hoaDonId);
             await hoaDonRepo.UnlinkHoaDonGhepAsync(conn, tx, hoaDonId, hoaDon.HoaDonGhepId);
