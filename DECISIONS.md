@@ -142,6 +142,10 @@ Các cột dễ nhầm:
 - `ChiSoDienNuoc` dùng `HopDongId` nullable để tách nhiều đoạn chỉ số cùng phòng/dịch vụ/tháng khi khách cũ trả phòng, phòng trống/sửa chữa phát sinh điện/nước, rồi khách mới vào trong cùng kỳ. `HopDongId IS NULL` chỉ dùng cho mốc theo phòng/tạm trước khi có hợp đồng hoặc fallback dữ liệu cũ.
 - `ChiSoDienNuoc` dùng `LoaiGhiNhan`: `BinhThuong` yêu cầu `ChiSoCuoi >= ChiSoDau`; `Reset` dùng thêm `ChiSoTruocReset` và `ChiSoSauReset` để tính sản lượng khi đồng hồ reset/hỏng/thay/quay vòng.
 - `ChiSoNgoaiHopDong` không liên kết `HoaDon`; bảng này chỉ ghi nhận sản lượng ngoài hợp đồng và mốc bàn giao công tơ.
+- Chuỗi chỉ số của cùng phòng/dịch vụ là một chuỗi liên tục theo ngày: chỉ số hợp đồng cũ -> chỉ số ngoài hợp đồng -> chỉ số hợp đồng mới. `TuChiSo`/`ChiSoDau` phải bằng mốc kết thúc gần nhất; không dùng gap ngầm, số âm hoặc việc xóa lịch sử để biểu diễn thay đồng hồ.
+- Mọi reset, đồng hồ hỏng, thay đồng hồ hoặc quay vòng xảy ra ngoài hợp đồng phải ghi `ChiSoNgoaiHopDong.LoaiGhiNhan = Reset`, có `ChiSoTruocReset`, `ChiSoSauReset` và `LyDoDieuChinh`. Không thêm loại reset riêng khi metadata hiện tại đã giải thích đủ nghiệp vụ.
+- Không cho hai mốc cùng phòng/dịch vụ trong cùng ngày vì schema chưa có thời điểm đủ để xác định thứ tự. Dòng chỉ số đã làm mốc cho bất kỳ dòng ngoài hợp đồng/chỉ số hợp đồng phía sau không được xóa cứng; chỉ số hợp đồng đã lên hóa đơn tiếp tục là dữ liệu bất biến theo REVIEW-009.
+- Guard continuity/dependency và thao tác ghi/xóa phải chạy cùng transaction sau khi khóa dòng `Phong`; phase này chưa mở rộng thành correction/audit tổng quát và chỉ cho xóa tail chưa có dependency.
 - `DichVu` có `DonGiaMacDinh` chỉ để gợi ý khi gán dịch vụ cho phòng; hóa đơn vẫn tính theo `PhongDichVu.DonGia` hoặc lịch sử giá áp dụng.
 - `DichVu.CachTinhCoDinh` chỉ áp dụng khi `LoaiTinhPhi = CoDinh`; giá trị hiện hỗ trợ `TheoPhong` và `TheoNguoi`.
 - `DichVu.BatBuocKhiThue` xác định dịch vụ không được bỏ khỏi hợp đồng; dữ liệu mẫu đặt Điện là bắt buộc, Nước là tùy chọn.

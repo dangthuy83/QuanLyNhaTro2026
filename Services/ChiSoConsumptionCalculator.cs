@@ -51,6 +51,36 @@ public static class ChiSoConsumptionCalculator
         throw BuildInvalidChiSoException(chiSo, $"loai ghi nhan khong hop le '{chiSo.LoaiGhiNhan}'");
     }
 
+    public static decimal Calculate(ChiSoNgoaiHopDong chiSo)
+    {
+        if (chiSo.LoaiGhiNhan == ChiSoNgoaiHopDong.LoaiBinhThuong)
+        {
+            if (chiSo.DenChiSo < chiSo.TuChiSo)
+                throw new InvalidOperationException("Chi so den khong duoc nho hon chi so tu.");
+
+            return chiSo.DenChiSo - chiSo.TuChiSo;
+        }
+
+        if (chiSo.LoaiGhiNhan != ChiSoNgoaiHopDong.LoaiReset)
+            throw new InvalidOperationException($"Loai ghi nhan khong hop le '{chiSo.LoaiGhiNhan}'.");
+
+        if (!chiSo.ChiSoTruocReset.HasValue)
+            throw new InvalidOperationException("Reset bat buoc co chi so truoc reset.");
+        if (chiSo.ChiSoTruocReset.Value < chiSo.TuChiSo)
+            throw new InvalidOperationException("Chi so truoc reset khong duoc nho hon chi so tu.");
+
+        var chiSoSauReset = chiSo.ChiSoSauReset ?? 0;
+        if (chiSoSauReset < 0)
+            throw new InvalidOperationException("Chi so sau reset khong duoc am.");
+        if (chiSo.DenChiSo < chiSoSauReset)
+            throw new InvalidOperationException("Chi so den khong duoc nho hon chi so sau reset.");
+        if (string.IsNullOrWhiteSpace(chiSo.LyDoDieuChinh))
+            throw new InvalidOperationException("Reset bat buoc co ly do dieu chinh.");
+
+        return (chiSo.ChiSoTruocReset.Value - chiSo.TuChiSo)
+             + (chiSo.DenChiSo - chiSoSauReset);
+    }
+
     private static InvalidOperationException BuildInvalidChiSoException(ChiSoDienNuoc chiSo, string message)
     {
         var tenDichVu = chiSo.DichVu?.TenDichVu ?? $"Dich vu #{chiSo.DichVuId}";

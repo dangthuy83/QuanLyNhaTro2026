@@ -98,15 +98,39 @@ public class ChiSoNgoaiHopDongRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             INSERT INTO ChiSoNgoaiHopDong
-                (PhongId, DichVuId, TuChiSo, DenChiSo, NgayGhiNhan, LyDo, GhiChu, NgayTao)
+                (PhongId, DichVuId, TuChiSo, DenChiSo, LoaiGhiNhan,
+                 ChiSoTruocReset, ChiSoSauReset, LyDoDieuChinh,
+                 NgayGhiNhan, LyDo, GhiChu, NgayTao)
             VALUES
-                (@PhongId, @DichVuId, @TuChiSo, @DenChiSo, @NgayGhiNhan, @LyDo, @GhiChu, NOW());
+                (@PhongId, @DichVuId, @TuChiSo, @DenChiSo, @LoaiGhiNhan,
+                 @ChiSoTruocReset, @ChiSoSauReset, @LyDoDieuChinh,
+                 @NgayGhiNhan, @LyDo, @GhiChu, NOW());
             SELECT LAST_INSERT_ID();
             """;
 
         return await _db.ExecuteScalarAsync<int>(sql, item);
     }
 
+    public async Task<int> InsertAsync(IDbConnection conn, IDbTransaction tx, ChiSoNgoaiHopDong item)
+    {
+        const string sql = """
+            INSERT INTO ChiSoNgoaiHopDong
+                (PhongId, DichVuId, TuChiSo, DenChiSo, LoaiGhiNhan,
+                 ChiSoTruocReset, ChiSoSauReset, LyDoDieuChinh,
+                 NgayGhiNhan, LyDo, GhiChu, NgayTao)
+            VALUES
+                (@PhongId, @DichVuId, @TuChiSo, @DenChiSo, @LoaiGhiNhan,
+                 @ChiSoTruocReset, @ChiSoSauReset, @LyDoDieuChinh,
+                 @NgayGhiNhan, @LyDo, @GhiChu, NOW());
+            SELECT LAST_INSERT_ID();
+            """;
+        return await conn.ExecuteScalarAsync<int>(sql, item, transaction: tx);
+    }
+
     public async Task DeleteAsync(int id)
         => await _db.ExecuteAsync("DELETE FROM ChiSoNgoaiHopDong WHERE Id = @Id", new { Id = id });
+
+    public async Task DeleteAsync(IDbConnection conn, IDbTransaction tx, int id)
+        => await conn.ExecuteAsync(
+            "DELETE FROM ChiSoNgoaiHopDong WHERE Id = @Id", new { Id = id }, transaction: tx);
 }

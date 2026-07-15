@@ -6,7 +6,10 @@ using QuanLyNhaTro.Repositories;
 
 namespace QuanLyNhaTro.Services;
 
-public class ChiSoService(IDbConnection db, ChiSoDienNuocRepository chiSoRepo)
+public class ChiSoService(
+    IDbConnection db,
+    ChiSoDienNuocRepository chiSoRepo,
+    MeterContinuityService continuity)
 {
     public async Task LuuBatchAsync(IEnumerable<ChiSoDienNuoc> chiSos)
     {
@@ -17,9 +20,26 @@ public class ChiSoService(IDbConnection db, ChiSoDienNuocRepository chiSoRepo)
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
+            var updateIds = items.Where(item => item.Id > 0).Select(item => item.Id).Distinct().ToArray();
+            List<ChiSoScopeRow> persistedScopes = updateIds.Length == 0
+                ? []
+                : (await conn.QueryAsync<ChiSoScopeRow>(
+                    "SELECT Id,PhongId FROM ChiSoDienNuoc WHERE Id IN @Ids",
+                    new { Ids = updateIds }, tx)).ToList();
+            var roomByMeterId = persistedScopes.ToDictionary(row => row.Id, row => row.PhongId);
+            var roomIds = items.Select(item => item.Id > 0 && roomByMeterId.TryGetValue(item.Id, out var roomId)
+                    ? roomId
+                    : item.PhongId)
+                .ToArray();
+            await continuity.LockRoomsAsync(conn, tx, roomIds);
+
             foreach (var item in items)
             {
                 await ValidateNgayDocAsync(conn, tx, item);
+                if (item.LoaiGhiNhan == ChiSoDienNuoc.LoaiReset && string.IsNullOrWhiteSpace(item.LyDoDieuChinh))
+                    throw new InvalidOperationException("Reset bat buoc co ly do dieu chinh.");
+                _ = ChiSoConsumptionCalculator.Calculate(item);
+
                 if (item.Id > 0)
                 {
                     var current = await conn.QueryFirstOrDefaultAsync<ChiSoDienNuoc>(
@@ -30,10 +50,12 @@ public class ChiSoService(IDbConnection db, ChiSoDienNuocRepository chiSoRepo)
                         throw new InvalidOperationException($"Chi so #{item.Id}: khong duoc thay doi phong, hop dong, dich vu hoac ky.");
                     if (await DaDuocDungTrenHoaDonAsync(conn, tx, item.Id))
                         throw new InvalidOperationException($"Chi so #{item.Id} da duoc dung tren hoa don. Hay xoa/reissue hoa don hop le truoc khi sua.");
+                    await ValidateContinuityAsync(conn, tx, item, continuity);
                     await chiSoRepo.UpdateAsync(conn, tx, item);
                 }
                 else
                 {
+                    await ValidateContinuityAsync(conn, tx, item, continuity);
                     await chiSoRepo.InsertAsync(conn, tx, item);
                 }
             }
@@ -53,16 +75,33 @@ public class ChiSoService(IDbConnection db, ChiSoDienNuocRepository chiSoRepo)
 
     public async Task XoaAsync(int id)
     {
+        var preliminary = await chiSoRepo.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"Khong tim thay chi so #{id}.");
         var conn = (MySqlConnection)db;
         if (conn.State != ConnectionState.Open) await conn.OpenAsync();
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
-            var exists = await conn.ExecuteScalarAsync<int?>(
-                "SELECT Id FROM ChiSoDienNuoc WHERE Id = @Id FOR UPDATE", new { Id = id }, tx);
-            if (!exists.HasValue) throw new KeyNotFoundException($"Khong tim thay chi so #{id}.");
+            await continuity.LockRoomsAsync(conn, tx, [preliminary.PhongId]);
+            var current = await conn.QueryFirstOrDefaultAsync<ChiSoDienNuoc>(
+                "SELECT * FROM ChiSoDienNuoc WHERE Id = @Id FOR UPDATE", new { Id = id }, tx)
+                ?? throw new KeyNotFoundException($"Khong tim thay chi so #{id}.");
             if (await DaDuocDungTrenHoaDonAsync(conn, tx, id))
                 throw new InvalidOperationException($"Chi so #{id} da duoc dung tren hoa don, khong the xoa.");
+
+            var eventDate = current.NgayDoc
+                ?? throw new InvalidOperationException($"Chi so #{id} thieu ngay doc.");
+            var next = await continuity.GetNextAsync(
+                conn, tx,
+                current.PhongId, current.DichVuId, eventDate,
+                excludeMeterId: current.Id);
+            if (next != null)
+            {
+                var invoiceNote = next.IsInvoiced ? " Moc phia sau da duoc dung tren hoa don." : string.Empty;
+                throw new InvalidOperationException(
+                    $"Khong the xoa chi so #{id} vi dang lam moc cho {next.Description}.{invoiceNote}");
+            }
+
             await chiSoRepo.DeleteAsync(conn, tx, id);
             await tx.CommitAsync();
         }
@@ -94,4 +133,28 @@ public class ChiSoService(IDbConnection db, ChiSoDienNuocRepository chiSoRepo)
         => (await conn.QueryAsync<int>(
             "SELECT Id FROM ChiTietHoaDon WHERE ChiSoDienNuocId = @Id FOR UPDATE",
             new { Id = chiSoId }, tx)).Any();
+
+    private static async Task ValidateContinuityAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        ChiSoDienNuoc item,
+        MeterContinuityService continuity)
+    {
+        var eventDate = item.NgayDoc
+            ?? throw new InvalidOperationException("Ngay doc chi so la bat buoc.");
+        var conversionStart = await continuity.GetConversionStartAsync(
+            conn, tx, item.PhongId, item.DichVuId, item.Thang, item.Nam);
+        await continuity.EnsureContinuityAsync(
+            conn, tx,
+            item.PhongId, item.DichVuId, eventDate,
+            item.ChiSoDau, item.ChiSoCuoi,
+            excludeMeterId: item.Id > 0 ? item.Id : null,
+            authoritativeStart: conversionStart);
+    }
+
+    private sealed class ChiSoScopeRow
+    {
+        public int Id { get; init; }
+        public int PhongId { get; init; }
+    }
 }

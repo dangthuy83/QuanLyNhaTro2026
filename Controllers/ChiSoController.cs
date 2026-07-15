@@ -12,9 +12,9 @@ public class ChiSoController(
     PhongRepository phongRepo,
     PhongDichVuRepository phongDichVuRepo,
     HopDongDichVuRepository hopDongDichVuRepo,
-    ChiSoNgoaiHopDongRepository chiSoNgoaiHopDongRepo,
     LichSuHinhThucDichVuRepository lichSuHinhThucRepo,
-    ChiSoService chiSoService) : Controller
+    ChiSoService chiSoService,
+    MeterContinuityService continuity) : Controller
 {
     public async Task<IActionResult> Index(int? thang, int? nam)
     {
@@ -562,45 +562,12 @@ public class ChiSoController(
             ? ngayBatDauHopDong.Value.Date
             : new DateTime(nam, thang, DateTime.DaysInMonth(nam, thang));
 
-        var mocHopDongTruoc = await chiSoRepo.GetLatestBeforeOrOnDateAsync(
-            phongId,
-            dichVuId,
-            cutoffDate,
-            hopDongId);
-        var ngoaiHopDong = await chiSoNgoaiHopDongRepo.GetLatestBeforeOrOnDateAsync(phongId, dichVuId, cutoffDate);
-
-        if (ngoaiHopDong != null && IsNgoaiHopDongNewerThanChiSo(ngoaiHopDong, mocHopDongTruoc))
-            return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false, $"Chỉ số ngoài hợp đồng ngày {ngoaiHopDong.NgayGhiNhan:dd/MM/yyyy}");
-
-        if (mocHopDongTruoc != null)
-            return new ChiSoDauInfo(mocHopDongTruoc.ChiSoCuoi, false, $"Mốc bàn giao gần nhất ngày {ResolveNgayDoc(mocHopDongTruoc):dd/MM/yyyy}");
-
-        if (ngoaiHopDong != null)
-            return new ChiSoDauInfo(ngoaiHopDong.DenChiSo, false, $"Chỉ số ngoài hợp đồng ngày {ngoaiHopDong.NgayGhiNhan:dd/MM/yyyy}");
+        var previous = await continuity.GetPreviousOnOrBeforeAsync(
+            phongId, dichVuId, cutoffDate, hopDongId);
+        if (previous != null)
+            return new ChiSoDauInfo(previous.EndReading, false, previous.Description);
 
         return new ChiSoDauInfo(chiSoDauNhap ?? 0, true, "Kỳ đầu chưa có dữ liệu cũ");
-    }
-
-    private static DateTime ResolveNgayDoc(ChiSoDienNuoc chiSo)
-        => chiSo.NgayDoc?.Date ?? new DateTime(
-            chiSo.Nam,
-            chiSo.Thang,
-            DateTime.DaysInMonth(chiSo.Nam, chiSo.Thang));
-
-    private static bool IsNgoaiHopDongNewerThanChiSo(
-        ChiSoNgoaiHopDong ngoaiHopDong,
-        ChiSoDienNuoc? chiSo)
-    {
-        if (chiSo == null)
-            return true;
-
-        var ngayChiSo = chiSo.NgayDoc?.Date ?? new DateTime(
-            chiSo.Nam,
-            chiSo.Thang,
-            DateTime.DaysInMonth(chiSo.Nam, chiSo.Thang));
-
-        return ngoaiHopDong.NgayGhiNhan.Date >= ngayChiSo.Date
-            && ngoaiHopDong.TuChiSo >= chiSo.ChiSoCuoi;
     }
 
     private sealed record ChiSoNhapItem(ChiSoDienNuoc ChiSo);

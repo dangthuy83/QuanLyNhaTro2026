@@ -1,5 +1,9 @@
 # Database updates
 
+REVIEW-019 apply-once:
+
+- `20260715_review019_off_contract_meter_continuity.sql`: dry-run chuỗi chỉ số hợp đồng/ngoài hợp đồng và dừng trước DDL nếu có gap, mốc trùng ngày hoặc dòng ngoài hợp đồng nằm trong thời gian hợp đồng; thêm `LoaiGhiNhan`, `ChiSoTruocReset`, `ChiSoSauReset`, `LyDoDieuChinh` cùng generated `SanLuong`/CHECK reset-aware. Script không tự sửa, xóa hoặc suy đoán reset từ dữ liệu cũ và chạy lại an toàn. DB vận hành khi áp có `ChiSoNgoaiHopDong=0`, `ChiSoDienNuoc=0`, không có dòng nghiệp vụ cần backfill.
+
 REVIEW-017 apply-once:
 
 - `20260715_invoice_due_date_snapshot.sql`: dry-run nguồn kỳ hóa đơn/ngày thanh toán và dừng trước DDL nếu không hợp lệ; thêm `HoaDon.NgayDenHan DATE NOT NULL`, backfill riêng dòng chưa có snapshot theo `HopDong.NgayThanhToanHangThang`, chặn ngày ngoài tháng N+1 bằng CHECK và chạy lại an toàn. DB vận hành khi áp có `HopDong=0`, `HoaDon=0`, nên không có dòng nghiệp vụ cần backfill.

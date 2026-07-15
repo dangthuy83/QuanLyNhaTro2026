@@ -6,6 +6,10 @@ namespace QuanLyNhaTro.Repositories;
 
 public class ChiSoDienNuocRepository(IDbConnection db) : BaseRepository(db)
 {
+    public async Task<ChiSoDienNuoc?> GetByIdAsync(int id)
+        => await _db.QueryFirstOrDefaultAsync<ChiSoDienNuoc>(
+            "SELECT * FROM ChiSoDienNuoc WHERE Id=@Id", new { Id = id });
+
     public async Task<IEnumerable<ChiSoDienNuoc>> GetByHopDongKyAsync(int hopDongId, int thang, int nam)
     {
         const string sql = """

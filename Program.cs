@@ -62,6 +62,8 @@ builder.Services.AddScoped<GiaService>();
 builder.Services.AddScoped<HoaDonSnapshotService>();
 builder.Services.AddScoped<HinhThucDichVuService>();
 builder.Services.AddScoped<ChiSoService>();
+builder.Services.AddScoped<MeterContinuityService>();
+builder.Services.AddScoped<ChiSoNgoaiHopDongService>();
 builder.Services.AddScoped<TenantPhotoStorage>();
 
 // ── Build ─────────────────────────────────────────────────────────────────────

@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 3: REVIEW-018 đã hoàn tất |
-| Build | Phiên 64: build app sạch và REVIEW-018 fresh-schema service/concurrency smoke pass |
+| Giai đoạn | Phase 3: REVIEW-019 đã hoàn tất |
+| Build | Phiên 65: build sạch; REVIEW-019 fresh-schema service/concurrency và migration smoke pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 64 dry-run REVIEW-018 chỉ đọc có `HopDong=0`, `HoaDon=0`; không đổi schema hay dữ liệu vận hành. Fresh-schema service/concurrency và Browser QA pass; DB tạm drop trong `finally`, cleanup hậu kiểm `Dropped=0`. |
+| Database | Phiên 65 dry-run REVIEW-019 chỉ đọc có `ChiSoNgoaiHopDong=0`, `ChiSoDienNuoc=0`, anomaly/dependency/invoice đều 0 và đã rollback. Migration hẹp đã áp, hậu kiểm 4 cột reset + 3 CHECK; không sửa dữ liệu nghiệp vụ. DB smoke tạm còn 0. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,44 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 65 - REVIEW-019: continuity chỉ số ngoài hợp đồng
+
+Đã phân tích/tái hiện và triển khai riêng REVIEW-019 theo quyết định đã chốt:
+
+- Mọi reset, đồng hồ hỏng, thay mới hoặc quay vòng ngoài hợp đồng phải dùng `LoaiGhiNhan=Reset`; không cho gap chỉ số ngầm. `ChiSoNgoaiHopDong` có cùng metadata/công thức reset với `ChiSoDienNuoc`.
+- `MeterContinuityService` resolve chuỗi chung chỉ số hợp đồng cũ -> ngoài hợp đồng -> hợp đồng mới. Create/update phải nối cả mốc trước và dữ liệu sau, chặn hai mốc cùng phòng/dịch vụ/ngày.
+- `ChiSoNgoaiHopDongService` và `ChiSoService` khóa dòng phòng rồi kiểm tra dependency/ghi/xóa trong cùng transaction. Chỉ xóa tail chưa có dependency; mốc đang nuôi dòng sau hoặc chỉ số hợp đồng và chỉ số đã lên hóa đơn bị chặn.
+- UI ngoài hợp đồng khóa mốc `Từ số` khi đã resolve được, thêm loại ghi nhận/reset metadata và hướng dẫn không dùng gap ngầm.
+- Thêm migration apply-once `20260715_review019_off_contract_meter_continuity.sql`; blocker chạy trước DDL, không suy đoán/backfill reset từ lý do cũ và rerun-safe.
+
+Dry-run và apply DB vận hành:
+
+```text
+TotalOff=0; TotalContract=0; ContinuityMismatch=0; SameDate=0
+InsideContract=0; OffAnchorsWithLaterData=0; InvoicedMeterRows=0
+Transaction read-only kết thúc bằng ROLLBACK.
+Migration applied: ResetColumns=4; Checks=3; không sửa dữ liệu nghiệp vụ.
+```
+
+Kết quả kiểm tra hiện tại:
+
+```text
+dotnet build --no-restore: 0 warning, 0 error
+SERVICE_SMOKE_PASS
+MIGRATION_ADD_AND_RERUN_PASS (có ca blocker-before-DDL)
+TEMP_DATABASES_REMAINING=0
+```
+
+Browser QA màn `ChiSoNgoaiHopDong` đã pass sau khi khởi động host trước khi mở tab:
+
+- Page identity đúng, form và bảng render đầy đủ, filter phòng/dịch vụ giữ đúng giá trị.
+- Chuyển `Bình thường -> Reset` hiển thị hướng dẫn và ba trường metadata; `ChiSoTruocReset`/`LyDoDieuChinh` bắt buộc, `ChiSoSauReset` cho phép trống để mặc định 0. Chuyển lại Bình thường ẩn field và bỏ required.
+- Không có exception overlay, console warning/error bằng 0, stderr rỗng và host không có log `fail`.
+
+Không sửa/chạy lại dữ liệu hoặc file REVIEW-014 đến REVIEW-018; không làm REVIEW-020+ và không push.
+
+---
 
 ### Phiên 64 - REVIEW-018: invariant hóa đơn kỳ trả phòng
 

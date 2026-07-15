@@ -305,14 +305,16 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 
 #### REVIEW-019 - Chỉ số ngoài hợp đồng có thể phá chuỗi audit
 
+**Trạng thái 15/07/2026: RESOLVED trong Phiên 65.** Chính sách đã chốt: mọi reset/thay/hỏng/quay vòng đồng hồ ngoài hợp đồng phải dùng `LoaiGhiNhan=Reset`, không cho gap chỉ số ngầm. Migration hẹp thêm bốn metadata reset vào `ChiSoNgoaiHopDong`; không sửa/backfill dữ liệu nghiệp vụ.
+
 - **Mức độ / loại:** Medium - rủi ro xác nhận bằng code.
 - **Module:** F.
-- **Hiện trạng:** cho nhập/xóa dòng tự do, không bắt `TuChiSo` nối mốc gần nhất, không khóa dòng đã làm mốc cho chỉ số sau.
-- **Bằng chứng:** `ChiSoNgoaiHopDongController.ValidateAsync/Delete`; `ChiSoNgoaiHopDongRepository.DeleteAsync`.
-- **Tái hiện:** nhập `TuChiSo` cách xa mốc cuối hoặc xóa đoạn đã dùng làm mốc đầu hợp đồng mới.
-- **Hậu quả:** mất audit sản lượng phòng trống và chuỗi công tơ không giải thích được.
-- **Sửa nhỏ nhất:** validate continuity, soft-delete/correction và khóa mốc đã có dòng sau phụ thuộc.
-- **Cần user quyết định:** Có - có cho phép gap hợp lệ khi thay đồng hồ ngoài hợp đồng hay phải dùng loại reset riêng.
+- **Kết quả:** `MeterContinuityService` resolve chung mốc trước/sau từ cả `ChiSoDienNuoc` và `ChiSoNgoaiHopDong`. Create/update/delete đi qua service transaction, khóa dòng phòng, chặn trùng ngày, gap, đoạn chèn không nối dữ liệu sau, ngày ngoài hợp đồng sai phạm vi và xóa mốc đã có dependency.
+- **Dữ liệu bất biến:** chỉ số hợp đồng đã được `ChiTietHoaDon` tham chiếu không được sửa/xóa; mọi mốc hợp đồng/ngoài hợp đồng đang có sự kiện phía sau cũng không được xóa. Tail ngoài hợp đồng chưa có dependency vẫn được xóa cứng; chưa cần soft-delete/correction tổng quát.
+- **Reset:** `ChiSoNgoaiHopDong` dùng cùng công thức và metadata reset với chỉ số hợp đồng. Reset thiếu chỉ số trước/sau hoặc lý do bị chặn ở calculator/service và CHECK; `BinhThuong` không được mang metadata reset.
+- **Migration/DB:** `20260715_review019_off_contract_meter_continuity.sql` dry-run và blocker trước DDL, rerun-safe. Dry-run DB vận hành có cả hai bảng chỉ số và các nhóm anomaly/dependency/invoice đều bằng 0; transaction đã rollback. Migration đã áp, hậu kiểm 4 cột reset và 3 CHECK.
+- **Kiểm tra:** fresh-schema service smoke, migration add-path/blocker/rerun, reset formula, create/delete dependency và concurrency pass; DB tạm hậu kiểm còn 0. Browser QA màn `ChiSoNgoaiHopDong` pass cho trạng thái Bình thường/Reset, required metadata, layout, page identity và filter; không có exception overlay, console warning/error hoặc lỗi host.
+- **Cần user quyết định:** Không - đã chốt chính sách continuity/reset ngày 15/07/2026.
 
 #### REVIEW-020 - Màn vận hành mặc định sai kỳ thu tiền trả sau
 
@@ -412,7 +414,7 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 
 - **Phạm vi file:** `ChuyenPhongService/View`, `TraPhongService/View`, `HoaDonService`, `KiemTraDuLieuRepository`,
   `KhoanPhatSinhHopDongRepository`.
-- **Schema:** REVIEW-017 đã thêm snapshot `NgayDenHan`; REVIEW-018 không thêm trạng thái hóa đơn hay credit note và không cần đổi schema. Các mục Phase 3 còn lại chỉ đổi schema khi có quyết định riêng.
+- **Schema:** REVIEW-017 đã thêm snapshot `NgayDenHan`; REVIEW-018 không đổi schema; REVIEW-019 thêm hẹp metadata reset cho `ChiSoNgoaiHopDong`. Các mục Phase 3 còn lại chỉ đổi schema khi có quyết định riêng.
 - **DB hiện tại:** cần update nếu thêm cột/bảng.
 - **Smoke:** chuyển cuối tháng/nhiều lần; trả giữa tháng có hóa đơn; khoản phát sinh trước/sau trả; cọc thiếu;
   hợp đồng kết thúc chưa quyết toán phải hiện trên dashboard kiểm tra.

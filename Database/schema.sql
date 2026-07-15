@@ -324,7 +324,17 @@ CREATE TABLE ChiSoNgoaiHopDong (
     DichVuId INT NOT NULL,
     TuChiSo DECIMAL(10,2) NOT NULL,
     DenChiSo DECIMAL(10,2) NOT NULL,
-    SanLuong DECIMAL(10,2) GENERATED ALWAYS AS (DenChiSo - TuChiSo) STORED,
+    LoaiGhiNhan VARCHAR(20) NOT NULL DEFAULT 'BinhThuong',
+    ChiSoTruocReset DECIMAL(10,2) NULL,
+    ChiSoSauReset DECIMAL(10,2) NULL,
+    LyDoDieuChinh VARCHAR(255) NULL,
+    SanLuong DECIMAL(10,2) GENERATED ALWAYS AS (
+        CASE
+            WHEN LoaiGhiNhan = 'Reset' THEN
+                (ChiSoTruocReset - TuChiSo) + (DenChiSo - COALESCE(ChiSoSauReset, 0))
+            ELSE DenChiSo - TuChiSo
+        END
+    ) STORED,
     NgayGhiNhan DATE NOT NULL,
     LyDo VARCHAR(255) NOT NULL,
     GhiChu VARCHAR(255) NULL,
@@ -332,8 +342,31 @@ CREATE TABLE ChiSoNgoaiHopDong (
     CONSTRAINT FK_ChiSoNgoaiHopDong_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
     CONSTRAINT FK_ChiSoNgoaiHopDong_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
     CONSTRAINT CK_ChiSoNgoaiHopDong_Nam CHECK (YEAR(NgayGhiNhan) BETWEEN 2000 AND 2100),
-    CONSTRAINT CK_ChiSoNgoaiHopDong_KhongAm CHECK (TuChiSo >= 0 AND DenChiSo >= 0),
-    CONSTRAINT CK_ChiSoNgoaiHopDong_SanLuong CHECK (DenChiSo >= TuChiSo)
+    CONSTRAINT CK_ChiSoNgoaiHopDong_Loai CHECK (LoaiGhiNhan IN ('BinhThuong', 'Reset')),
+    CONSTRAINT CK_ChiSoNgoaiHopDong_KhongAm CHECK (
+        TuChiSo >= 0
+        AND DenChiSo >= 0
+        AND (ChiSoTruocReset IS NULL OR ChiSoTruocReset >= 0)
+        AND (ChiSoSauReset IS NULL OR ChiSoSauReset >= 0)
+    ),
+    CONSTRAINT CK_ChiSoNgoaiHopDong_SanLuongHopLe CHECK (
+        (
+            LoaiGhiNhan = 'BinhThuong'
+            AND DenChiSo >= TuChiSo
+            AND ChiSoTruocReset IS NULL
+            AND ChiSoSauReset IS NULL
+            AND LyDoDieuChinh IS NULL
+        )
+        OR
+        (
+            LoaiGhiNhan = 'Reset'
+            AND ChiSoTruocReset IS NOT NULL
+            AND ChiSoTruocReset >= TuChiSo
+            AND DenChiSo >= COALESCE(ChiSoSauReset, 0)
+            AND LyDoDieuChinh IS NOT NULL
+            AND TRIM(LyDoDieuChinh) <> ''
+        )
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX IX_ChiSoNgoaiHopDong_Moc

@@ -7,6 +7,7 @@
     var danhSachPhong = ViewBag.DanhSachPhong as List<QuanLyNhaTro.Models.Phong> ?? [];
     var dichVuTheoChiSo = ViewBag.DichVuTheoChiSo as List<QuanLyNhaTro.Models.DichVu> ?? [];
     decimal? goiYTuChiSo = ViewBag.GoiYTuChiSo as decimal?;
+    var nguonGoiYTuChiSo = ViewBag.NguonGoiYTuChiSo as string;
     var inv = System.Globalization.CultureInfo.InvariantCulture;
 }
 
@@ -59,13 +60,20 @@
                 }
             </select>
         </div>
+        <div class="col-md-2">
+            <label class="form-label small text-muted mb-1">Loại ghi nhận</label>
+            <select name="LoaiGhiNhan" id="loaiGhiNhan" class="form-select form-select-sm">
+                <option value="BinhThuong">Bình thường</option>
+                <option value="Reset">Reset / thay đồng hồ</option>
+            </select>
+        </div>
         <div class="col-6 col-md-1">
             <label class="form-label small text-muted mb-1">Từ số</label>
-            <input name="TuChiSo" type="number" step="0.01" min="0" class="form-control form-control-sm"
-                   value="@(goiYTuChiSo?.ToString(inv) ?? "")" required />
+            <input name="TuChiSo" id="tuChiSo" type="number" step="0.01" min="0" class="form-control form-control-sm"
+                   value="@(goiYTuChiSo?.ToString(inv) ?? "")" readonly="@(goiYTuChiSo.HasValue)" required />
             @if (goiYTuChiSo.HasValue)
             {
-                <div class="form-text">Gợi ý từ mốc gần nhất.</div>
+                <div class="form-text">Bắt buộc nối từ @nguonGoiYTuChiSo.</div>
             }
         </div>
         <div class="col-6 col-md-1">
@@ -88,6 +96,29 @@
         <div class="col-12">
             <input name="GhiChu" class="form-control form-control-sm" maxlength="255"
                    placeholder="Ghi chú thêm nếu cần" />
+        </div>
+        <div id="resetFields" class="col-12 d-none">
+            <div class="alert alert-warning py-2 mb-2 small">
+                Reset dùng cho đồng hồ về 0, hỏng, thay mới hoặc quay vòng. Không nhập gap ngầm; sản lượng = phần trước reset + phần sau reset.
+            </div>
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Chỉ số trước reset <span class="text-danger">*</span></label>
+                    <input name="ChiSoTruocReset" id="chiSoTruocReset" type="number" step="0.01" min="0" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Chỉ số sau reset (mặc định 0)</label>
+                    <input name="ChiSoSauReset" id="chiSoSauReset" type="number" step="0.01" min="0" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small text-muted mb-1">Lý do điều chỉnh <span class="text-danger">*</span></label>
+                    <input name="LyDoDieuChinh" id="lyDoDieuChinh" maxlength="255" class="form-control form-control-sm"
+                           placeholder="Ví dụ: Thay đồng hồ hỏng, số cuối đồng hồ cũ là..." />
+                </div>
+            </div>
+        </div>
+        <div class="col-12 small text-muted">
+            Mỗi dòng phải nối đúng mốc gần nhất và không được trùng ngày với một mốc điện/nước khác của cùng phòng. Dòng đã làm mốc cho dữ liệu sau sẽ không thể xóa.
         </div>
     </div>
 </form>
@@ -123,6 +154,7 @@
                     <th class="text-end">Từ số</th>
                     <th class="text-end">Đến số</th>
                     <th class="text-end">Sản lượng</th>
+                    <th>Loại</th>
                     <th>Ngày</th>
                     <th>Lý do</th>
                     <th>Ghi chú</th>
@@ -138,6 +170,18 @@
                         <td class="text-end">@item.TuChiSo.ToString("N2")</td>
                         <td class="text-end">@item.DenChiSo.ToString("N2")</td>
                         <td class="text-end fw-semibold">@item.SanLuong.ToString("N2")</td>
+                        <td>
+                            @if (item.LaReset)
+                            {
+                                <span class="badge text-bg-warning">Reset</span>
+                                <div class="small text-muted mt-1">@item.ChiSoTruocReset?.ToString("N2") → @item.ChiSoSauReset?.ToString("N2")</div>
+                                <div class="small">@item.LyDoDieuChinh</div>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-light">Bình thường</span>
+                            }
+                        </td>
                         <td class="text-nowrap">@item.NgayGhiNhan.ToString("dd/MM/yyyy")</td>
                         <td>@item.LyDo</td>
                         <td class="small text-muted">@item.GhiChu</td>
@@ -153,10 +197,32 @@
                 @if (!Model.Any())
                 {
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">Chưa có chỉ số ngoài hợp đồng.</td>
+                        <td colspan="10" class="text-center text-muted py-4">Chưa có chỉ số ngoài hợp đồng.</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const type = document.getElementById('loaiGhiNhan');
+            const resetFields = document.getElementById('resetFields');
+            const requiredResetInputs = [
+                document.getElementById('chiSoTruocReset'),
+                document.getElementById('lyDoDieuChinh')
+            ];
+
+            const refresh = () => {
+                const isReset = type.value === 'Reset';
+                resetFields.classList.toggle('d-none', !isReset);
+                requiredResetInputs.forEach(input => input.required = isReset);
+            };
+
+            type.addEventListener('change', refresh);
+            refresh();
+        })();
+    </script>
+}
