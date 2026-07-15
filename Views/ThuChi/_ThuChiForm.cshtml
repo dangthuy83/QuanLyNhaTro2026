@@ -1,4 +1,9 @@
 @model QuanLyNhaTro.Models.ThuChi
+<input type="hidden" asp-for="ThuChiGocId" />
+@if (Model.ThuChiGocId.HasValue)
+{
+    <div class="alert alert-warning py-2">Đây là bút toán điều chỉnh cho giao dịch #@Model.ThuChiGocId. Giao dịch gốc được giữ nguyên.</div>
+}
 <div class="mb-3">
     <label class="form-label">Loại giao dịch <span class="text-danger">*</span></label>
     <select asp-for="LoaiGiaoDich" class="form-select">
@@ -17,7 +22,7 @@
 </div>
 <div class="mb-3">
     <label class="form-label">Số tiền (đ) <span class="text-danger">*</span></label>
-    <input asp-for="SoTien" type="number" class="form-control" min="0" step="1000" />
+    <input asp-for="SoTien" type="number" class="form-control" min="1" step="1" />
     <span asp-validation-for="SoTien" class="text-danger small"></span>
 </div>
 <div class="mb-3">

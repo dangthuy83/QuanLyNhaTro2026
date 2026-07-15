@@ -70,6 +70,32 @@
     </div>
 </form>
 
+<div class="card border-info mb-3">
+    <div class="card-header bg-info bg-opacity-10 d-flex justify-content-between">
+        <strong>Đối soát snapshot/ledger chỉ đọc</strong>
+        <span class="badge bg-@(Model.CanhBaoDoiSoat.Count == 0 ? "success" : "warning")">@Model.CanhBaoDoiSoat.Count cảnh báo</span>
+    </div>
+    <div class="card-body">
+        <p class="small text-muted">Khối này chỉ chạy SELECT để so sánh dữ liệu đã lưu; không có nút tự sửa và không ghi database.</p>
+        @if (Model.CanhBaoDoiSoat.Count == 0)
+        {
+            <div class="text-success">Chưa phát hiện lệch snapshot, ledger hoặc liên kết trong dữ liệu hiện có.</div>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+            @foreach (var issue in Model.CanhBaoDoiSoat)
+            {
+                <div class="list-group-item px-0 d-flex justify-content-between gap-3">
+                    <div><span class="badge bg-warning text-dark me-2">@issue.Loai</span><strong>@issue.DoiTuong #@issue.DoiTuongId</strong><div class="small text-muted">@issue.LyDo</div></div>
+                    @if (!string.IsNullOrEmpty(issue.LinkController)) { <a asp-controller="@issue.LinkController" asp-action="@issue.LinkAction" asp-route-id="@issue.DoiTuongId" class="btn btn-sm btn-outline-primary align-self-center">Xử lý</a> }
+                </div>
+            }
+            </div>
+        }
+    </div>
+</div>
+
 <div class="row g-3 mb-3">
     <div class="col-md-3 col-xl-2">
         <div class="border rounded p-3 h-100">

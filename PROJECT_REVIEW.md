@@ -318,6 +318,11 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 
 #### REVIEW-020 - Màn vận hành mặc định sai kỳ thu tiền trả sau
 
+**Trạng thái 16/07/2026: RESOLVED trong Phiên 66.** Các màn hóa đơn, chỉ số,
+dashboard và sẵn sàng vận hành dùng chung `DefaultBillingPeriodResolver` để mặc định kỳ
+N-1; tham số kỳ explicit vẫn được giữ nguyên. Browser QA xác nhận ngày 16/07/2026 mở
+`HoaDon` và `KiemTraDuLieu` ở kỳ 6/2026.
+
 - **Mức độ / loại:** Medium - UX có thể gây lỗi nghiệp vụ.
 - **Module:** G, F, L.
 - **Hiện trạng:** Hóa đơn, chỉ số, preview và dashboard mặc định `DateTime.Today.Month/Year`, trong khi tháng N+1 thu kỳ N.
@@ -328,6 +333,11 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 - **Cần user quyết định:** Không.
 
 #### REVIEW-021 - KiemTraDuLieu và báo cáo chưa reconcile dữ liệu denormalized/snapshot
+
+**Trạng thái 16/07/2026: RESOLVED trong Phiên 66.** `KiemTraDuLieu` có khối reconcile
+SELECT-only cho quyết toán kỳ cuối, tổng thanh toán, chuỗi ledger cọc, trạng thái phòng,
+tổng/snapshot hóa đơn, liên kết chỉ số và khoản phát sinh. Kết quả chỉ cảnh báo và link tới
+đối tượng; không có nút sửa hoặc ghi DB.
 
 - **Mức độ / loại:** Medium - thiếu kiểm soát vận hành.
 - **Module:** L, H, I.
@@ -341,6 +351,11 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 
 #### REVIEW-022 - ThuChi cho phép dữ liệu âm/sai loại và sửa/xóa không audit
 
+**Trạng thái 16/07/2026: RESOLVED trong code/schema; migration DB vận hành CHƯA ÁP.**
+Model/service/CHECK hiện hành chặn loại, tiền và ngày sai; `ThuChiKySo` cùng ba trigger
+khóa INSERT/UPDATE/DELETE trực tiếp. Không có unlock UI. Điều chỉnh tháng đã khóa là dòng
+mới ở tháng mở có `ThuChiGocId`; migration add-path/rerun/blocker và direct-SQL smoke pass.
+
 - **Mức độ / loại:** Medium - bug/rủi ro xác nhận bằng code/schema.
 - **Module:** L, M.
 - **Hiện trạng:** model không validation, schema không CHECK; controller tin `ModelState`; giao dịch đã ghi có thể sửa/xóa cứng.
@@ -348,9 +363,16 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 - **Tái hiện:** POST `LoaiGiaoDich=Khac`, `SoTien=-100000`, hoặc sửa giao dịch tháng đã đối chiếu.
 - **Hậu quả:** báo cáo thu chi/cân đối sai và mất audit.
 - **Sửa nhỏ nhất:** validate + CHECK, soft delete/correction hoặc nhật ký thay đổi.
-- **Cần user quyết định:** Có - ThuChi có cần khóa sổ theo tháng không.
+- **Cần user quyết định:** Không - đã chốt khóa theo tháng, không unlock.
 
 #### REVIEW-023 - Chưa có lớp bảo vệ vận hành nếu app được mở ngoài máy quản lý
+
+**Trạng thái 16/07/2026: RESOLVED cho mô hình một admin trong LAN.** Fallback cookie auth
+bảo vệ toàn bộ route nghiệp vụ; production yêu cầu password hash, HTTPS/HSTS và Secure
+cookie. `/healthz` ẩn danh chỉ trả trạng thái tối thiểu. Ảnh CCCD lưu ngoài `wwwroot`, đọc
+qua controller có auth/no-store. `DEPLOYMENT.md` ghi LAN HTTPS, backup/restore drill và
+không port-forward. Browser QA pass login/logout/protected route; responsive overflow được
+phát hiện và sửa bằng menu trượt ở viewport 390x844.
 
 - **Mức độ / loại:** High nếu triển khai LAN/Internet; khoảng trống vận hành đã biết.
 - **Module:** L, M, `Program.cs`.
@@ -360,9 +382,15 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 - **Tái hiện:** mở cổng app cho thiết bị khác trong LAN.
 - **Hậu quả:** bất kỳ ai truy cập được có thể sửa/xóa dữ liệu tài chính và xem ảnh CCCD.
 - **Sửa nhỏ nhất:** nếu chỉ localhost thì bind localhost; nếu LAN thì thêm auth tối thiểu, HTTPS, backup và audit actor trước go-live.
-- **Cần user quyết định:** Có - mô hình triển khai thực tế localhost, LAN hay Internet.
+- **Cần user quyết định:** Không - đã chốt LAN HTTPS, không Internet.
 
 #### REVIEW-024 - Migration hiện tại có guard, nhưng archive không được coi là idempotent cho baseline mới
+
+**Trạng thái 16/07/2026: RESOLVED trong repo; journal DB vận hành CHƯA BOOTSTRAP.**
+`migration-manifest.json` đánh số 1..11 và khóa SHA-256; runner cung cấp `status`, bootstrap
+theo schema evidence prefix liên tục và `apply-next` chống lệch thứ tự/checksum. Fresh
+schema có marker bao phủ 1..11. Smoke DB tạm chứng minh bootstrap 1..10 rồi chỉ apply số 11;
+không file archive nào được thực thi.
 
 - **Mức độ / loại:** Medium - lưu ý vận hành database.
 - **Module:** M.
@@ -421,6 +449,9 @@ Dry-run DB vận hành chỉ đọc có `HopDong=0`, `HoaDon=0`, không có dữ
 - **Hoàn thành khi:** mọi ca trả/chuyển có đường thao tác rõ, rollback toàn bộ và báo đúng số tiền còn phải xử lý.
 
 #### Phase 4 - UX, báo cáo, hiệu năng và vận hành
+
+**Cập nhật 16/07/2026:** REVIEW-020..024 đã hoàn tất trong repo. Schema đổi hẹp cho
+khóa sổ/journal; migration và journal DB vận hành vẫn chờ phiên apply riêng có backup.
 
 - **Phạm vi file:** controllers/view mặc định kỳ, `HoaDonRepository.GetCongNoAsync`, `KiemTraDuLieu`, `ExcelService`,
   `ThuChi`, `Program.cs`/deployment docs.

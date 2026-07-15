@@ -1,0 +1,90 @@
+[
+  {
+    "sequence": 1,
+    "id": "20260712_contract_overlap_future_status",
+    "file": "20260712_contract_overlap_future_status.sql",
+    "sha256": "75FD689F6F3559FD3A22E6499E1834667D1737145505AC90C1078ADB76C32485",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='HopDong' AND CONSTRAINT_NAME IN ('CK_HopDong_KhoangNgay','CK_HopDong_TrangThai') UNION ALL SELECT COUNT(DISTINCT INDEX_NAME) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='HopDong' AND INDEX_NAME='IX_HopDong_Phong_KhoangNgay'",
+    "evidenceExpected": [2, 1]
+  },
+  {
+    "sequence": 2,
+    "id": "20260712_contract_scoped_rent_history",
+    "file": "20260712_contract_scoped_rent_history.sql",
+    "sha256": "7BD143324BC79B57420BB4E8CE0B522335083C698F9FF0230147DBE0C1CAA8A9",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND CONSTRAINT_NAME='CK_LichSuGia_Loai' AND CHECK_CLAUSE LIKE '%PhongLegacy%' UNION ALL SELECT COUNT(*) FROM LichSuThayDoiGia WHERE LoaiDoiTuong='Phong'",
+    "evidenceExpected": [1, 0]
+  },
+  {
+    "sequence": 3,
+    "id": "20260712_deposit_payment_method",
+    "file": "20260712_deposit_payment_method.sql",
+    "sha256": "78D2F1100E057B10C97927E74877E43C489CB1FD4D7D25BAA42FC29C3A3C214F",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='GiaoDichCoc' AND COLUMN_NAME='PhuongThuc'",
+    "evidenceExpected": [1]
+  },
+  {
+    "sequence": 4,
+    "id": "20260712_khach_thue_identity_vehicle",
+    "file": "20260712_khach_thue_identity_vehicle.sql",
+    "sha256": "24BC6BE88C3D8AD98B12A5CF82E1CED14E9A305C9568B60A27450E7EB475C76A",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='KhachThue' AND COLUMN_NAME IN ('NgayCapCCCD','NgheNghiep','LoaiXe','BienSoXe')",
+    "evidenceExpected": [4]
+  },
+  {
+    "sequence": 5,
+    "id": "20260713_invoice_identity_snapshot",
+    "file": "20260713_invoice_identity_snapshot.sql",
+    "sha256": "98E5B3A72096ED74609D7BC4276BAB605CC945B152D968D6454081B5D1923963",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND ((TABLE_NAME='HoaDon' AND COLUMN_NAME IN ('NhaIdSnapshot','TenNhaSnapshot','PhongIdSnapshot','TenPhongSnapshot','KhachDaiDienIdSnapshot','TenKhachDaiDienSnapshot','CccdKhachDaiDienSnapshot')) OR (TABLE_NAME='ChiTietHoaDon' AND COLUMN_NAME IN ('TenDichVuSnapshot','DonViTinhSnapshot')) OR (TABLE_NAME='KhoanPhatSinhHopDong' AND COLUMN_NAME IN ('MoTaHoaDonSnapshot','SoTienHoaDonSnapshot'))) ",
+    "evidenceExpected": [11]
+  },
+  {
+    "sequence": 6,
+    "id": "20260713_tenant_identity_photo_lifecycle",
+    "file": "20260713_tenant_identity_photo_lifecycle.sql",
+    "sha256": "A995521C63137D437BAED6130F446C26FF60FC116CE66D314AE5DB1D6F092961",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='KhachThue' AND COLUMN_NAME='CCCDNormalized' UNION ALL SELECT COUNT(DISTINCT INDEX_NAME) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='KhachThue' AND INDEX_NAME='UQ_KhachThue_CCCD_Normalized'",
+    "evidenceExpected": [1, 1]
+  },
+  {
+    "sequence": 7,
+    "id": "20260713_tenant_residency_history",
+    "file": "20260713_tenant_residency_history.sql",
+    "sha256": "6FAB87E7B91C981A537712F58CED2D885E0C029F1C7375C4629A4319CFC81D49",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='HopDongKhachThue' AND COLUMN_NAME IN ('NgayBatDau','NgayKetThucDuKien','NgayKetThuc') UNION ALL SELECT COUNT(DISTINCT INDEX_NAME) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='HopDongKhachThue' AND INDEX_NAME IN ('UQ_HDKT_GiaiDoan','IX_HDKT_HopDong_HieuLuc','IX_HDKT_Khach_HieuLuc')",
+    "evidenceExpected": [3, 3]
+  },
+  {
+    "sequence": 8,
+    "id": "20260714_financial_time_invariants",
+    "file": "20260714_financial_time_invariants.sql",
+    "sha256": "9D3854862CD0B762F554CDEC674B988C49A240C452D70933BA01B0301C39D811",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME IN ('TR_HopDong_NoOverlap_Insert','TR_HopDong_NoOverlap_Update','TR_HDKT_RepresentativeOverlap_Insert','TR_HDKT_RepresentativeOverlap_Update') UNION ALL SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND CONSTRAINT_NAME IN ('CK_Phong_GiaThue','CK_HoaDon_Tien','CK_ThanhToan_HinhThuc') AND CONSTRAINT_TYPE='CHECK'",
+    "evidenceExpected": [4, 3]
+  },
+  {
+    "sequence": 9,
+    "id": "20260715_invoice_due_date_snapshot",
+    "file": "20260715_invoice_due_date_snapshot.sql",
+    "sha256": "49CD246B2FB11F2B73F1EAB0515ECC99ABD6FC6355E17063C085B1E0E0F2D83D",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='HoaDon' AND COLUMN_NAME='NgayDenHan' UNION ALL SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='HoaDon' AND CONSTRAINT_NAME='CK_HoaDon_NgayDenHan'",
+    "evidenceExpected": [1, 1]
+  },
+  {
+    "sequence": 10,
+    "id": "20260715_review019_off_contract_meter_continuity",
+    "file": "20260715_review019_off_contract_meter_continuity.sql",
+    "sha256": "50B1AB20A670C28E5458BE487336D1F2641DCF12D0D43B1FE3C32D7FAAFA9FA4",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ChiSoNgoaiHopDong' AND COLUMN_NAME IN ('LoaiGhiNhan','ChiSoTruocReset','ChiSoSauReset','LyDoDieuChinh') UNION ALL SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='ChiSoNgoaiHopDong' AND CONSTRAINT_NAME IN ('CK_ChiSoNgoaiHopDong_Loai','CK_ChiSoNgoaiHopDong_KhongAm','CK_ChiSoNgoaiHopDong_SanLuongHopLe')",
+    "evidenceExpected": [4, 3]
+  },
+  {
+    "sequence": 11,
+    "id": "20260716_review022_monthly_book_lock",
+    "file": "20260716_review022_monthly_book_lock.sql",
+    "sha256": "8D7430FBD79B955FE5627C200772715C776028E3347E7DC52D1053A7CDB05115",
+    "evidenceSql": "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ThuChiKySo' UNION ALL SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ThuChi' AND COLUMN_NAME='ThuChiGocId' UNION ALL SELECT COUNT(*) FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND EVENT_OBJECT_TABLE='ThuChi' AND TRIGGER_NAME IN ('TR_ThuChi_OpenPeriod_Insert','TR_ThuChi_OpenPeriod_Update','TR_ThuChi_OpenPeriod_Delete')",
+    "evidenceExpected": [1, 1, 3]
+  }
+]

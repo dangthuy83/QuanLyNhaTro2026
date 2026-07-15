@@ -9,7 +9,8 @@ public class KhachThueController(
     KhachThueRepository khachThueRepo,
     HopDongKhachThueRepository cuTruRepo,
     PhongRepository phongRepo,
-    KhachThueService khachThueService) : Controller
+    KhachThueService khachThueService,
+    TenantPhotoStorage tenantPhotoStorage) : Controller
 {
     public async Task<IActionResult> Index(string? tuKhoa, string? trangThai, int? phongId)
     {
@@ -42,6 +43,24 @@ public class KhachThueController(
         if (khach == null) return NotFound();
         ViewBag.LichSuCuTru = await cuTruRepo.GetByKhachThueAsync(id);
         return View(khach);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Photo(int id, string side)
+    {
+        var khach = await khachThueRepo.GetByIdAsync(id);
+        if (khach == null) return NotFound();
+
+        var token = side.ToLowerInvariant() switch
+        {
+            "front" => khach.AnhCCCDMatTruoc,
+            "back" => khach.AnhCCCDMatSau,
+            _ => null
+        };
+        var photo = await tenantPhotoStorage.OpenReadAsync(token);
+        if (photo == null) return NotFound();
+        Response.Headers.CacheControl = "no-store, private";
+        return File(photo.Stream, photo.ContentType);
     }
 
     public IActionResult Create()

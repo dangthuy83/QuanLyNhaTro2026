@@ -20,8 +20,9 @@ public class KiemTraDuLieuController(
     {
         await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "kiemtra";
-        thang ??= DateTime.Today.Month;
-        nam ??= DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        thang = ky.Thang;
+        nam = ky.Nam;
         tuKhoa = tuKhoa?.Trim();
         trangThaiDong = NormalizeTrangThaiDong(trangThaiDong);
 
@@ -44,7 +45,8 @@ public class KiemTraDuLieuController(
             TuKhoa = tuKhoa,
             TrangThaiDong = trangThaiDong,
             DanhSachNha = (await nhaRepo.GetAllAsync()).ToList(),
-            Rows = rows
+            Rows = rows,
+            CanhBaoDoiSoat = (await kiemTraRepo.GetReconcileIssuesAsync()).ToList()
         };
 
         return View(model);

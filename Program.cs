@@ -1,6 +1,8 @@
 using MySqlConnector;
 using System.Data;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using QuanLyNhaTro.Repositories;
 using QuanLyNhaTro.Services;
 
@@ -17,6 +19,31 @@ if (builder.Configuration.GetValue<bool>("UseEphemeralDataProtection"))
 builder.Services.AddControllersWithViews();
 builder.Services.Configure<TenantPhotoOptions>(
     builder.Configuration.GetSection(TenantPhotoOptions.SectionName));
+builder.Services.Configure<AdminAuthOptions>(builder.Configuration.GetSection(AdminAuthOptions.SectionName));
+if (!builder.Environment.IsDevelopment()
+    && string.IsNullOrWhiteSpace(builder.Configuration["AdminAuth:PasswordHash"]))
+    throw new InvalidOperationException("AdminAuth:PasswordHash is required outside Development.");
+builder.Services.AddScoped<AdminCredentialService>();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.Cookie.Name = "QuanLyNhaTro.Admin";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    });
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 // ── Database (Dapper + MySqlConnector) ───────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -65,6 +92,7 @@ builder.Services.AddScoped<ChiSoService>();
 builder.Services.AddScoped<MeterContinuityService>();
 builder.Services.AddScoped<ChiSoNgoaiHopDongService>();
 builder.Services.AddScoped<TenantPhotoStorage>();
+builder.Services.AddScoped<ThuChiService>();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -72,10 +100,14 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

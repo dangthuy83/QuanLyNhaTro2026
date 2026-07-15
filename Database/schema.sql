@@ -8,6 +8,24 @@ CREATE DATABASE IF NOT EXISTS QuanLyNhaTro
 
 USE QuanLyNhaTro;
 
+-- Fresh databases are created at the repository baseline through REVIEW-022.
+-- Migration runners treat this row as covering all ordered migrations <= 11.
+CREATE TABLE MigrationJournal (
+    MigrationId VARCHAR(160) PRIMARY KEY,
+    SequenceNo INT NOT NULL,
+    Sha256 CHAR(64) NULL,
+    AppliedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    Source VARCHAR(30) NOT NULL,
+    Notes VARCHAR(500) NULL,
+    CONSTRAINT UQ_MigrationJournal_Sequence UNIQUE (SequenceNo),
+    CONSTRAINT CK_MigrationJournal_Sequence CHECK (SequenceNo > 0),
+    CONSTRAINT CK_MigrationJournal_Source CHECK (Source IN ('FreshBaseline', 'BootstrapEvidence', 'Runner'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO MigrationJournal(MigrationId, SequenceNo, Sha256, Source, Notes)
+VALUES ('schema-baseline-20260716', 11, NULL, 'FreshBaseline',
+        'Fresh schema already includes ordered migrations 1..11; no update script was replayed.');
+
 -- ============================================================
 -- 1. NHA — Nhà trọ (bảng gốc, dù chỉ quản lý 1 nhà vẫn nên giữ
 --    để dễ mở rộng sau này mà không phải sửa cấu trúc)
@@ -587,6 +605,21 @@ CREATE INDEX IX_KhoanPhatSinh_HoaDon
 -- LoaiThuChi: Thu | Chi
 -- PhongId NULL nếu là thu/chi chung, không gắn phòng cụ thể
 -- ============================================================
+CREATE TABLE ThuChiKySo (
+    Nam SMALLINT NOT NULL,
+    Thang TINYINT NOT NULL,
+    TrangThai VARCHAR(20) NOT NULL DEFAULT 'Mo',
+    KhoaLuc DATETIME NULL,
+    GhiChu VARCHAR(500) NULL,
+    PRIMARY KEY (Nam, Thang),
+    CONSTRAINT CK_ThuChiKySo_Ky CHECK (Thang BETWEEN 1 AND 12 AND Nam BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_ThuChiKySo_TrangThai CHECK (TrangThai IN ('Mo', 'DaKhoa')),
+    CONSTRAINT CK_ThuChiKySo_KhoaLuc CHECK (
+        (TrangThai = 'Mo' AND KhoaLuc IS NULL) OR
+        (TrangThai = 'DaKhoa' AND KhoaLuc IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE ThuChi (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     LoaiGiaoDich VARCHAR(10) NOT NULL,
@@ -596,11 +629,15 @@ CREATE TABLE ThuChi (
     NoiDung VARCHAR(500) NULL,
     PhongId INT NULL,
     GhiChu TEXT NULL,
+    ThuChiGocId INT NULL,
     CONSTRAINT FK_ThuChi_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
+    CONSTRAINT FK_ThuChi_Goc FOREIGN KEY (ThuChiGocId) REFERENCES ThuChi(Id),
     CONSTRAINT CK_ThuChi_Loai CHECK (LoaiGiaoDich IN ('Thu', 'Chi')),
     CONSTRAINT CK_ThuChi_Tien CHECK (SoTien > 0),
     CONSTRAINT CK_ThuChi_Ngay CHECK (YEAR(NgayPhatSinh) BETWEEN 2000 AND 2100)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_ThuChi_Goc ON ThuChi(ThuChiGocId);
 
 -- ============================================================
 -- 13. LICHSUTHAYDOIGIA — Lịch sử thay đổi đơn giá (phòng / dịch vụ)
@@ -639,6 +676,7 @@ CREATE TABLE LichSuThayDoiGia (
 
 -- MySQL khong co exclusion constraint. Hai trigger duoi day khoa dong cha
 -- truoc khi kiem tra khoang de serialize ca ghi truc tiep/import va service.
+DELIMITER $$
 CREATE TRIGGER TR_HopDong_NoOverlap_Insert
 BEFORE INSERT ON HopDong
 FOR EACH ROW
@@ -659,7 +697,7 @@ BEGIN
                 SET MESSAGE_TEXT = 'REVIEW-016: hop dong chong khoang thoi gian cua phong.';
         END IF;
     END IF;
-END;
+END$$
 
 CREATE TRIGGER TR_HopDong_NoOverlap_Update
 BEFORE UPDATE ON HopDong
@@ -691,7 +729,7 @@ BEGIN
                 SET MESSAGE_TEXT = 'REVIEW-016: hop dong chong khoang thoi gian cua phong.';
         END IF;
     END IF;
-END;
+END$$
 
 CREATE TRIGGER TR_HDKT_RepresentativeOverlap_Insert
 BEFORE INSERT ON HopDongKhachThue
@@ -713,7 +751,7 @@ BEGIN
                 SET MESSAGE_TEXT = 'REVIEW-016: hai dai dien chong thoi gian trong hop dong.';
         END IF;
     END IF;
-END;
+END$$
 
 CREATE TRIGGER TR_HDKT_RepresentativeOverlap_Update
 BEFORE UPDATE ON HopDongKhachThue
@@ -745,7 +783,112 @@ BEGIN
                 SET MESSAGE_TEXT = 'REVIEW-016: hai dai dien chong thoi gian trong hop dong.';
         END IF;
     END IF;
-END;
+END$$
+
+-- REVIEW-022: the service and these triggers share the same period rows as
+-- serialization locks. Direct SQL/import cannot mutate a closed month.
+CREATE TRIGGER TR_ThuChi_OpenPeriod_Insert
+BEFORE INSERT ON ThuChi
+FOR EACH ROW
+BEGIN
+    DECLARE PeriodState VARCHAR(20);
+
+    IF NEW.Id > 0 AND NEW.ThuChiGocId = NEW.Id THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'REVIEW-022: giao dich dieu chinh khong duoc tu tham chieu.';
+    END IF;
+
+    INSERT INTO ThuChiKySo(Nam, Thang, TrangThai)
+    VALUES (YEAR(NEW.NgayPhatSinh), MONTH(NEW.NgayPhatSinh), 'Mo')
+    ON DUPLICATE KEY UPDATE Nam = VALUES(Nam);
+    SELECT TrangThai INTO PeriodState
+    FROM ThuChiKySo
+    WHERE Nam = YEAR(NEW.NgayPhatSinh) AND Thang = MONTH(NEW.NgayPhatSinh)
+    FOR UPDATE;
+    IF PeriodState = 'DaKhoa' THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'REVIEW-022: thang thu chi da khoa; khong the them giao dich.';
+    END IF;
+END$$
+
+CREATE TRIGGER TR_ThuChi_OpenPeriod_Update
+BEFORE UPDATE ON ThuChi
+FOR EACH ROW
+BEGIN
+    DECLARE PeriodState VARCHAR(20);
+    DECLARE OldKey INT;
+    DECLARE NewKey INT;
+
+    SET OldKey = YEAR(OLD.NgayPhatSinh) * 100 + MONTH(OLD.NgayPhatSinh);
+    SET NewKey = YEAR(NEW.NgayPhatSinh) * 100 + MONTH(NEW.NgayPhatSinh);
+
+    IF NEW.ThuChiGocId = OLD.Id THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'REVIEW-022: giao dich dieu chinh khong duoc tu tham chieu.';
+    END IF;
+
+    IF OldKey <= NewKey THEN
+        INSERT INTO ThuChiKySo(Nam, Thang, TrangThai)
+        VALUES (YEAR(OLD.NgayPhatSinh), MONTH(OLD.NgayPhatSinh), 'Mo')
+        ON DUPLICATE KEY UPDATE Nam = VALUES(Nam);
+        SELECT TrangThai INTO PeriodState FROM ThuChiKySo
+        WHERE Nam = YEAR(OLD.NgayPhatSinh) AND Thang = MONTH(OLD.NgayPhatSinh) FOR UPDATE;
+        IF PeriodState = 'DaKhoa' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'REVIEW-022: thang goc da khoa; khong the sua giao dich.';
+        END IF;
+        IF NewKey <> OldKey THEN
+            INSERT INTO ThuChiKySo(Nam, Thang, TrangThai)
+            VALUES (YEAR(NEW.NgayPhatSinh), MONTH(NEW.NgayPhatSinh), 'Mo')
+            ON DUPLICATE KEY UPDATE Nam = VALUES(Nam);
+            SELECT TrangThai INTO PeriodState FROM ThuChiKySo
+            WHERE Nam = YEAR(NEW.NgayPhatSinh) AND Thang = MONTH(NEW.NgayPhatSinh) FOR UPDATE;
+            IF PeriodState = 'DaKhoa' THEN
+                SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'REVIEW-022: thang dich da khoa; khong the chuyen giao dich.';
+            END IF;
+        END IF;
+    ELSE
+        INSERT INTO ThuChiKySo(Nam, Thang, TrangThai)
+        VALUES (YEAR(NEW.NgayPhatSinh), MONTH(NEW.NgayPhatSinh), 'Mo')
+        ON DUPLICATE KEY UPDATE Nam = VALUES(Nam);
+        SELECT TrangThai INTO PeriodState FROM ThuChiKySo
+        WHERE Nam = YEAR(NEW.NgayPhatSinh) AND Thang = MONTH(NEW.NgayPhatSinh) FOR UPDATE;
+        IF PeriodState = 'DaKhoa' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'REVIEW-022: thang dich da khoa; khong the chuyen giao dich.';
+        END IF;
+        INSERT INTO ThuChiKySo(Nam, Thang, TrangThai)
+        VALUES (YEAR(OLD.NgayPhatSinh), MONTH(OLD.NgayPhatSinh), 'Mo')
+        ON DUPLICATE KEY UPDATE Nam = VALUES(Nam);
+        SELECT TrangThai INTO PeriodState FROM ThuChiKySo
+        WHERE Nam = YEAR(OLD.NgayPhatSinh) AND Thang = MONTH(OLD.NgayPhatSinh) FOR UPDATE;
+        IF PeriodState = 'DaKhoa' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'REVIEW-022: thang goc da khoa; khong the sua giao dich.';
+        END IF;
+    END IF;
+END$$
+
+CREATE TRIGGER TR_ThuChi_OpenPeriod_Delete
+BEFORE DELETE ON ThuChi
+FOR EACH ROW
+BEGIN
+    DECLARE PeriodState VARCHAR(20);
+
+    INSERT INTO ThuChiKySo(Nam, Thang, TrangThai)
+    VALUES (YEAR(OLD.NgayPhatSinh), MONTH(OLD.NgayPhatSinh), 'Mo')
+    ON DUPLICATE KEY UPDATE Nam = VALUES(Nam);
+    SELECT TrangThai INTO PeriodState
+    FROM ThuChiKySo
+    WHERE Nam = YEAR(OLD.NgayPhatSinh) AND Thang = MONTH(OLD.NgayPhatSinh)
+    FOR UPDATE;
+    IF PeriodState = 'DaKhoa' THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'REVIEW-022: thang thu chi da khoa; khong the xoa giao dich.';
+    END IF;
+END$$
+DELIMITER ;
 
 -- ============================================================
 -- DỮ LIỆU MẪU BAN ĐẦU CHO DICHVU (tùy chỉnh lại đơn giá theo thực tế)

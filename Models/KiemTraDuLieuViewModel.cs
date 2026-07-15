@@ -9,6 +9,7 @@ public class KiemTraDuLieuViewModel
     public string TrangThaiDong { get; set; } = "TatCa";
     public List<Nha> DanhSachNha { get; set; } = [];
     public List<KiemTraDuLieuRow> Rows { get; set; } = [];
+    public List<ReconcileIssue> CanhBaoDoiSoat { get; set; } = [];
 
     public int SoDongSanSang => Rows.Count(x => x.SanSangVanHanh);
     public int SoDongCanXuLy => Rows.Count(x => x.CanXuLy);
@@ -17,6 +18,16 @@ public class KiemTraDuLieuViewModel
     public int SoDongThieuDonGia => Rows.Count(x => x.ThieuDonGia);
     public int SoDongThieuChiSo => Rows.Count(x => x.ThieuChiSo);
     public int SoDongDaCoHoaDon => Rows.Count(x => x.DaCoHoaDon);
+}
+
+public class ReconcileIssue
+{
+    public string Loai { get; set; } = "";
+    public string LyDo { get; set; } = "";
+    public string DoiTuong { get; set; } = "";
+    public int DoiTuongId { get; set; }
+    public string? LinkController { get; set; }
+    public string? LinkAction { get; set; }
 }
 
 public class KiemTraDuLieuRow

@@ -19,8 +19,9 @@ public class ChiSoController(
     public async Task<IActionResult> Index(int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "chiso";
-        thang ??= DateTime.Today.Month;
-        nam ??= DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        thang = ky.Thang;
+        nam = ky.Nam;
 
         var hopDongs = (await hopDongRepo.GetAllAsync())
             .Where(hd => hd.TrangThai == "DangHieuLuc")
@@ -43,8 +44,9 @@ public class ChiSoController(
     public async Task<IActionResult> NhapHangLoat(int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "chiso";
-        thang ??= DateTime.Today.Month;
-        nam ??= DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        thang = ky.Thang;
+        nam = ky.Nam;
 
         var model = await BuildNhapHangLoatViewModelAsync(thang.Value, nam.Value);
         return View(model);
@@ -53,8 +55,9 @@ public class ChiSoController(
     public async Task<IActionResult> Nhap(int hopDongId, int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "chiso";
-        thang ??= DateTime.Today.Month;
-        nam ??= DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        thang = ky.Thang;
+        nam = ky.Nam;
 
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
         if (hopDong == null) return NotFound();
@@ -75,8 +78,9 @@ public class ChiSoController(
     public async Task<IActionResult> NhapTheoPhong(int phongId, int? thang, int? nam, int? returnHopDongId)
     {
         ViewData["ActiveMenu"] = "chiso";
-        thang ??= DateTime.Today.Month;
-        nam ??= DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        thang = ky.Thang;
+        nam = ky.Nam;
 
         var phong = await phongRepo.GetByIdAsync(phongId);
         if (phong == null) return NotFound();
@@ -197,7 +201,8 @@ public class ChiSoController(
         if (!BusinessDataLimits.IsValidPeriod(model.Thang, model.Nam))
         {
             TempData["Error"] = "Ky nhap chi so khong hop le.";
-            return RedirectToAction(nameof(NhapHangLoat), new { thang = DateTime.Today.Month, nam = DateTime.Today.Year });
+            var kyMacDinh = DefaultBillingPeriodResolver.Resolve();
+            return RedirectToAction(nameof(NhapHangLoat), new { thang = kyMacDinh.Thang, nam = kyMacDinh.Nam });
         }
 
         var selectedRows = model.Rows.Where(r => r.Luu).ToList();

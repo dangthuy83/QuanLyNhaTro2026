@@ -17,10 +17,26 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 | 8 | Hóa đơn cần snapshot tối thiểu thông tin nào: nhà, phòng, khách đại diện, CCCD, tên/đơn vị dịch vụ? | Bảo toàn chứng từ lịch sử | Cao |
 | 9 | Hợp đồng tương lai dùng trạng thái `ChoHieuLuc` riêng hay trạng thái được suy ra từ ngày? | Chống chồng kỳ và trạng thái phòng | Cao |
 | 10 | Có cho chuyển một phòng vật lý sang Nhà khác sau khi đã có dữ liệu, hay phải tạo phòng mới để giữ lịch sử? | Nhà-Phòng và báo cáo lịch sử | Trung bình |
-| 11 | `ThuChi` có khóa sổ theo tháng và dùng bút toán điều chỉnh thay cho sửa/xóa không? | Audit thu chi | Trung bình |
-| 12 | App sẽ chạy chỉ trên localhost, trong LAN hay có truy cập Internet? | Auth, HTTPS, backup và bảo vệ ảnh CCCD | Cao |
 | 13 | Có gửi nhắc nợ tự động không, gửi cho chủ nhà bằng Telegram Bot hay gửi khách thuê qua ZNS/SMS? | Giai đoạn sau; hiện chỉ có màn nhắc nợ | Thấp |
 | 14 | Có thêm index theo kết quả benchmark dữ liệu lớn không? | Tối ưu query | Thấp |
+
+---
+
+## Quyết định chốt REVIEW-022/023/024 ngày 16/07/2026
+
+- `ThuChi` khóa sổ theo tháng và không có luồng mở khóa trên UI. Dòng thuộc tháng đã khóa
+  bất biến ở cả service lẫn trigger; sai sót được đảo/điều chỉnh bằng giao dịch mới trong
+  tháng đang mở, bắt buộc tham chiếu `ThuChiGocId` và ghi rõ mã dòng gốc.
+- Mô hình triển khai là một tài khoản quản trị trong LAN. Mọi route nghiệp vụ cần cookie
+  đăng nhập; production bắt buộc password hash, HTTPS/HSTS và cookie Secure. Không mở app
+  trực tiếp ra Internet và không port-forward router.
+- Ảnh CCCD nằm ngoài `wwwroot` trong `private-data`, chỉ đọc qua controller đã xác thực và
+  trả `Cache-Control: no-store, private`. DB vận hành tại thời điểm chuyển có 0 token/file
+  ảnh nên không có backfill hay di chuyển file.
+- Migration được đánh số/thứ tự trong manifest, kiểm tra SHA-256 và ghi `MigrationJournal`.
+  DB cũ chỉ bootstrap một prefix liên tục đã được chứng minh bằng schema evidence; DB mới
+  từ `schema.sql` dùng marker `FreshBaseline`. Không chạy archive và không replay migration
+  đã được journal/baseline bao phủ.
 
 ---
 
@@ -60,7 +76,8 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   - Giá và số tiền gốc không âm; tiền thuê thỏa thuận, thanh toán, thu chi và khoản phát sinh phải lớn hơn `0`. Hóa đơn không cho thu vượt, tổng tiền phải đúng công thức snapshot và trạng thái `ChuaThu/ThuMotPhan/DaThu` phải khớp số đã thu. Chi tiết hóa đơn phải khớp `ROUND(SoLuong * DonGia, 0)`.
   - Các mã trạng thái/loại/hình thức thanh toán chỉ nhận tập giá trị đã được model nghiệp vụ sử dụng. `ThanhToan.HinhThuc` bắt buộc; giao dịch cọc giữ quy tắc dấu theo loại và chỉ `TruNo` được liên kết hóa đơn. Hoàn cọc nội bộ khi trả phòng vẫn có thể không có phương thức tiền.
   - MySQL không có exclusion constraint nên overlap hợp đồng và đại diện cư trú được enforce bằng trigger `BEFORE INSERT/UPDATE`. Trigger khóa dòng cha `Phong` hoặc `HopDong` bằng `SELECT ... FOR UPDATE` trước khi kiểm tra khoảng đóng `[bat dau, ket thuc]`; update nhiều cha khóa theo thứ tự ID để giảm deadlock. Service guard vẫn được giữ để trả lỗi nghiệp vụ sớm.
-- Trước khi có quyết định triển khai khác, ứng dụng chỉ chạy localhost; Phase 1 không mở rộng auth/multi-user.
+- Quyết định localhost/không auth của Phase 1 đã được REVIEW-023 thay thế ngày 16/07/2026:
+  app hỗ trợ một tài khoản quản trị và có thể chạy LAN qua HTTPS; chưa mở rộng multi-user.
 
 Các dòng tương ứng trong bảng `Mục Chưa Chốt` phía trên được giữ lại làm dấu vết câu hỏi của phiên review; nội dung tại mục này là quyết định mới nhất và có hiệu lực.
 
@@ -71,7 +88,7 @@ Các dòng tương ứng trong bảng `Mục Chưa Chốt` phía trên được 
 | Mục | Nội dung |
 |---|---|
 | Mục đích | Thay Excel quản lý nhà trọ bằng ứng dụng nội bộ |
-| Người dùng | Một chủ nhà/quản lý, chưa cần đăng nhập/phân quyền |
+| Người dùng | Một chủ nhà/quản lý, đăng nhập bằng tài khoản quản trị duy nhất |
 | Tech stack | .NET 8 MVC, Dapper, MySqlConnector, ClosedXML, Bootstrap 5, MySQL |
 | Ngôn ngữ giao diện | Tiếng Việt |
 | Database chuẩn | `Database/schema.sql` |

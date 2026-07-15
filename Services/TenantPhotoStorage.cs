@@ -6,7 +6,7 @@ namespace QuanLyNhaTro.Services;
 public sealed class TenantPhotoOptions
 {
     public const string SectionName = "TenantPhotos";
-    public string UploadDirectory { get; set; } = "uploads";
+    public string StorageDirectory { get; set; } = "tenant-photos";
     public long MaxFileSize { get; set; } = 5 * 1024 * 1024;
     public long MaxPixels { get; set; } = 40_000_000;
 }
@@ -21,19 +21,20 @@ public enum TenantPhotoDeleteResult
     Failed
 }
 
+public sealed record TenantPhotoReadResult(Stream Stream, string ContentType);
+
 public sealed class TenantPhotoStorage
 {
-    private static readonly Dictionary<string, string> ExtensionFormats =
+    private static readonly Dictionary<string, (string Format, string ContentType)> ExtensionFormats =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            [".jpg"] = "jpeg",
-            [".jpeg"] = "jpeg",
-            [".png"] = "png",
-            [".webp"] = "webp"
+            [".jpg"] = ("jpeg", "image/jpeg"),
+            [".jpeg"] = ("jpeg", "image/jpeg"),
+            [".png"] = ("png", "image/png"),
+            [".webp"] = ("webp", "image/webp")
         };
 
-    private readonly string _uploadRoot;
-    private readonly string _urlRoot;
+    private readonly string _storageRoot;
     private readonly TenantPhotoOptions _options;
     private readonly ILogger<TenantPhotoStorage> _logger;
 
@@ -45,39 +46,39 @@ public sealed class TenantPhotoStorage
         _options = options.Value;
         _logger = logger;
 
-        var webRoot = Path.GetFullPath(environment.WebRootPath);
-        var configured = (_options.UploadDirectory ?? string.Empty)
+        var privateDataRoot = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "private-data"));
+        var configured = (_options.StorageDirectory ?? string.Empty)
             .Replace('/', Path.DirectorySeparatorChar)
             .Replace('\\', Path.DirectorySeparatorChar)
             .Trim(Path.DirectorySeparatorChar);
         if (string.IsNullOrWhiteSpace(configured) || Path.IsPathRooted(configured))
-            throw new InvalidOperationException("TenantPhotos:UploadDirectory phải là đường dẫn tương đối bên trong wwwroot.");
+            throw new InvalidOperationException(
+                "TenantPhotos:StorageDirectory phải là đường dẫn tương đối bên trong private-data.");
 
-        _uploadRoot = Path.GetFullPath(Path.Combine(webRoot, configured));
-        if (!IsInside(_uploadRoot, webRoot))
-            throw new InvalidOperationException("Thư mục ảnh CCCD phải nằm bên trong wwwroot.");
-
-        _urlRoot = "/" + configured.Replace(Path.DirectorySeparatorChar, '/');
+        _storageRoot = Path.GetFullPath(Path.Combine(privateDataRoot, configured));
+        if (!IsInside(_storageRoot, privateDataRoot))
+            throw new InvalidOperationException("Thư mục ảnh CCCD phải nằm bên trong private-data.");
     }
 
-    public string UploadRoot => _uploadRoot;
-    public string UrlRoot => _urlRoot;
+    public string StorageRoot => _storageRoot;
 
     public async Task<string> StoreAsync(IFormFile file, string label, CancellationToken cancellationToken = default)
     {
         if (file.Length <= 0)
             throw new TenantPhotoValidationException($"{label} không có nội dung.");
         if (file.Length > _options.MaxFileSize)
-            throw new TenantPhotoValidationException($"{label} không được vượt quá {_options.MaxFileSize / 1024 / 1024} MB.");
+            throw new TenantPhotoValidationException(
+                $"{label} không được vượt quá {_options.MaxFileSize / 1024 / 1024} MB.");
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!ExtensionFormats.TryGetValue(extension, out var expectedFormat))
+        if (!ExtensionFormats.TryGetValue(extension, out var expected))
             throw new TenantPhotoValidationException($"{label} chỉ chấp nhận JPG, PNG hoặc WEBP.");
 
         await using var input = file.OpenReadStream();
         var signatureFormat = await DetectSignatureAsync(input, cancellationToken);
-        if (signatureFormat == null || !string.Equals(signatureFormat, expectedFormat, StringComparison.Ordinal))
-            throw new TenantPhotoValidationException($"{label} có nội dung không khớp định dạng {extension.ToUpperInvariant()}.");
+        if (signatureFormat == null || !string.Equals(signatureFormat, expected.Format, StringComparison.Ordinal))
+            throw new TenantPhotoValidationException(
+                $"{label} có nội dung không khớp định dạng {extension.ToUpperInvariant()}.");
 
         input.Position = 0;
         try
@@ -85,7 +86,8 @@ public sealed class TenantPhotoStorage
             var info = await Image.IdentifyAsync(input, cancellationToken);
             if (info == null || info.Width <= 0 || info.Height <= 0
                 || (long)info.Width * info.Height > _options.MaxPixels)
-                throw new TenantPhotoValidationException($"{label} không phải ảnh hợp lệ hoặc có kích thước ảnh quá lớn.");
+                throw new TenantPhotoValidationException(
+                    $"{label} không phải ảnh hợp lệ hoặc có kích thước ảnh quá lớn.");
 
             input.Position = 0;
             using var decoded = await Image.LoadAsync(input, cancellationToken);
@@ -100,9 +102,9 @@ public sealed class TenantPhotoStorage
             throw new TenantPhotoValidationException($"{label} bị hỏng hoặc không thể giải mã thành ảnh thật.");
         }
 
-        Directory.CreateDirectory(_uploadRoot);
+        Directory.CreateDirectory(_storageRoot);
         var fileName = $"{Guid.NewGuid():N}{extension}";
-        var finalPath = Path.Combine(_uploadRoot, fileName);
+        var finalPath = Path.Combine(_storageRoot, fileName);
         var stagingPath = finalPath + ".uploading";
         try
         {
@@ -114,8 +116,9 @@ public sealed class TenantPhotoStorage
                 await input.CopyToAsync(output, cancellationToken);
                 await output.FlushAsync(cancellationToken);
             }
+
             File.Move(stagingPath, finalPath);
-            return $"{_urlRoot}/{fileName}";
+            return fileName;
         }
         catch
         {
@@ -125,13 +128,30 @@ public sealed class TenantPhotoStorage
         }
     }
 
-    public Task<TenantPhotoDeleteResult> DeleteAsync(string? storedPath)
+    public Task<TenantPhotoReadResult?> OpenReadAsync(string? storedToken)
     {
-        if (string.IsNullOrWhiteSpace(storedPath))
+        if (string.IsNullOrWhiteSpace(storedToken)
+            || !TryResolveStoredPath(storedToken, out var physicalPath)
+            || !File.Exists(physicalPath))
+            return Task.FromResult<TenantPhotoReadResult?>(null);
+
+        var extension = Path.GetExtension(physicalPath);
+        if (!ExtensionFormats.TryGetValue(extension, out var format))
+            return Task.FromResult<TenantPhotoReadResult?>(null);
+
+        Stream stream = new FileStream(
+            physicalPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+            81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        return Task.FromResult<TenantPhotoReadResult?>(new TenantPhotoReadResult(stream, format.ContentType));
+    }
+
+    public Task<TenantPhotoDeleteResult> DeleteAsync(string? storedToken)
+    {
+        if (string.IsNullOrWhiteSpace(storedToken))
             return Task.FromResult(TenantPhotoDeleteResult.NotPresent);
-        if (!TryResolveStoredPath(storedPath, out var physicalPath))
+        if (!TryResolveStoredPath(storedToken, out var physicalPath))
         {
-            _logger.LogWarning("Từ chối xóa đường dẫn ảnh CCCD không an toàn: {StoredPath}", storedPath);
+            _logger.LogWarning("Từ chối xóa mã ảnh CCCD không an toàn: {StoredToken}", storedToken);
             return Task.FromResult(TenantPhotoDeleteResult.RejectedUnsafePath);
         }
 
@@ -143,25 +163,20 @@ public sealed class TenantPhotoStorage
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _logger.LogError(ex, "Không thể xóa ảnh CCCD {StoredPath}", storedPath);
+            _logger.LogError(ex, "Không thể xóa ảnh CCCD {StoredToken}", storedToken);
             return Task.FromResult(TenantPhotoDeleteResult.Failed);
         }
     }
 
-    public bool TryResolveStoredPath(string storedPath, out string physicalPath)
+    public bool TryResolveStoredPath(string storedToken, out string physicalPath)
     {
         physicalPath = string.Empty;
-        var normalizedUrl = storedPath.Replace('\\', '/');
-        var requiredPrefix = _urlRoot + "/";
-        if (!normalizedUrl.StartsWith(requiredPrefix, StringComparison.OrdinalIgnoreCase)) return false;
+        if (storedToken.Contains('/') || storedToken.Contains('\\') || storedToken.Contains('\0')) return false;
+        if (Path.GetFileName(storedToken) != storedToken) return false;
+        if (!ExtensionFormats.ContainsKey(Path.GetExtension(storedToken))) return false;
 
-        var relative = Uri.UnescapeDataString(normalizedUrl[requiredPrefix.Length..]);
-        if (string.IsNullOrWhiteSpace(relative) || relative.Contains('\0')) return false;
-
-        var candidate = Path.GetFullPath(Path.Combine(
-            _uploadRoot,
-            relative.Replace('/', Path.DirectorySeparatorChar)));
-        if (!IsInside(candidate, _uploadRoot)) return false;
+        var candidate = Path.GetFullPath(Path.Combine(_storageRoot, storedToken));
+        if (!IsInside(candidate, _storageRoot)) return false;
 
         physicalPath = candidate;
         return true;
@@ -201,7 +216,7 @@ public sealed class TenantPhotoStorage
         }
         catch
         {
-            // Best effort cleanup; the original exception remains the actionable failure.
+            // Best-effort cleanup; keep the original exception as the actionable failure.
         }
     }
 }

@@ -55,7 +55,7 @@
                     <div class="col-6">
                         @if (!string.IsNullOrEmpty(Model.AnhCCCDMatTruoc))
                         {
-                            <img src="@Model.AnhCCCDMatTruoc" alt="CCCD mặt trước" class="img-fluid rounded" style="max-height:180px;" />
+                            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "front" })" alt="CCCD mặt trước" class="img-fluid rounded" style="max-height:180px;" />
                         }
                         else
                         {
@@ -65,7 +65,7 @@
                     <div class="col-6">
                         @if (!string.IsNullOrEmpty(Model.AnhCCCDMatSau))
                         {
-                            <img src="@Model.AnhCCCDMatSau" alt="CCCD mặt sau" class="img-fluid rounded" style="max-height:180px;" />
+                            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "back" })" alt="CCCD mặt sau" class="img-fluid rounded" style="max-height:180px;" />
                         }
                         else
                         {

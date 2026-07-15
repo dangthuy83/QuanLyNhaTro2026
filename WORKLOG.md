@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 3: REVIEW-019 đã hoàn tất |
-| Build | Phiên 65: build sạch; REVIEW-019 fresh-schema service/concurrency và migration smoke pass |
+| Giai đoạn | Phase 3: REVIEW-020 đến REVIEW-024 đã hoàn tất trong repo; DB vận hành chưa nhận migration/journal mới |
+| Build | Phiên 66: app và hai tool build sạch; fresh schema, migration, runner và browser QA pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 65 dry-run REVIEW-019 chỉ đọc có `ChiSoNgoaiHopDong=0`, `ChiSoDienNuoc=0`, anomaly/dependency/invoice đều 0 và đã rollback. Migration hẹp đã áp, hậu kiểm 4 cột reset + 3 CHECK; không sửa dữ liệu nghiệp vụ. DB smoke tạm còn 0. |
+| Database | Phiên 66 chỉ đọc xác nhận DB vận hành chưa có `MigrationJournal`, không có token/file ảnh CCCD. REVIEW-022 migration và bootstrap REVIEW-024 chỉ chạy trên DB tạm; DB vận hành chưa thay đổi. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,38 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 66 - REVIEW-020 đến REVIEW-024: kỳ mặc định, reconcile, khóa sổ, bảo vệ LAN và migration journal
+
+Đã triển khai theo đề xuất user duyệt ngày 16/07/2026:
+
+- REVIEW-020: dùng helper kỳ N-1 cho hóa đơn, chỉ số, dashboard và sẵn sàng vận hành.
+- REVIEW-021: thêm reconcile snapshot/ledger/link SELECT-only, không auto-fix.
+- REVIEW-022: validation `ThuChi`, service transaction, khóa sổ tháng không unlock, bút toán
+  điều chỉnh tham chiếu dòng gốc, bảng `ThuChiKySo`, FK/index và ba trigger chống direct SQL.
+- REVIEW-023: một-admin cookie auth, production HTTPS/HSTS, health tối thiểu, ảnh CCCD ngoài
+  `wwwroot`, hướng dẫn LAN/backup/restore. QA mobile phát hiện overflow và đã thêm menu trượt.
+- REVIEW-024: `MigrationJournal`, manifest SHA-256 1..11 và runner status/bootstrap/apply-next;
+  archive không được thực thi.
+
+Kiểm chứng:
+
+```text
+dotnet build --no-restore: 0 warning, 0 error
+MigrationRunner/AdminPasswordHasher build: 0 warning, 0 error
+Fresh schema MySQL 8: 21 tables, 1 FreshBaseline marker, 3 ThuChi triggers
+REVIEW-022: add-path + rerun pass; locked direct UPDATE blocked; invalid-data blocker trước DDL pass
+REVIEW-022 service: update tháng khóa blocked; correction tháng mở pass; thiếu tham chiếu #gốc blocked
+REVIEW-024: bootstrap evidence 1..10, apply-next 11, journal_rows=11
+Browser: login/logout/protected routes, HoaDon/KiemTra mặc định 6/2026, reconcile read-only,
+         desktop + 390x844, console 0 warning/error; mobile scrollWidth 461 -> 375 sau fix
+Health: HTTP 200 {"status":"healthy"}
+```
+
+DB vận hành chỉ được đọc: `MigrationJournal` chưa tồn tại, `photo_tokens=0`,
+`legacy_photo_tokens=0`. Không áp `20260716_review022_monthly_book_lock.sql`, không bootstrap
+journal, không chạy archive, không sửa REVIEW-014..019 và không push. Việc áp migration/journal
+phải có backup, dry-run và xác nhận riêng trong phiên mới.
 
 ### Phiên 65 - REVIEW-019: continuity chỉ số ngoài hợp đồng
 

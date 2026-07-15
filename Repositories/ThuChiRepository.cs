@@ -24,6 +24,11 @@ public class ThuChiRepository(IDbConnection db) : BaseRepository(db)
         => await _db.QueryFirstOrDefaultAsync<ThuChi>(
             "SELECT * FROM ThuChi WHERE Id = @Id", new { Id = id });
 
+    public async Task<ThuChiKySo?> GetKySoAsync(int thang, int nam)
+        => await _db.QueryFirstOrDefaultAsync<ThuChiKySo>(
+            "SELECT * FROM ThuChiKySo WHERE Thang=@Thang AND Nam=@Nam",
+            new { Thang = thang, Nam = nam });
+
     public async Task<int> InsertAsync(ThuChi tc)
     {
         const string sql = """

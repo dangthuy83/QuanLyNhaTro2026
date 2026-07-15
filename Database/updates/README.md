@@ -1,5 +1,17 @@
 # Database updates
 
+REVIEW-022 apply-once (chưa áp DB vận hành trong phiên 16/07/2026):
+
+- `20260716_review022_monthly_book_lock.sql`: dry-run dữ liệu `ThuChi`, thêm bảng
+  `ThuChiKySo`, liên kết `ThuChiGocId` và ba trigger chặn INSERT/UPDATE/DELETE trực tiếp
+  vào tháng đã khóa. Không có unlock; sai sót sau khóa được ghi bằng bút toán mới ở
+  tháng mở, tham chiếu dòng gốc. Script không sửa/xóa/backfill giao dịch và chạy lại an toàn.
+- `Database/migration-manifest.json` + `tools/MigrationRunner`: thứ tự 1..11, kiểm tra
+  SHA-256, bootstrap DB cũ bằng schema evidence theo prefix liên tục và chỉ chạy đúng
+  migration kế tiếp. DB mới từ `Database/schema.sql` có marker `FreshBaseline` qua số 11.
+- Không chạy file trong `archive_pre_20260710`. Trước `bootstrap`/`apply-next` trên DB thật
+  phải có backup, lưu dry-run và xác nhận riêng.
+
 REVIEW-019 apply-once:
 
 - `20260715_review019_off_contract_meter_continuity.sql`: dry-run chuỗi chỉ số hợp đồng/ngoài hợp đồng và dừng trước DDL nếu có gap, mốc trùng ngày hoặc dòng ngoài hợp đồng nằm trong thời gian hợp đồng; thêm `LoaiGhiNhan`, `ChiSoTruocReset`, `ChiSoSauReset`, `LyDoDieuChinh` cùng generated `SanLuong`/CHECK reset-aware. Script không tự sửa, xóa hoặc suy đoán reset từ dữ liệu cũ và chạy lại an toàn. DB vận hành khi áp có `ChiSoNgoaiHopDong=0`, `ChiSoDienNuoc=0`, không có dòng nghiệp vụ cần backfill.

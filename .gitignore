@@ -12,3 +12,4 @@ appsettings.json
 .tmp/
 .tmp-*.log
 *.log
+private-data/

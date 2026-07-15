@@ -102,7 +102,7 @@
 
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatTruoc))
         {
-            <img src="@Model.AnhCCCDMatTruoc"
+            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "front" })"
                  alt="CCCD mặt trước"
                  class="mt-2 rounded"
                  style="max-height:120px;" />
@@ -119,7 +119,7 @@
 
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatSau))
         {
-            <img src="@Model.AnhCCCDMatSau"
+            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "back" })"
                  alt="CCCD mặt sau"
                  class="mt-2 rounded"
                  style="max-height:120px;" />

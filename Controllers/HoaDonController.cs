@@ -20,8 +20,9 @@ public class HoaDonController(
     public async Task<IActionResult> Index(int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "hoadon";
-        thang ??= DateTime.Today.Month;
-        nam   ??= DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        thang = ky.Thang;
+        nam = ky.Nam;
 
         // Hóa đơn của kỳ đang xem
         var hopDongs = (await hopDongRepo.GetAllAsync()).ToList();
@@ -51,8 +52,9 @@ public class HoaDonController(
         string trangThaiDong = "TatCa")
     {
         ViewData["ActiveMenu"] = "hoadon";
-        thang ??= DateTime.Today.Month;
-        nam ??= DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        thang = ky.Thang;
+        nam = ky.Nam;
 
         var model = await BuildChotHangLoatPreviewAsync(thang.Value, nam.Value, nhaId, tuKhoa, trangThaiDong);
         return View(model);
@@ -136,8 +138,9 @@ public class HoaDonController(
         if (hopDong == null) return NotFound();
 
         ViewBag.HopDong = hopDong;
-        ViewBag.Thang   = DateTime.Today.Month;
-        ViewBag.Nam     = DateTime.Today.Year;
+        var ky = DefaultBillingPeriodResolver.Resolve();
+        ViewBag.Thang = ky.Thang;
+        ViewBag.Nam = ky.Nam;
         return View();
     }
 

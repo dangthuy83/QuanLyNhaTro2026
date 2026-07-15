@@ -6,6 +6,58 @@ namespace QuanLyNhaTro.Repositories;
 
 public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
 {
+    public async Task<IEnumerable<ReconcileIssue>> GetReconcileIssuesAsync()
+    {
+        const string sql = """
+            SELECT 'HopDongThieuQuyetToan' Loai,
+                   CONCAT('Hợp đồng đã kết thúc nhưng thiếu hóa đơn kỳ trả ', MONTH(hd.NgayTraPhongThucTe), '/', YEAR(hd.NgayTraPhongThucTe), '.') LyDo,
+                   'HopDong' DoiTuong, hd.Id DoiTuongId, 'HopDong' LinkController, 'Details' LinkAction
+            FROM HopDong hd
+            LEFT JOIN HoaDon finalHd ON finalHd.HopDongId=hd.Id
+              AND finalHd.Thang=MONTH(hd.NgayTraPhongThucTe) AND finalHd.Nam=YEAR(hd.NgayTraPhongThucTe)
+            WHERE hd.TrangThai='DaKetThuc' AND hd.NgayTraPhongThucTe IS NOT NULL AND finalHd.Id IS NULL
+
+            UNION ALL
+            SELECT 'HoaDonThanhToan', CONCAT('SoTienDaThu=',FORMAT(x.SoTienDaThu,0),' nhưng SUM(ThanhToan)=',FORMAT(x.PaymentSum,0),'.'),
+                   'HoaDon',x.Id,'HoaDon','Details'
+            FROM (SELECT hd.Id,hd.SoTienDaThu,COALESCE(SUM(tt.SoTien),0) PaymentSum FROM HoaDon hd LEFT JOIN ThanhToan tt ON tt.HoaDonId=hd.Id GROUP BY hd.Id,hd.SoTienDaThu) x
+            WHERE x.SoTienDaThu<>x.PaymentSum
+
+            UNION ALL
+            SELECT 'LedgerCoc', CONCAT('SoDuSauGiaoDich=',FORMAT(x.SoDuSauGiaoDich,0),' nhưng số dư chuỗi=',FORMAT(x.ExpectedBalance,0),'.'),
+                   'HopDong',x.HopDongId,'GiaoDichCoc','Index'
+            FROM (SELECT Id,HopDongId,SoDuSauGiaoDich,SUM(SoTien) OVER(PARTITION BY HopDongId ORDER BY NgayGiaoDich,Id ROWS UNBOUNDED PRECEDING) ExpectedBalance FROM GiaoDichCoc) x
+            WHERE x.SoDuSauGiaoDich<>x.ExpectedBalance OR x.ExpectedBalance<0
+
+            UNION ALL
+            SELECT 'TrangThaiPhong', CONCAT('Snapshot phòng=',p.TrangThai,', số hợp đồng hiệu lực hôm nay=',COUNT(hd.Id),'.'),
+                   'Phong',p.Id,'Phong','Details'
+            FROM Phong p LEFT JOIN HopDong hd ON hd.PhongId=p.Id AND hd.TrangThai<>'DaHuy' AND CURDATE() BETWEEN hd.NgayBatDau AND COALESCE(hd.NgayKetThuc,'9999-12-31')
+            GROUP BY p.Id,p.TrangThai
+            HAVING (COUNT(hd.Id)>0 AND p.TrangThai<>'DangThue') OR (COUNT(hd.Id)=0 AND p.TrangThai NOT IN ('Trong','DangSuaChua')) OR COUNT(hd.Id)>1
+
+            UNION ALL
+            SELECT 'TongHoaDon', CONCAT('Tổng chi tiết=',FORMAT(x.DetailTotal,0),', snapshot dịch vụ=',FORMAT(x.TongTienDichVu,0),', tổng cộng=',FORMAT(x.TongCong,0),'.'),
+                   'HoaDon',x.Id,'HoaDon','Details'
+            FROM (SELECT hd.Id,hd.TienPhong,hd.TongTienDichVu,hd.TongTienPhatSinh,hd.TienNoKyTruoc,hd.TongCong,COALESCE(SUM(ct.ThanhTien),0) DetailTotal FROM HoaDon hd LEFT JOIN ChiTietHoaDon ct ON ct.HoaDonId=hd.Id GROUP BY hd.Id) x
+            WHERE x.TongTienDichVu<>x.DetailTotal OR x.TongCong<>x.TienPhong+x.TongTienDichVu+x.TongTienPhatSinh+x.TienNoKyTruoc
+
+            UNION ALL
+            SELECT 'LienKetChiSo', 'Chi tiết hóa đơn liên kết chỉ số khác hợp đồng hoặc khác kỳ.',
+                   'HoaDon',hd.Id,'HoaDon','Details'
+            FROM ChiTietHoaDon ct JOIN HoaDon hd ON hd.Id=ct.HoaDonId JOIN ChiSoDienNuoc cs ON cs.Id=ct.ChiSoDienNuocId
+            WHERE cs.HopDongId<>hd.HopDongId OR cs.Thang<>hd.Thang OR cs.Nam<>hd.Nam
+
+            UNION ALL
+            SELECT 'LienKetKhoanPhatSinh', 'Khoản phát sinh liên kết hóa đơn có trạng thái/snapshot/scope bất thường.',
+                   'HoaDon',hd.Id,'HoaDon','Details'
+            FROM KhoanPhatSinhHopDong k JOIN HoaDon hd ON hd.Id=k.HoaDonId
+            WHERE k.TrangThai<>'DaDuaVaoHoaDon' OR k.HopDongId<>hd.HopDongId OR k.MoTaHoaDonSnapshot IS NULL OR k.SoTienHoaDonSnapshot IS NULL
+            ORDER BY Loai,DoiTuongId
+            """;
+        return await _db.QueryAsync<ReconcileIssue>(sql);
+    }
+
     public async Task<IEnumerable<KiemTraDuLieuRow>> GetRowsAsync(int thang, int nam, int? nhaId)
     {
         const string sql = """
