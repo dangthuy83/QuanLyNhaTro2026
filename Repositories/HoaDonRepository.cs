@@ -78,13 +78,13 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             INSERT INTO HoaDon
-                (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
+                (HopDongId, Thang, Nam, NgayLap, NgayDenHan, TienPhong, TongTienDichVu,
                  TongTienPhatSinh, TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
                  SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu,
                  NhaIdSnapshot, TenNhaSnapshot, PhongIdSnapshot, TenPhongSnapshot,
                  KhachDaiDienIdSnapshot, TenKhachDaiDienSnapshot, CccdKhachDaiDienSnapshot)
             VALUES
-                (@HopDongId, @Thang, @Nam, @NgayLap, @TienPhong, @TongTienDichVu,
+                (@HopDongId, @Thang, @Nam, @NgayLap, @NgayDenHan, @TienPhong, @TongTienDichVu,
                  @TongTienPhatSinh, @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
                  @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu,
                  @NhaIdSnapshot, @TenNhaSnapshot, @PhongIdSnapshot, @TenPhongSnapshot,
@@ -98,13 +98,13 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
     {
         const string sql = """
             INSERT INTO HoaDon
-                (HopDongId, Thang, Nam, NgayLap, TienPhong, TongTienDichVu,
+                (HopDongId, Thang, Nam, NgayLap, NgayDenHan, TienPhong, TongTienDichVu,
                  TongTienPhatSinh, TienNoKyTruoc, TongCong, SoTienDaThu, TrangThaiThanhToan,
                  SoNgayO, SoNgayTrongThang, HoaDonGhepId, GhiChu,
                  NhaIdSnapshot, TenNhaSnapshot, PhongIdSnapshot, TenPhongSnapshot,
                  KhachDaiDienIdSnapshot, TenKhachDaiDienSnapshot, CccdKhachDaiDienSnapshot)
             VALUES
-                (@HopDongId, @Thang, @Nam, @NgayLap, @TienPhong, @TongTienDichVu,
+                (@HopDongId, @Thang, @Nam, @NgayLap, @NgayDenHan, @TienPhong, @TongTienDichVu,
                  @TongTienPhatSinh, @TienNoKyTruoc, @TongCong, @SoTienDaThu, @TrangThaiThanhToan,
                  @SoNgayO, @SoNgayTrongThang, @HoaDonGhepId, @GhiChu,
                  @NhaIdSnapshot, @TenNhaSnapshot, @PhongIdSnapshot, @TenPhongSnapshot,
@@ -193,13 +193,9 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
                 hd.Nam,
                 hd.TongCong,
                 hd.SoTienDaThu,
+                hd.NgayDenHan,
                 hop.TrangThai  AS TrangThaiHopDong,
-                GREATEST(0, DATEDIFF(CURDATE(),
-                    DATE_ADD(
-                        STR_TO_DATE(CONCAT(hd.Nam, '-', LPAD(hd.Thang, 2, '0'), '-01'), '%Y-%m-%d'),
-                        INTERVAL 1 MONTH
-                    )
-                )) AS SoNgayQuaHan
+                GREATEST(0, DATEDIFF(CURDATE(), hd.NgayDenHan)) AS SoNgayQuaHan
             FROM HoaDon hd
             JOIN HopDong hop ON hd.HopDongId = hop.Id
             LEFT JOIN KhachThue k ON k.Id = hd.KhachDaiDienIdSnapshot

@@ -126,6 +126,7 @@
                     <th>Khách thuê</th>
                     <th>SĐT</th>
                     <th>Kỳ</th>
+                    <th>Đến hạn</th>
                     <th class="text-end">Còn nợ</th>
                     <th>Quá hạn</th>
                     <th>Trạng thái</th>
@@ -136,7 +137,7 @@
                 @if (!Model.Any())
                 {
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-4">Không có hóa đơn cần nhắc theo bộ lọc hiện tại.</td>
+                        <td colspan="11" class="text-center text-muted py-4">Không có hóa đơn cần nhắc theo bộ lọc hiện tại.</td>
                     </tr>
                 }
                 @foreach (var x in Model)
@@ -153,6 +154,7 @@
                             }
                         </td>
                         <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
+                        <td class="text-nowrap">@x.NgayDenHan.ToString("dd/MM/yyyy")</td>
                         <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
                         <td>
                             @if (x.SoNgayQuaHan > 0)

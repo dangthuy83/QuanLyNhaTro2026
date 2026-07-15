@@ -208,9 +208,15 @@ public class HopDongService(
                 throw new InvalidOperationException("Phong cua hop dong da thay doi. Vui long tai lai du lieu.");
 
             var coDuLieu = await CoDuLieuNghiepVuAsync(conn, tx, hopDong.Id);
+            ValidateNgayThanhToan(hopDong.NgayThanhToanHangThang);
             if (coDuLieu)
             {
-                await hopDongRepo.UpdateGhiChuAsync(conn, tx, hopDong.Id, hopDong.GhiChu);
+                await hopDongRepo.UpdateNgayThanhToanVaGhiChuAsync(
+                    conn,
+                    tx,
+                    hopDong.Id,
+                    hopDong.NgayThanhToanHangThang,
+                    hopDong.GhiChu);
             }
             else
             {
@@ -313,6 +319,7 @@ public class HopDongService(
 
     private static void ValidateThongTinHopDong(HopDong hopDong, int[] khachThueIds, int? khachChinhId)
     {
+        ValidateNgayThanhToan(hopDong.NgayThanhToanHangThang);
         if (!BusinessDataLimits.IsValidBusinessDate(hopDong.NgayBatDau)
             || (hopDong.NgayKetThuc.HasValue
                 && !BusinessDataLimits.IsValidBusinessDate(hopDong.NgayKetThuc.Value)))
@@ -330,6 +337,12 @@ public class HopDongService(
             throw new InvalidOperationException("Hợp đồng phải có một người đại diện.");
         if (!selected.Contains(khachChinhId.Value))
             throw new InvalidOperationException("Khach dai dien phai thuoc danh sach khach da chon.");
+    }
+
+    private static void ValidateNgayThanhToan(int ngayThanhToanHangThang)
+    {
+        if (ngayThanhToanHangThang is < 1 or > 31)
+            throw new InvalidOperationException("Ngay thanh toan hang thang phai tu 1 den 31.");
     }
 
     private static async Task<bool> CoDuLieuNghiepVuAsync(IDbConnection conn, IDbTransaction? tx, int id)

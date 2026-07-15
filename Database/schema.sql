@@ -363,6 +363,8 @@ CREATE INDEX IX_ChiSoNgoaiHopDong_Moc
 --   | DaThu (SoTienDaThu>=TongCong)
 -- SoTienDaThu là cột tổng hợp (denormalized) từ bảng ThanhToan, PHẢI cập nhật
 --   cùng transaction mỗi khi insert vào ThanhToan.
+-- NgayDenHan: snapshot ngày thanh toán của hợp đồng lúc chốt hóa đơn. Hóa đơn
+--   kỳ N đến hạn trong tháng N+1; ngày 29-31 được chặn về ngày cuối tháng.
 -- ============================================================
 CREATE TABLE HoaDon (
     Id INT AUTO_INCREMENT PRIMARY KEY,
@@ -380,6 +382,7 @@ CREATE TABLE HoaDon (
     SoTienDaThu DECIMAL(12,0) NOT NULL DEFAULT 0,
     TrangThaiThanhToan VARCHAR(20) NOT NULL DEFAULT 'ChuaThu',
     NgayLap DATE NOT NULL,
+    NgayDenHan DATE NOT NULL,
     NgayThuThucTe DATE NULL,
     GhiChu TEXT NULL,
     NhaIdSnapshot INT NOT NULL,
@@ -396,6 +399,12 @@ CREATE TABLE HoaDon (
     CONSTRAINT CK_HoaDon_NgayNghiepVu CHECK (
         YEAR(NgayLap) BETWEEN 2000 AND 2100
         AND (NgayThuThucTe IS NULL OR YEAR(NgayThuThucTe) BETWEEN 2000 AND 2100)
+    ),
+    CONSTRAINT CK_HoaDon_NgayDenHan CHECK (
+        YEAR(NgayDenHan) BETWEEN 2000 AND 2101
+        AND NgayDenHan BETWEEN
+            DATE_ADD(STR_TO_DATE(CONCAT(Nam, '-', LPAD(Thang, 2, '0'), '-01'), '%Y-%m-%d'), INTERVAL 1 MONTH)
+            AND LAST_DAY(DATE_ADD(STR_TO_DATE(CONCAT(Nam, '-', LPAD(Thang, 2, '0'), '-01'), '%Y-%m-%d'), INTERVAL 1 MONTH))
     ),
     CONSTRAINT CK_HoaDon_Tien CHECK (
         TienPhong >= 0

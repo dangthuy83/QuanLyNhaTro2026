@@ -80,6 +80,7 @@
                     <dt class="col-5">Ngày kết thúc</dt><dd class="col-7">@(Model.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Không xác định")</dd>
                     <dt class="col-5">Giá thuê TT</dt>   <dd class="col-7">@Model.TienThueThoaThuan.ToString("N0") đ</dd>
                     <dt class="col-5">Tiền cọc</dt>      <dd class="col-7">@Model.TienCoc.ToString("N0") đ</dd>
+                    <dt class="col-5">Ngày thanh toán</dt><dd class="col-7">Ngày @Model.NgayThanhToanHangThang hàng tháng</dd>
                     <dt class="col-5">Trạng thái</dt>
                     <dd class="col-7">
                         @Html.Raw(Model.TrangThai switch {

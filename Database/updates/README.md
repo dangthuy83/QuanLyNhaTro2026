@@ -1,5 +1,9 @@
 # Database updates
 
+REVIEW-017 apply-once:
+
+- `20260715_invoice_due_date_snapshot.sql`: dry-run nguồn kỳ hóa đơn/ngày thanh toán và dừng trước DDL nếu không hợp lệ; thêm `HoaDon.NgayDenHan DATE NOT NULL`, backfill riêng dòng chưa có snapshot theo `HopDong.NgayThanhToanHangThang`, chặn ngày ngoài tháng N+1 bằng CHECK và chạy lại an toàn. DB vận hành khi áp có `HopDong=0`, `HoaDon=0`, nên không có dòng nghiệp vụ cần backfill.
+
 REVIEW-016 apply-once:
 
 - `20260714_financial_time_invariants.sql`: báo cáo dry-run và dừng trước DDL nếu có dữ liệu vi phạm; thêm 32 CHECK cho dải năm nghiệp vụ `2000-2100`, tiền/công thức/trạng thái/hình thức thanh toán, đổi `ThanhToan.HinhThuc` thành bắt buộc và tạo 4 trigger chống overlap bằng khóa dòng cha. Script không sửa dữ liệu nghiệp vụ và chạy lại an toàn.

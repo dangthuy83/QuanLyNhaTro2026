@@ -207,12 +207,12 @@ public class ExcelService
         var ws = wb.Worksheets.Add("Công Nợ");
 
         ws.Cell("A1").Value = $"BÁO CÁO CÔNG NỢ — {DateTime.Today:dd/MM/yyyy}";
-        ws.Range("A1:I1").Merge().Style
+        ws.Range("A1:J1").Merge().Style
             .Font.SetBold(true).Font.SetFontSize(13)
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
         int row = 3;
-        string[] headers = ["Nhà", "Phòng", "Khách thuê", "SĐT", "Kỳ", "Tổng cộng", "Đã thu", "Còn lại", "Quá hạn"];
+        string[] headers = ["Nhà", "Phòng", "Khách thuê", "SĐT", "Kỳ", "Đến hạn", "Tổng cộng", "Đã thu", "Còn lại", "Quá hạn"];
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(row, i + 1).Value = headers[i];
         ws.Row(row).Style.Font.SetBold(true)
@@ -226,11 +226,13 @@ public class ExcelService
             ws.Cell(row, 3).Value = x.TenKhachChinh;
             ws.Cell(row, 4).Value = x.SoDienThoai ?? "";
             ws.Cell(row, 5).Value = $"T{x.Thang}/{x.Nam}";
-            ws.Cell(row, 6).Value = x.TongCong;
-            ws.Cell(row, 7).Value = x.SoTienDaThu;
-            ws.Cell(row, 8).Value = x.ConLai;
-            ws.Cell(row, 9).Value = x.SoNgayQuaHan > 0 ? $"{x.SoNgayQuaHan} ngày" : "Chưa quá hạn";
-            for (int c = 6; c <= 8; c++)
+            ws.Cell(row, 6).Value = x.NgayDenHan;
+            ws.Cell(row, 6).Style.DateFormat.Format = "dd/MM/yyyy";
+            ws.Cell(row, 7).Value = x.TongCong;
+            ws.Cell(row, 8).Value = x.SoTienDaThu;
+            ws.Cell(row, 9).Value = x.ConLai;
+            ws.Cell(row, 10).Value = x.SoNgayQuaHan > 0 ? $"{x.SoNgayQuaHan} ngày" : "Chưa quá hạn";
+            for (int c = 7; c <= 9; c++)
                 ws.Cell(row, c).Style.NumberFormat.Format = "#,##0";
             if (!x.DangOHienTai)
                 ws.Row(row).Style.Font.SetFontColor(XLColor.Gray);
@@ -238,10 +240,10 @@ public class ExcelService
         }
 
         row++;
-        ws.Cell(row, 7).Value = "TỔNG NỢ:";
-        ws.Cell(row, 7).Style.Font.SetBold(true);
-        ws.Cell(row, 8).Value = ds.Sum(x => x.ConLai);
-        ws.Cell(row, 8).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
+        ws.Cell(row, 8).Value = "TỔNG NỢ:";
+        ws.Cell(row, 8).Style.Font.SetBold(true);
+        ws.Cell(row, 9).Value = ds.Sum(x => x.ConLai);
+        ws.Cell(row, 9).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
 
         ws.Columns().AdjustToContents();
         using var ms = new MemoryStream();

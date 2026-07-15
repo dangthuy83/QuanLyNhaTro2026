@@ -99,10 +99,10 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
         const string sql = """
             INSERT INTO HopDong
                 (PhongId, NgayBatDau, NgayKetThuc, TienThueThoaThuan, TienCoc,
-                 TrangThai, HopDongTruocId, DaXuLyChenhLechCoc, GhiChu, NgayTao)
+                 NgayThanhToanHangThang, TrangThai, HopDongTruocId, DaXuLyChenhLechCoc, GhiChu, NgayTao)
             VALUES
                 (@PhongId, @NgayBatDau, @NgayKetThuc, @TienThueThoaThuan, @TienCoc,
-                 @TrangThai, @HopDongTruocId, @DaXuLyChenhLechCoc, @GhiChu, NOW());
+                 @NgayThanhToanHangThang, @TrangThai, @HopDongTruocId, @DaXuLyChenhLechCoc, @GhiChu, NOW());
             SELECT LAST_INSERT_ID();
             """;
         return await _db.ExecuteScalarAsync<int>(sql, hd);
@@ -113,10 +113,10 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
         const string sql = """
             INSERT INTO HopDong
                 (PhongId, NgayBatDau, NgayKetThuc, TienThueThoaThuan, TienCoc,
-                 TrangThai, HopDongTruocId, DaXuLyChenhLechCoc, GhiChu, NgayTao)
+                 NgayThanhToanHangThang, TrangThai, HopDongTruocId, DaXuLyChenhLechCoc, GhiChu, NgayTao)
             VALUES
                 (@PhongId, @NgayBatDau, @NgayKetThuc, @TienThueThoaThuan, @TienCoc,
-                 @TrangThai, @HopDongTruocId, @DaXuLyChenhLechCoc, @GhiChu, NOW());
+                 @NgayThanhToanHangThang, @TrangThai, @HopDongTruocId, @DaXuLyChenhLechCoc, @GhiChu, NOW());
             SELECT LAST_INSERT_ID();
             """;
         return await conn.ExecuteScalarAsync<int>(sql, hd, transaction: tx);
@@ -128,6 +128,7 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
             UPDATE HopDong SET
                 NgayBatDau = @NgayBatDau, NgayKetThuc = @NgayKetThuc,
                 TienThueThoaThuan = @TienThueThoaThuan, TienCoc = @TienCoc,
+                NgayThanhToanHangThang = @NgayThanhToanHangThang,
                 TrangThai = @TrangThai, DaXuLyChenhLechCoc = @DaXuLyChenhLechCoc,
                 GhiChu = @GhiChu
             WHERE Id = @Id
@@ -141,6 +142,7 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
             UPDATE HopDong SET
                 NgayBatDau = @NgayBatDau, NgayKetThuc = @NgayKetThuc,
                 TienThueThoaThuan = @TienThueThoaThuan, TienCoc = @TienCoc,
+                NgayThanhToanHangThang = @NgayThanhToanHangThang,
                 TrangThai = @TrangThai, DaXuLyChenhLechCoc = @DaXuLyChenhLechCoc,
                 GhiChu = @GhiChu
             WHERE Id = @Id
@@ -155,16 +157,22 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
                 NgayBatDau = @NgayBatDau,
                 NgayKetThuc = @NgayKetThuc,
                 TienCoc = @TienCoc,
+                NgayThanhToanHangThang = @NgayThanhToanHangThang,
                 GhiChu = @GhiChu
             WHERE Id = @Id
             """,
             hd,
             transaction: tx);
 
-    public async Task UpdateGhiChuAsync(IDbConnection conn, IDbTransaction tx, int id, string? ghiChu)
+    public async Task UpdateNgayThanhToanVaGhiChuAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int id,
+        int ngayThanhToanHangThang,
+        string? ghiChu)
         => await conn.ExecuteAsync(
-            "UPDATE HopDong SET GhiChu = @GhiChu WHERE Id = @Id",
-            new { Id = id, GhiChu = ghiChu },
+            "UPDATE HopDong SET NgayThanhToanHangThang = @NgayThanhToanHangThang, GhiChu = @GhiChu WHERE Id = @Id",
+            new { Id = id, NgayThanhToanHangThang = ngayThanhToanHangThang, GhiChu = ghiChu },
             transaction: tx);
 
     public async Task UpdateTrangThaiAsync(int id, string trangThai)

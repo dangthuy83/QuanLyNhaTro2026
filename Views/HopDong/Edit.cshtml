@@ -21,8 +21,9 @@
         @if (coDuLieuNghiepVu)
         {
             <div class="alert alert-warning py-2">
-                Hợp đồng đã phát sinh dữ liệu nghiệp vụ. Chỉ ghi chú được phép sửa; phòng, ngày, tiền cọc,
-                giá gốc và danh sách khách được giữ nguyên để bảo toàn lịch sử. Lịch sử nhân khẩu thuộc REVIEW-008.
+                Hợp đồng đã phát sinh dữ liệu nghiệp vụ. Ngày thanh toán và ghi chú vẫn được phép sửa;
+                ngày thanh toán mới chỉ áp dụng cho hóa đơn tạo sau lần sửa. Hóa đơn cũ giữ nguyên ngày đến hạn snapshot.
+                Phòng, thời hạn, tiền cọc, giá gốc và danh sách khách được giữ nguyên để bảo toàn lịch sử.
             </div>
         }
         <form asp-action="Edit" method="post">
@@ -52,6 +53,13 @@
                     <label class="form-label fw-semibold">Tiền cọc (đ)</label>
                     <input asp-for="TienCoc" type="number" min="0" class="form-control" readonly="@coDuLieuNghiepVu" />
                 </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="NgayThanhToanHangThang" class="form-label fw-semibold">Ngày thanh toán hàng tháng</label>
+                <input asp-for="NgayThanhToanHangThang" type="number" min="1" max="31" class="form-control" required />
+                <span asp-validation-for="NgayThanhToanHangThang" class="text-danger small"></span>
+                <div class="form-text">Chỉ ảnh hưởng hóa đơn lập sau lần sửa; hóa đơn đã có giữ nguyên ngày đến hạn.</div>
             </div>
 
             <div class="mb-3">

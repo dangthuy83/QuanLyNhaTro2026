@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 2: REVIEW-016 đã hoàn tất |
-| Build | Phiên 62: build app và REVIEW-016 smoke pass; chỉ có `NU1900` do vulnerability feed NuGet không truy cập được trong môi trường |
+| Giai đoạn | Phase 2: REVIEW-017 đã hoàn tất |
+| Build | Phiên 63: build app sạch và REVIEW-017 fresh-schema/service/concurrency/migration/Excel smoke pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 62 dry-run REVIEW-016 chỉ đọc sạch; apply-once đã áp trên DB vận hành, hậu kiểm 32 CHECK, 4 trigger, `ThanhToan.HinhThuc NOT NULL`. Fresh schema/migration blocker-rerun/service-concurrency smoke pass; DB tạm drop trong `finally`. |
+| Database | Phiên 63 dry-run REVIEW-017 chỉ đọc có `HopDong=0`, `HoaDon=0`; apply-once đã áp trên DB vận hành, hậu kiểm `HoaDon.NgayDenHan DATE NOT NULL`, due-date CHECK bằng 1. Fresh schema/migration blocker-rerun/service-concurrency/Browser QA pass; DB tạm drop trong `finally`. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -24,7 +24,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 0 | Duyệt Phase 1 của review phiên 49 | Đã duyệt và triển khai REVIEW-001 đến REVIEW-007 theo từng nhóm hẹp | Hoàn tất |
 | 0.1 | Chặn mọi đường đóng hợp đồng bỏ qua quyết toán | REVIEW-001/002/010 đã xong | Hoàn tất |
 | 0.2 | Lock thanh toán/cọc | REVIEW-003/004/005 đã xong | Hoàn tất |
-| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-016 đã xong | Hoàn tất batch hiện tại |
+| 0.3 | Chống overlap và bảo toàn lịch sử khách/chỉ số/hóa đơn | REVIEW-006 đến REVIEW-017 đã xong | Hoàn tất batch hiện tại |
 | 1 | Rà dữ liệu test sau smoke test | Dữ liệu có tiền tố `TEST_Codex_*`, `TEST_P*`, `TEST_METER_*`, `TEST_KHACH_*`, `TEST_MOVE_*`, `TEST_RETURN_*`, `TEST_LEDGER_*`, `TEST_DEBT_EDGE_*`, `TEST_QUICKPAY_*`, `TEST_BULK_METER_*`, `TEST_BULK_INVOICE_PREVIEW_*`, `TEST_UI_CONTRACT_SCOPE_*` | Thấp |
 | 2 | Theo dõi edge case công nợ trên dữ liệu vận hành thật | Smoke test nhiều hóa đơn nợ, trả phòng có nợ cũ và chặn xóa hóa đơn mang nợ kỳ trước đã pass | Trung bình |
 | 3 | Rà lại `Database/schema.sql` encoding | File schema hiển thị mojibake trong terminal; cần chuẩn hóa nếu muốn đọc comment tiếng Việt | Trung bình |
@@ -57,6 +57,57 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 63 - REVIEW-017: snapshot ngày đến hạn và báo quá hạn
+
+Đã chốt và triển khai riêng REVIEW-017:
+
+- Hóa đơn kỳ N đến hạn theo `HopDong.NgayThanhToanHangThang` trong tháng N+1; tháng thiếu ngày dùng ngày cuối tháng. `HoaDonSnapshotService` tính và lưu `HoaDon.NgayDenHan` cho mọi đường lập hóa đơn thường, chuyển phòng và trả phòng.
+- Cho nhập/sửa ngày thanh toán `1-31`. Hợp đồng đã có dữ liệu nghiệp vụ vẫn được đổi ngày thanh toán và ghi chú; ngày mới chỉ áp dụng cho hóa đơn tạo sau lần sửa, hóa đơn cũ giữ nguyên snapshot. Hợp đồng mới khi chuyển phòng kế thừa ngày thanh toán cũ.
+- `HoaDonRepository.GetCongNoAsync` tính quá hạn từ snapshot; màn công nợ, nhắc nợ, chi tiết hóa đơn và Excel công nợ hiển thị ngày đến hạn.
+- Tạo apply-once `Database/updates/20260715_invoice_due_date_snapshot.sql`: dry-run nguồn, blocker trước DDL, backfill riêng snapshot còn NULL, đổi `NOT NULL`, thêm CHECK ngày nằm trong tháng N+1 và rerun-safe. Fresh schema được cập nhật cùng invariant.
+
+Dry-run DB vận hành trước triển khai, chỉ đọc:
+
+```text
+ServerDate=2026-07-15
+HopDong=0; HoaDon=0; HoaDonConNo=0
+InvalidPaymentDay=0; ExistingNgayDenHanColumn=0
+Outstanding=0; OverdueDaysDifferent=0; FalseOverdueNow=0; DebtAffected=0
+Edge cases: kỳ 01/2026 ngày 31 -> 28/02/2026; kỳ 03/2026 ngày 31 -> 30/04/2026; kỳ 11/2026 ngày 31 -> 31/12/2026
+Transaction read-only kết thúc bằng ROLLBACK; không có câu lệnh ghi.
+```
+
+Apply/hậu kiểm DB vận hành:
+
+```text
+TotalInvoices=0; InvalidDueDateSource=0; NgayDenHanColumnCountBefore=0
+MissingNgayDenHan=0; InvalidNgayDenHan=0
+HoaDon.NgayDenHan: date, IS_NULLABLE=NO
+CK_HoaDon_NgayDenHan=1
+```
+
+Kết quả kiểm tra:
+
+```text
+Application build succeeded: 0 warning, 0 error
+FRESH_SERVICE_CONCURRENCY_PASS FirstDue=2026-06-30;SecondDue=2026-07-05;Concurrent=OK|BLOCKED
+MIGRATION_BLOCKER_PASS DataUnchanged=True;SchemaUnchanged=True
+MIGRATION_RERUN_PASS DueColumn=1;DueCheck=1;Nullable=NO;Backfill=2026-06-30
+REVIEW_017_SMOKE_PASS
+TEMP_DATABASES_DROPPED
+```
+
+Browser QA dùng Browser plugin tại `/BaoCao/CongNo` và `/NhacNo` trên DB tạm:
+
+- Công nợ hiển thị `30/06/2026 -> 15 ngày`, `05/07/2026 -> 10 ngày`, `05/08/2026 -> Chưa quá hạn`; lọc `Đã quá hạn` còn đúng hai dòng.
+- Nhắc nợ mặc định có đúng hai hóa đơn quá hạn; đổi bộ lọc sang `Chưa quá hạn` còn đúng hóa đơn đến hạn `05/08/2026`.
+- Page identity, DOM không rỗng, không có error overlay, screenshot và tương tác lọc đều pass; console không có warning/error.
+- Host tự dừng và `BROWSER_QA_TEMP_DATABASE_DROPPED` chạy trong `finally`.
+
+Không sửa hoặc chạy lại dữ liệu/file REVIEW-014/015/016; không làm review khác. Git baseline đầu phiên `32932d6`, khớp `origin/main`; chưa push.
+
+---
 
 ### Phiên 62 - REVIEW-016: constraint tài chính/thời gian và overlap ở DB
 

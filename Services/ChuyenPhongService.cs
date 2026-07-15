@@ -95,10 +95,11 @@ public class ChuyenPhongService(
             var hdMoiId = await conn.ExecuteScalarAsync<int>("""
                 INSERT INTO HopDong
                     (PhongId, NgayBatDau, TienThueThoaThuan, TienCoc,
-                     TrangThai, HopDongTruocId, DaXuLyChenhLechCoc, GhiChu, NgayTao)
+                     NgayThanhToanHangThang, TrangThai, HopDongTruocId,
+                     DaXuLyChenhLechCoc, GhiChu, NgayTao)
                 VALUES
                     (@PhongId, @NgayBatDau, @TienThue, @TienCoc,
-                     @TrangThai, @HopDongTruocId,
+                     @NgayThanhToanHangThang, @TrangThai, @HopDongTruocId,
                      @CanXuLyCoc, @GhiChu, NOW());
                 SELECT LAST_INSERT_ID();
                 """,
@@ -108,6 +109,7 @@ public class ChuyenPhongService(
                     NgayBatDau = vm.NgayBatDauMoi,
                     TienThue = vm.TienThueMoi,
                     TienCoc = vm.TienCocMoi,
+                    NgayThanhToanHangThang = hdCuDaKhoa.NgayThanhToanHangThang,
                     TrangThai = trangThaiHopDongMoi,
                     HopDongTruocId = vm.HopDongCuId,
                     CanXuLyCoc = vm.TienCocMoi != hdCu.TienCoc,

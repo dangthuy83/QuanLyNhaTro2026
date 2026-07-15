@@ -14,13 +14,13 @@ public class HoaDonSnapshotService
         await DienNhanDienAsync(conn, tx, hoaDon);
         const string sql = """
             INSERT INTO HoaDon
-                (HopDongId,Thang,Nam,NgayLap,TienPhong,TongTienDichVu,TongTienPhatSinh,
+                (HopDongId,Thang,Nam,NgayLap,NgayDenHan,TienPhong,TongTienDichVu,TongTienPhatSinh,
                  TienNoKyTruoc,TongCong,SoTienDaThu,TrangThaiThanhToan,SoNgayO,
                  SoNgayTrongThang,HoaDonGhepId,GhiChu,NhaIdSnapshot,TenNhaSnapshot,
                  PhongIdSnapshot,TenPhongSnapshot,KhachDaiDienIdSnapshot,
                  TenKhachDaiDienSnapshot,CccdKhachDaiDienSnapshot)
             VALUES
-                (@HopDongId,@Thang,@Nam,@NgayLap,@TienPhong,@TongTienDichVu,@TongTienPhatSinh,
+                (@HopDongId,@Thang,@Nam,@NgayLap,@NgayDenHan,@TienPhong,@TongTienDichVu,@TongTienPhatSinh,
                  @TienNoKyTruoc,@TongCong,@SoTienDaThu,@TrangThaiThanhToan,@SoNgayO,
                  @SoNgayTrongThang,@HoaDonGhepId,@GhiChu,@NhaIdSnapshot,@TenNhaSnapshot,
                  @PhongIdSnapshot,@TenPhongSnapshot,@KhachDaiDienIdSnapshot,
@@ -70,7 +70,7 @@ public class HoaDonSnapshotService
     {
         var scope = await conn.QueryFirstOrDefaultAsync<InvoiceScope>(
             """
-            SELECT n.Id NhaId,n.TenNha,p.Id PhongId,p.TenPhong
+            SELECT n.Id NhaId,n.TenNha,p.Id PhongId,p.TenPhong,h.NgayThanhToanHangThang
             FROM HopDong h
             INNER JOIN Phong p ON p.Id=h.PhongId
             INNER JOIN Nha n ON n.Id=p.NhaId
@@ -116,6 +116,15 @@ public class HoaDonSnapshotService
         hoaDon.KhachDaiDienIdSnapshot = daiDien.KhachThueId;
         hoaDon.TenKhachDaiDienSnapshot = daiDien.HoTen;
         hoaDon.CccdKhachDaiDienSnapshot = daiDien.CCCD;
+
+        if (scope.NgayThanhToanHangThang is < 1 or > 31)
+            throw new InvalidOperationException(
+                $"Hợp đồng #{hoaDon.HopDongId} có ngày thanh toán ngoài khoảng 1-31.");
+        var thangDenHan = kyBatDau.AddMonths(1);
+        var ngayDenHan = Math.Min(
+            scope.NgayThanhToanHangThang,
+            DateTime.DaysInMonth(thangDenHan.Year, thangDenHan.Month));
+        hoaDon.NgayDenHan = new DateTime(thangDenHan.Year, thangDenHan.Month, ngayDenHan);
     }
 
     private sealed class InvoiceScope
@@ -124,6 +133,7 @@ public class HoaDonSnapshotService
         public string TenNha { get; init; } = string.Empty;
         public int PhongId { get; init; }
         public string TenPhong { get; init; } = string.Empty;
+        public int NgayThanhToanHangThang { get; init; }
     }
 
     private sealed class RepresentativeIdentity

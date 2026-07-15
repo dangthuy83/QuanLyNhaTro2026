@@ -57,6 +57,16 @@
                 </div>
             </div>
 
+            <div class="mb-3">
+                <label asp-for="NgayThanhToanHangThang" class="form-label fw-semibold">
+                    Ngày thanh toán hàng tháng <span class="text-danger">*</span>
+                </label>
+                <input asp-for="NgayThanhToanHangThang" type="number" min="1" max="31"
+                       value="@(Model?.NgayThanhToanHangThang ?? 5)" class="form-control" required />
+                <span asp-validation-for="NgayThanhToanHangThang" class="text-danger small"></span>
+                <div class="form-text">Hóa đơn kỳ N đến hạn vào ngày này trong tháng N+1; tháng thiếu ngày dùng ngày cuối tháng.</div>
+            </div>
+
             <div class="row g-3 mb-3">
                 <div class="col-6">
                     <label class="form-label fw-semibold">Giá thuê thỏa thuận (đ) <span class="text-danger">*</span></label>

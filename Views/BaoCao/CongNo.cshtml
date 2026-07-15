@@ -120,6 +120,7 @@
                         <th>Khách thuê</th>
                         <th>SĐT</th>
                         <th>Kỳ</th>
+                        <th>Đến hạn</th>
                         <th>Trạng thái</th>
                         <th class="text-end">Tổng cộng</th>
                         <th class="text-end">Đã thu</th>
@@ -131,7 +132,7 @@
                 <tbody>
                     @if (!Model.Any())
                     {
-                        <tr><td colspan="11" class="text-center text-muted py-4">Không có công nợ theo bộ lọc hiện tại.</td></tr>
+                        <tr><td colspan="12" class="text-center text-muted py-4">Không có công nợ theo bộ lọc hiện tại.</td></tr>
                     }
                     @foreach (var x in Model)
                     {
@@ -141,6 +142,7 @@
                             <td>@x.TenKhachChinh</td>
                             <td>@x.SoDienThoai</td>
                             <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
+                            <td class="text-nowrap">@x.NgayDenHan.ToString("dd/MM/yyyy")</td>
                             <td>@Html.Raw(TrangThaiBadge(x.TrangThaiHopDong))</td>
                             <td class="text-end">@x.TongCong.ToString("N0")</td>
                             <td class="text-end">@x.SoTienDaThu.ToString("N0")</td>
@@ -168,7 +170,7 @@
                 {
                     <tfoot class="table-light fw-bold">
                         <tr>
-                            <td colspan="8" class="text-end">Tổng nợ:</td>
+                            <td colspan="9" class="text-end">Tổng nợ:</td>
                             <td class="text-end text-danger">@Model.Sum(x => x.ConLai).ToString("N0") đ</td>
                             <td colspan="2"></td>
                         </tr>

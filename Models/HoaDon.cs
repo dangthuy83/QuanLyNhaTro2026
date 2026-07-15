@@ -7,6 +7,7 @@ public class HoaDon
     public int Thang { get; set; }
     public int Nam { get; set; }
     public DateTime NgayLap { get; set; }
+    public DateTime NgayDenHan { get; set; }      // Snapshot theo ngày thanh toán HĐ tại lúc lập hóa đơn
 
     // Snapshot — ghi cứng lúc lập, KHÔNG tính lại sau
     public decimal TienPhong { get; set; }

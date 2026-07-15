@@ -15,5 +15,6 @@ public class BaoCaoCongNoViewModel
     public decimal ConLai => TongCong - SoTienDaThu;
     public string TrangThaiHopDong { get; set; } = "";
     public bool DangOHienTai => TrangThaiHopDong == "DangHieuLuc";
+    public DateTime NgayDenHan { get; set; }
     public int SoNgayQuaHan { get; set; }
 }
