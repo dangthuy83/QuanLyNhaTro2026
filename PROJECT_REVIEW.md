@@ -427,6 +427,30 @@ HTML, phiếu thu Excel, công nợ Excel, thu-chi Excel đều trả HTTP 200 s
   nên chưa có screenshot/visual QA; kiểm chứng giao diện dùng HTTP host-side.
 - **Cần user quyết định:** Không.
 
+#### REVIEW-026 - Diễn tập quyết toán cọc/công nợ
+
+**Trạng thái 16/07/2026: RESOLVED trong Phiên 69.** Backup DB vận hành đã restore sang DB
+tạm với 21/21 bảng, 7/7 trigger, row count và journal 1..11 khớp nguồn. Dataset đã duyệt chạy
+qua service gồm bốn ca: trả phòng cọc dư, trả phòng thiếu cọc, chuyển phòng có chênh lệch cọc
+và nợ cũ, cùng guard xóa/reissue hóa đơn đã settlement.
+
+Ca cọc thiếu tái hiện trường kết quả `TienHoanCoc` âm dù số hoàn thực tế bằng 0. Service và hai
+view trả phòng đã tách rõ số hoàn không âm khỏi `KhachConNoThem`; Browser QA xác nhận trạng thái
+thiếu cọc hiển thị `Khách còn nợ thêm 2,000,000 đ`, đổi ngày cập nhật preview, guard settlement
+giữ nút xác nhận disabled và console sạch.
+
+Chuyển phòng ghi đúng một `KetChuyenNo=1.000.000`; hóa đơn tháng 05 cũ hết nợ, hóa đơn phòng
+cũ tháng 06 còn 1.650.000 và hóa đơn phòng mới mang 1.000.000 nợ cũ có tổng 2.850.000. Tổng
+công nợ chuỗi là 4.500.000, không double-count. Reconcile, payment và ledger mismatch đều 0;
+journal DB tạm/vận hành vẫn 1..11 và DB vận hành không phát sinh dữ liệu nghiệp vụ. DB restore
+tạm đã được xóa sau khi lưu evidence.
+
+- **Mức độ / loại:** High - correctness quyết toán cọc, settlement và công nợ.
+- **Module:** G, H, I, J, K, O.
+- **Bằng chứng:** backup/restore drill; service harness bốn ca; SQL reconcile/hậu kiểm;
+  Browser QA có auth trên DB tạm.
+- **Cần user quyết định:** Không.
+
 ### 0.4. Câu hỏi nghiệp vụ cần chốt
 
 1. `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay còn trường hợp hủy sau khi đã nhận phòng?

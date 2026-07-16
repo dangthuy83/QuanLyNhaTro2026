@@ -50,6 +50,19 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   Các cột báo cáo thu-chi và công nợ dùng độ rộng xác định thay cho `AdjustToContents()`;
   đây là lựa chọn ổn định cho tiến trình LAN/service account bị giới hạn quyền.
 
+## Quyết định chốt REVIEW-026 ngày 16/07/2026
+
+- Diễn tập quyết toán cọc/công nợ chỉ ghi trên DB restore tạm. DB vận hành chỉ được kiểm tra
+  trong transaction `READ ONLY`; không chạy archive, không replay migration và không dùng
+  dataset diễn tập làm dữ liệu thật.
+- `TienHoanCoc` là số tiền thực hoàn cho khách và luôn không âm. Phần thiếu cọc phải nằm riêng
+  trong `KhachConNoThem`; view không dùng số hoàn cọc âm để mã hóa công nợ.
+- Chuyển phòng có nợ cũ phải tạo đúng một settlement `KetChuyenNo` cho hóa đơn cũ, mang snapshot
+  nợ sang hóa đơn mới và không để báo cáo cộng đồng thời cả hóa đơn cũ lẫn số đã kết chuyển.
+- Hóa đơn đã có `ThanhToan`, `GiaoDichCoc`, settlement `TruCoc`/`KetChuyenNo` hoặc đang mang
+  `TienNoKyTruoc` không được xóa/reissue bằng flow đơn giản. Trả phòng với hóa đơn không khớp
+  thuộc nhóm này phải bị chặn trước mọi thay đổi trạng thái, cọc hoặc công nợ.
+
 ---
 
 ## Quyết định chốt cho Phase 1 ngày 12/07/2026

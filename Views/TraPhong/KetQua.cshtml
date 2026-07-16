@@ -18,9 +18,9 @@
                 {
                     <tr><td class="text-muted">Khoản phát sinh còn lại</td><td class="text-end text-danger">@Model.TongTienPhatSinhConLai.ToString("N0") đ</td></tr>
                 }
-                <tr class="@(Model.TienHoanCoc >= 0 ? "table-success" : "table-danger") fw-bold">
-                    <td>@(Model.TienHoanCoc >= 0 ? "Hoàn cọc cho khách" : "Khách còn nợ thêm")</td>
-                    <td class="text-end fs-5">@Math.Abs(Model.TienHoanCoc).ToString("N0") đ</td>
+                <tr class="@(Model.KhachConNoThem > 0 ? "table-danger" : "table-success") fw-bold">
+                    <td>@(Model.KhachConNoThem > 0 ? "Khách còn nợ thêm" : "Hoàn cọc cho khách")</td>
+                    <td class="text-end fs-5">@((Model.KhachConNoThem > 0 ? Model.KhachConNoThem : Model.TienHoanCoc).ToString("N0")) đ</td>
                 </tr>
             </tbody>
         </table>

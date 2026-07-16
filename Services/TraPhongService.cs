@@ -94,7 +94,7 @@ public class TraPhongService(
             TongTienPhatSinhChuaXuLy = tongPhatSinhChuaXuLy,
             TongNoConLai = tongNo,
             TienTruNoTuCoc = tienTruNoTuCoc,
-            TienHoanCoc = soDuCoc - tongNo,
+            TienHoanCoc = Math.Max(0, soDuCoc - tongNo),
             KhachConNoThem = Math.Max(0, tongNo - soDuCoc)
         };
     }
@@ -305,7 +305,7 @@ public class TraPhongService(
                 TongNoConLai = tongNoConLai,
                 TongTienPhatSinhConLai = tongPhatSinhConLai,
                 TienTruNoTuCoc = ketQuaCoc.SoTienTruNo,
-                TienHoanCoc = ketQuaCoc.SoTienHoanCoc - ketQuaCoc.KhachConNoThem,
+                TienHoanCoc = ketQuaCoc.SoTienHoanCoc,
                 KhachConNoThem = ketQuaCoc.KhachConNoThem,
                 CoNoTon = tongNoConLai > 0
             };

@@ -88,8 +88,8 @@
                             <td class="text-end fw-bold">@Model.TienCoc.ToString("N0") đ</td>
                         </tr>
                         <tr class="@(Model.KhachConNoThem > 0 ? "table-danger" : "table-success")">
-                            <td class="fw-bold">@(Model.TienHoanCoc >= 0 ? "Hoàn cọc cho khách" : "Khách còn nợ thêm")</td>
-                            <td class="text-end fw-bold fs-5">@Math.Abs(Model.TienHoanCoc).ToString("N0") đ</td>
+                            <td class="fw-bold">@(Model.KhachConNoThem > 0 ? "Khách còn nợ thêm" : "Hoàn cọc cho khách")</td>
+                            <td class="text-end fw-bold fs-5">@((Model.KhachConNoThem > 0 ? Model.KhachConNoThem : Model.TienHoanCoc).ToString("N0")) đ</td>
                         </tr>
                     </tbody>
                 </table>

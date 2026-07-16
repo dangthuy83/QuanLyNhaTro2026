@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | REVIEW-001 đến REVIEW-025 đã hoàn tất; REVIEW-025 diễn tập vận hành trên DB restore tạm, DB vận hành không bị ghi |
-| Build | Phiên 68: app build sạch 0 warning/0 error; HTTP rehearsal và bốn đầu ra HTML/Excel pass |
+| Giai đoạn | REVIEW-001 đến REVIEW-026 đã hoàn tất; REVIEW-026 diễn tập quyết toán cọc/công nợ trên DB restore tạm, DB vận hành không bị ghi |
+| Build | Phiên 69: app build sạch 0 warning/0 error; service harness và Browser QA trả phòng pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 68: backup/restore drill pass; dataset kỳ 06/2026 chỉ chạy trên DB tạm. DB vận hành hậu kiểm SELECT-only vẫn 0 hợp đồng/hóa đơn/thu chi và journal liên tục 1..11. |
+| Database | Phiên 69: backup/restore REVIEW-026 pass; 4 ca quyết toán chỉ chạy trên DB tạm. DB vận hành hậu kiểm SELECT-only vẫn 0 hợp đồng/hóa đơn/thu chi và journal liên tục 1..11. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,28 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 69 - REVIEW-026: diễn tập quyết toán cọc/công nợ
+
+- Xác minh `HEAD=main=origin/main=b8bcba7` trước diễn tập. DB vận hành chỉ chạy transaction
+  `READ ONLY`: `HopDong/HoaDon/ThanhToan/GiaoDichCoc/ThuChi=0`, journal liên tục 1..11.
+- Tạo backup `quanlynhatro_review026_pre_settlement_20260716_221534.sql`, 58.270 byte,
+  SHA-256 `C5DCC6BF23B2910D9116EF85F88785B0B828E23ADFDA019C16763B2744DBC329`.
+  Restore sang DB tạm khớp 21 bảng, 7 trigger, row count và journal 1..11.
+- Dataset được user duyệt và chỉ chạy trên DB tạm: trả phòng cọc dư hoàn 300.000; trả phòng
+  thiếu cọc trừ 2.000.000 và còn nợ 1.900.000; chuyển Phòng 202 -> 301 kết chuyển đúng
+  1.000.000 nợ cũ, tổng công nợ chuỗi còn 4.500.000 và thu thêm cọc 1.000.000; hóa đơn đã
+  `TruCoc`, `KetChuyenNo` hoặc mang `TienNoKyTruoc` đều bị chặn xóa/reissue.
+- Rehearsal tái hiện `KetQuaTraPhongViewModel.TienHoanCoc=-1.900.000` khi thiếu cọc dù số
+  hoàn thực tế là 0. Chuẩn hóa preview/result để `TienHoanCoc` không âm và dùng trường riêng
+  `KhachConNoThem`; cập nhật hai view trả phòng đọc đúng hai trường.
+- Browser QA phát hiện và sửa tiếp lỗi Razor render literal `.ToString("N0")`. Sau build lại,
+  màn Confirm hiển thị `Khách còn nợ thêm 2,000,000 đ`, guard settlement và nút disabled đúng;
+  đổi ngày trả phòng cập nhật URL/preview, console không có warning/error.
+- Hậu kiểm DB tạm: 5 hợp đồng, 6 hóa đơn, 5 thanh toán, 11 dòng ledger cọc, 6 chỉ số;
+  reconcile issue = 0, payment/ledger mismatch = 0, journal vẫn 1..11. DB vận hành hậu kiểm
+  cuối vẫn không có dữ liệu nghiệp vụ và journal 1..11. Không chạy archive, không replay
+  migration và không push. DB restore tạm đã được xóa sau khi lưu evidence.
 
 ### Phiên 68 - REVIEW-025: diễn tập sẵn sàng vận hành
 
