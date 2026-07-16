@@ -405,6 +405,28 @@ có 11 dòng liên tục; không file archive nào được thực thi.
 - **Sửa nhỏ nhất:** deployment checklist chỉ chạy file trực tiếp trong `updates/` theo mốc đã ghi; thêm bảng migration journal khi có dữ liệu thật.
 - **Cần user quyết định:** Không.
 
+#### REVIEW-025 - Diễn tập sẵn sàng vận hành kỳ hóa đơn đầu tiên
+
+**Trạng thái 16/07/2026: RESOLVED trong Phiên 68.** Backup đã restore sang DB tạm và giữ
+đúng 21/21 bảng, 7/7 trigger, row count cùng journal 1..11. Dataset kỳ 06/2026 chạy qua
+controller/service gồm ba ca: đủ tháng thu một phần, vào giữa tháng prorata thu đủ và thiếu
+chỉ số bị chặn trước khi bổ sung. `Gửi xe` không được chọn vì hiện là dịch vụ miễn phí.
+Ba hóa đơn khớp 2.370.000 / 2.226.667 / 2.940.000 đồng; khóa sổ tháng 6 chặn sửa/xóa/thêm,
+bút toán đảo tháng 7 tham chiếu đúng dòng gốc. Reconcile không có mismatch/overlap và DB
+vận hành không phát sinh dữ liệu nghiệp vụ.
+
+Rehearsal tái hiện lỗi export công nợ/thu-chi HTTP 500 dưới tài khoản hạn chế quyền đọc font.
+Hai lệnh `AdjustToContents()` đã được thay bằng độ rộng cột xác định; build sạch và phiếu thu
+HTML, phiếu thu Excel, công nợ Excel, thu-chi Excel đều trả HTTP 200 sau fix.
+
+- **Mức độ / loại:** High - readiness vận hành và chứng từ tài chính.
+- **Module:** G, H, I, J, K, L, O.
+- **Bằng chứng:** backup + restore drill; HTTP rehearsal có auth; hậu kiểm SELECT-only trên
+  DB tạm và DB vận hành; stack trace ClosedXML tại `ExcelService.XuatExcelCongNo/XuatThuChi`.
+- **Giới hạn:** in-app Browser/Chrome không truy cập được localhost trong môi trường phiên này,
+  nên chưa có screenshot/visual QA; kiểm chứng giao diện dùng HTTP host-side.
+- **Cần user quyết định:** Không.
+
 ### 0.4. Câu hỏi nghiệp vụ cần chốt
 
 1. `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay còn trường hợp hủy sau khi đã nhận phòng?
@@ -453,8 +475,8 @@ có 11 dòng liên tục; không file archive nào được thực thi.
 
 #### Phase 4 - UX, báo cáo, hiệu năng và vận hành
 
-**Cập nhật 16/07/2026:** REVIEW-020..024 đã hoàn tất trong repo và DB vận hành. Backup đã
-restore-validate; journal bootstrap evidence 1..10 và migration khóa sổ số 11 đã apply/hậu kiểm.
+**Cập nhật 16/07/2026:** REVIEW-020..025 đã hoàn tất. DB vận hành đã có journal 1..11;
+REVIEW-025 backup/restore và kỳ hóa đơn đầu tiên chỉ diễn tập trên DB tạm, không ghi DB vận hành.
 
 - **Phạm vi file:** controllers/view mặc định kỳ, `HoaDonRepository.GetCongNoAsync`, `KiemTraDuLieu`, `ExcelService`,
   `ThuChi`, `Program.cs`/deployment docs.

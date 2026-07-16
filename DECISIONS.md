@@ -38,6 +38,18 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   từ `schema.sql` dùng marker `FreshBaseline`. Không chạy archive và không replay migration
   đã được journal/baseline bao phủ.
 
+## Quyết định chốt REVIEW-025 ngày 16/07/2026
+
+- Diễn tập kỳ hóa đơn đầu tiên chỉ ghi trên DB restore tạm; DB vận hành chỉ được đọc để lập
+  inventory và hậu kiểm không thay đổi. Dataset kỳ 06/2026 gồm ba hợp đồng: đủ tháng có
+  thanh toán một phần, vào giữa tháng có prorata và thanh toán đủ, cùng một hợp đồng thiếu
+  chỉ số để chứng minh blocker trước khi bổ sung chỉ số và chốt.
+- Không đăng ký dịch vụ `Gửi xe` trong dataset REVIEW-025 vì dịch vụ này hiện có đơn giá 0
+  và được xác nhận là miễn phí; không dùng một dòng 0 đồng để làm nhiễu chứng từ kỳ đầu.
+- File Excel vận hành không phụ thuộc vào quyền đọc thư mục font của tài khoản chạy app.
+  Các cột báo cáo thu-chi và công nợ dùng độ rộng xác định thay cho `AdjustToContents()`;
+  đây là lựa chọn ổn định cho tiến trình LAN/service account bị giới hạn quyền.
+
 ---
 
 ## Quyết định chốt cho Phase 1 ngày 12/07/2026
@@ -507,4 +519,4 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 
 ---
 
-Cập nhật lần cuối: Phiên 62 - 14/07/2026. REVIEW-016 đã triển khai bằng CHECK và trigger khóa cha; dry-run DB vận hành sạch, apply-once/rerun/blocker và service/concurrency smoke pass.
+Cập nhật lần cuối: Phiên 68 - 16/07/2026. REVIEW-025 đã diễn tập trên DB restore tạm; DB vận hành chỉ đọc và không phát sinh dữ liệu nghiệp vụ.

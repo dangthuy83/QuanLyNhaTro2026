@@ -194,7 +194,13 @@ public class ExcelService
         ws.Cell(row, 5).Style.Font.SetBold(true);
         ws.Cell(row, 6).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
 
-        ws.Columns().AdjustToContents();
+        // Fixed widths keep export independent from host font discovery. ClosedXML's
+        // AdjustToContents() scans system/user font folders and can fail for a
+        // restricted service account even though workbook generation itself is valid.
+        double[] widths = [6, 12, 10, 20, 40, 18];
+        for (int column = 1; column <= widths.Length; column++)
+            ws.Column(column).Width = widths[column - 1];
+        ws.Column(5).Style.Alignment.WrapText = true;
         using var ms = new MemoryStream();
         wb.SaveAs(ms);
         return ms.ToArray();
@@ -245,7 +251,10 @@ public class ExcelService
         ws.Cell(row, 9).Value = ds.Sum(x => x.ConLai);
         ws.Cell(row, 9).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
 
-        ws.Columns().AdjustToContents();
+        double[] widths = [18, 12, 24, 15, 10, 14, 16, 16, 16, 14];
+        for (int column = 1; column <= widths.Length; column++)
+            ws.Column(column).Width = widths[column - 1];
+        ws.Column(3).Style.Alignment.WrapText = true;
         using var ms = new MemoryStream();
         wb.SaveAs(ms);
         return ms.ToArray();

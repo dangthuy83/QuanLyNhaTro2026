@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 3: REVIEW-020 đến REVIEW-024 đã hoàn tất trong repo và DB vận hành đã nhận journal/migration REVIEW-022 |
-| Build | Phiên 66: app và hai tool build sạch; fresh schema, migration, runner và browser QA pass |
+| Giai đoạn | REVIEW-001 đến REVIEW-025 đã hoàn tất; REVIEW-025 diễn tập vận hành trên DB restore tạm, DB vận hành không bị ghi |
+| Build | Phiên 68: app build sạch 0 warning/0 error; HTTP rehearsal và bốn đầu ra HTML/Excel pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 67 đã restore-validate backup, bootstrap `MigrationJournal` bằng evidence 1..10 và apply-next REVIEW-022 số 11. Journal có 11 dòng liên tục; hậu kiểm bảng/cột/index/FK/3 CHECK/3 trigger pass. |
+| Database | Phiên 68: backup/restore drill pass; dataset kỳ 06/2026 chỉ chạy trên DB tạm. DB vận hành hậu kiểm SELECT-only vẫn 0 hợp đồng/hóa đơn/thu chi và journal liên tục 1..11. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,29 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 68 - REVIEW-025: diễn tập sẵn sàng vận hành
+
+- Xác minh baseline `HEAD=fde8668`; không push. Inventory DB vận hành chạy trong transaction
+  `READ ONLY`: 1 nhà, 11 phòng trống, 13 khách, 7 dịch vụ; chưa có hợp đồng, chỉ số, hóa đơn,
+  thanh toán, thu chi hoặc khóa sổ; journal liên tục 1..11.
+- Tạo backup nhất quán `quanlynhatro_review025_pre_rehearsal_20260716_213448.sql`, 57.676 byte,
+  SHA-256 `406E8550D84F00A4CFB0394EBEB309F2E1E4324D9FD041E54B3559E786F19729`.
+  Restore drill pass 21/21 bảng, 7/7 trigger, row count và journal khớp.
+- Sau xác nhận của user, chạy dataset kỳ 06/2026 trên DB tạm: ba hợp đồng, bốn cư trú,
+  tám đăng ký dịch vụ và không có `Gửi xe`. Blocker thiếu chỉ số của hợp đồng C hoạt động;
+  sau khi nhập đủ ba chỉ số, hóa đơn A/B/C lần lượt là 2.370.000 / 2.226.667 / 2.940.000 đồng.
+- Ghi thanh toán A 1.000.000 tiền mặt, B 2.226.667 chuyển khoản; B đã thu đủ, A thu một phần,
+  C chưa thu. Báo cáo công nợ, nhắc nợ, reconcile và chi tiết ba hóa đơn trả HTTP 200.
+- Tạo chi 300.000 tháng 6, khóa sổ, xác nhận sửa/xóa/thêm tháng 6 đều bị chặn; tạo bút toán
+  đảo 300.000 tháng 7 tham chiếu `ThuChiGocId=1` và ghi rõ `#1`. Reconcile lệch trạng thái = 0,
+  overlap = 0, journal DB tạm vẫn 1..11.
+- Tái hiện lỗi HTTP 500 ở Excel công nợ/thu-chi: ClosedXML `AdjustToContents()` đọc thư mục
+  font user bị từ chối quyền. Thay bằng độ rộng cột xác định; build sạch và hậu kiểm phiếu thu
+  HTML, phiếu thu Excel, công nợ Excel, thu-chi Excel đều HTTP 200.
+- In-app Browser/Chrome không truy cập được localhost (`ERR_EMPTY_RESPONSE`), nên rehearsal
+  dùng HTTP host-side đã xác thực; không có screenshot/visual QA. DB vận hành hậu kiểm cuối
+  vẫn 0 dữ liệu nghiệp vụ và journal 1..11; DB restore tạm được xóa sau khi lưu evidence.
 
 ### Phiên 67 - Áp migration journal và REVIEW-022 trên DB vận hành
 
