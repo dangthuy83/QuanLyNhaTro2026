@@ -63,6 +63,22 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   `TienNoKyTruoc` không được xóa/reissue bằng flow đơn giản. Trả phòng với hóa đơn không khớp
   thuộc nhóm này phải bị chặn trước mọi thay đổi trạng thái, cọc hoặc công nợ.
 
+## Quyết định chốt REVIEW-027 ngày 16/07/2026
+
+- Mở sổ giữ `HopDong.NgayBatDau` thực tế. Cọc thực giữ tại ngày chốt được ghi bằng ledger
+  `SoDuMoSo`, không sinh `ThuCoc` lịch sử và không tạo thanh toán giả; `HopDong.TienCoc` vẫn là
+  số thỏa thuận.
+- Công nợ cũ được lưu trong `CongNoMoSo` với kỳ nguồn, mã chứng từ, nguồn tham chiếu và hash
+  đợt `DotMoSo`. Snapshot chỉ được gắn một lần vào hóa đơn đầu tiên; không ghi `ThanhToan` cho
+  khoản mở sổ và không double-count với công nợ hóa đơn.
+- Mốc điện/nước mở sổ phải lấy từ lần chốt/bàn giao gần cutover nhất có chứng từ. Thiếu hoặc
+  không đủ nguồn thì blocker trước transaction tạo hợp đồng.
+- `HopDongMoSo` lưu nguồn từng hợp đồng; đại diện và cư trú phải đúng một người hiệu lực tại
+  ngày chốt. Dataset rehearsal dùng cutover tài chính 01/06/2026, chạy riêng trên DB tạm.
+- Migration `20260716_review027_opening_balances.sql` là apply-once, blocker-first, rerun-safe.
+  DB vận hành giữ journal 1..11; schema fresh bao phủ đến 12 và migration 12 chỉ được áp trên
+  DB tạm trong rehearsal này.
+
 ---
 
 ## Quyết định chốt cho Phase 1 ngày 12/07/2026

@@ -558,6 +558,10 @@ public class ChiSoController(
 
         if (hopDongId.HasValue)
         {
+            var opening = await continuity.GetOpeningAsync(hopDongId.Value, dichVuId);
+            if (opening != null)
+                return new ChiSoDauInfo(opening.EndReading, false, opening.Description);
+
             var kyTruocCungHopDong = await chiSoRepo.GetChiSoCuoiKyTruocAsync(phongId, dichVuId, thang, nam, hopDongId);
             if (kyTruocCungHopDong != null)
                 return new ChiSoDauInfo(kyTruocCungHopDong.ChiSoCuoi, false, $"Kỳ trước cùng hợp đồng #{hopDongId}");

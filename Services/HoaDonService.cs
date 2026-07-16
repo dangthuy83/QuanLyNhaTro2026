@@ -76,6 +76,21 @@ public class HoaDonService(
             if (existingInTransaction != null)
                 throw new InvalidOperationException($"Hoa don ky {thang}/{nam} cua hop dong #{hopDongId} da ton tai.");
 
+            var kyBatDau = new DateTime(nam, thang, 1);
+            var congNoMoSo = (await conn.QueryAsync<(int Id, decimal SoTien)>(
+                """
+                SELECT cn.Id,cn.SoTien
+                FROM CongNoMoSo cn
+                INNER JOIN DotMoSo dot ON dot.Id=cn.DotMoSoId
+                WHERE cn.HopDongId=@HopDongId
+                  AND cn.HoaDonTiepNhanId IS NULL
+                  AND dot.NgayChot < @KyBatDau
+                ORDER BY cn.Id
+                FOR UPDATE
+                """, new { HopDongId = hopDongId, KyBatDau = kyBatDau.Date }, tx)).ToList();
+            if (congNoMoSo.Sum(x => x.SoTien) != duKien.TienNoMoSo)
+                throw new InvalidOperationException("Cong no mo so da thay doi. Vui long tai lai preview hoa don.");
+
             var hoaDonId = await snapshotService.InsertHoaDonAsync(conn, tx, hoaDon);
             await snapshotService.InsertChiTietAsync(
                 conn,
@@ -96,20 +111,30 @@ public class HoaDonService(
                 duKien.KhoanPhatSinh.Select(x => x.Id),
                 hoaDonId);
 
-            if (duKien.TienNoKyTruoc > 0)
+            var noHoaDonTruoc = duKien.TienNoKyTruoc - duKien.TienNoMoSo;
+            if (noHoaDonTruoc > 0)
             {
                 var daKetChuyen = await congNoSettlementService.ThanhToanNoAsync(
                     conn,
                     tx,
                     hopDongId,
-                    duKien.TienNoKyTruoc,
+                    noHoaDonTruoc,
                     hoaDon.NgayLap,
                     "KetChuyenNo",
                     $"Ket chuyen no sang hoa don #{hoaDonId}",
                     [hoaDonId]);
 
-                if (daKetChuyen != duKien.TienNoKyTruoc)
+                if (daKetChuyen != noHoaDonTruoc)
                     throw new InvalidOperationException("So tien no ky truoc khong khop voi cong no can ket chuyen.");
+            }
+
+            if (congNoMoSo.Count > 0)
+            {
+                var linked = await conn.ExecuteAsync(
+                    "UPDATE CongNoMoSo SET HoaDonTiepNhanId=@HoaDonId WHERE Id IN @Ids AND HoaDonTiepNhanId IS NULL",
+                    new { HoaDonId = hoaDonId, Ids = congNoMoSo.Select(x => x.Id).ToArray() }, tx);
+                if (linked != congNoMoSo.Count)
+                    throw new InvalidOperationException("Cong no mo so khong the gan duy nhat vao hoa don dau tien.");
             }
 
             await tx.CommitAsync();
@@ -271,7 +296,9 @@ public class HoaDonService(
         if (result.TongTienPhatSinh > 0)
             result.CanhBao.Add($"Co khoan phat sinh {result.TongTienPhatSinh:N0} d.");
 
-        result.TienNoKyTruoc = await TinhNoKyTruocAsync(hopDong, thang, nam);
+        var noKyTruoc = await TinhNoKyTruocAsync(hopDong, thang, nam);
+        result.TienNoMoSo = noKyTruoc.NoMoSo;
+        result.TienNoKyTruoc = noKyTruoc.Tong;
         if (result.TienNoKyTruoc > 0)
             result.CanhBao.Add($"Co no ky truoc {result.TienNoKyTruoc:N0} d.");
 
@@ -414,25 +441,38 @@ public class HoaDonService(
             : (soNgayTheoHopDong, soNgayTrongThangThucTe);
     }
 
-    private async Task<decimal> TinhNoKyTruocAsync(HopDong hopDong, int thang, int nam)
+    private async Task<NoKyTruoc> TinhNoKyTruocAsync(HopDong hopDong, int thang, int nam)
     {
         var noTruocKy = await TinhTongNoTruocKyAsync(hopDong.Id, thang, nam);
-        if (noTruocKy > 0)
-            return noTruocKy;
-
-        var kyTruoc = await hoaDonRepo.GetKyTruocAsync(hopDong.Id, thang, nam);
-        var duKyTruoc = kyTruoc?.TongCong - kyTruoc?.SoTienDaThu;
-        if (duKyTruoc < 0)
-            return duKyTruoc.Value;
-
-        if (hopDong.HopDongTruocId.HasValue)
+        decimal noHoaDon = noTruocKy;
+        if (noHoaDon <= 0)
         {
-            var hoaDonCuoi = (await hoaDonRepo.GetByHopDongAsync(hopDong.HopDongTruocId.Value)).FirstOrDefault();
-            if (hoaDonCuoi != null)
-                return hoaDonCuoi.TongCong - hoaDonCuoi.SoTienDaThu;
+            var kyTruoc = await hoaDonRepo.GetKyTruocAsync(hopDong.Id, thang, nam);
+            var duKyTruoc = kyTruoc?.TongCong - kyTruoc?.SoTienDaThu;
+            if (duKyTruoc < 0)
+                noHoaDon = duKyTruoc.Value;
+            else if (hopDong.HopDongTruocId.HasValue)
+            {
+                var hoaDonCuoi = (await hoaDonRepo.GetByHopDongAsync(hopDong.HopDongTruocId.Value)).FirstOrDefault();
+                if (hoaDonCuoi != null)
+                    noHoaDon = hoaDonCuoi.TongCong - hoaDonCuoi.SoTienDaThu;
+            }
         }
 
-        return 0;
+        var noMoSo = await db.ExecuteScalarAsync<decimal>(
+            """
+            SELECT COALESCE(SUM(cn.SoTien),0)
+            FROM CongNoMoSo cn
+            INNER JOIN DotMoSo dot ON dot.Id=cn.DotMoSoId
+            WHERE cn.HopDongId=@HopDongId
+              AND cn.HoaDonTiepNhanId IS NULL
+              AND dot.NgayChot < @KyBatDau
+            """, new
+            {
+                HopDongId = hopDong.Id,
+                KyBatDau = new DateTime(nam, thang, 1)
+            });
+        return new NoKyTruoc(noHoaDon, noMoSo);
     }
 
     private async Task<decimal> TinhTongNoTruocKyAsync(int hopDongId, int thang, int nam)
@@ -445,4 +485,9 @@ public class HoaDonService(
               AND (Nam < @Nam OR (Nam = @Nam AND Thang < @Thang))
             """,
             new { HopDongId = hopDongId, Thang = thang, Nam = nam });
+
+    private sealed record NoKyTruoc(decimal NoHoaDon, decimal NoMoSo)
+    {
+        public decimal Tong => NoHoaDon + NoMoSo;
+    }
 }

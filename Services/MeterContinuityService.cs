@@ -41,6 +41,21 @@ public sealed class MeterContinuityService(IDbConnection db)
             WHERE cs.PhongId = @PhongId
               AND cs.DichVuId = @DichVuId
               AND (@ExcludeOffContractId IS NULL OR cs.Id <> @ExcludeOffContractId)
+
+            UNION ALL
+
+            SELECT cs.PhongId,
+                   cs.DichVuId,
+                   cs.NgayChot AS EventDate,
+                   'MoSo' AS SourceType,
+                   cs.Id AS SourceId,
+                   cs.HopDongId,
+                   cs.ChiSo AS StartReading,
+                   cs.ChiSo AS EndReading,
+                   0 AS IsInvoiced
+            FROM ChiSoMoSo cs
+            WHERE cs.PhongId = @PhongId
+              AND cs.DichVuId = @DichVuId
         )
         """;
 
@@ -76,6 +91,19 @@ public sealed class MeterContinuityService(IDbConnection db)
         if (conn.State != ConnectionState.Open) await conn.OpenAsync();
         return await QueryLatestAsync(
             conn, null, roomId, serviceId, cutoffDate.Date, null, null, excludeContractId);
+    }
+
+    public async Task<MeterReadingAnchor?> GetOpeningAsync(int contractId, int serviceId)
+    {
+        var conn = (MySqlConnection)db;
+        if (conn.State != ConnectionState.Open) await conn.OpenAsync();
+        return await conn.QueryFirstOrDefaultAsync<MeterReadingAnchor>(
+            """
+            SELECT PhongId,DichVuId,NgayChot EventDate,'MoSo' SourceType,Id SourceId,
+                   HopDongId,ChiSo StartReading,ChiSo EndReading,0 IsInvoiced
+            FROM ChiSoMoSo
+            WHERE HopDongId=@HopDongId AND DichVuId=@DichVuId
+            """, new { HopDongId = contractId, DichVuId = serviceId });
     }
 
     public async Task EnsureContinuityAsync(
@@ -165,6 +193,8 @@ public sealed class MeterContinuityService(IDbConnection db)
               + (SELECT COUNT(*) FROM ChiSoNgoaiHopDong
                  WHERE PhongId=@PhongId AND DichVuId=@DichVuId AND NgayGhiNhan=@EventDate
                    AND (@ExcludeOffContractId IS NULL OR Id<>@ExcludeOffContractId))
+              + (SELECT COUNT(*) FROM ChiSoMoSo
+                 WHERE PhongId=@PhongId AND DichVuId=@DichVuId AND NgayChot=@EventDate)
             """,
             new
             {
@@ -255,7 +285,10 @@ public sealed class MeterReadingAnchor
     public decimal EndReading { get; init; }
     public bool IsInvoiced { get; init; }
 
-    public string Description => SourceType == "NgoaiHopDong"
-        ? $"chi so ngoai hop dong #{SourceId} ngay {EventDate:dd/MM/yyyy}"
-        : $"chi so hop dong #{SourceId} ngay {EventDate:dd/MM/yyyy}";
+    public string Description => SourceType switch
+    {
+        "NgoaiHopDong" => $"chi so ngoai hop dong #{SourceId} ngay {EventDate:dd/MM/yyyy}",
+        "MoSo" => $"chi so mo so #{SourceId} ngay {EventDate:dd/MM/yyyy}",
+        _ => $"chi so hop dong #{SourceId} ngay {EventDate:dd/MM/yyyy}"
+    };
 }

@@ -11,6 +11,7 @@ public class HoaDonDuKien
     public decimal TongTienDichVu { get; set; }
     public decimal TongTienPhatSinh { get; set; }
     public decimal TienNoKyTruoc { get; set; }
+    public decimal TienNoMoSo { get; set; }
     public decimal TongCong { get; set; }
     public int? SoNgayO { get; set; }
     public int? SoNgayTrongThang { get; set; }

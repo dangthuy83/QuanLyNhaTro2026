@@ -1,5 +1,15 @@
 # Database updates
 
+REVIEW-027 apply-once (đã áp DB tạm ngày 16/07/2026; chưa áp DB vận hành):
+
+- `20260716_review027_opening_balances.sql`: tạo `DotMoSo`, `HopDongMoSo`, `CongNoMoSo`,
+  `ChiSoMoSo`, mở rộng ledger cọc với `SoDuMoSo` và nguồn tham chiếu. Dry-run chặn ledger hiện
+  hữu có số dư âm/delta 0; script không backfill và không tạo thanh toán.
+- `MoSoService` ghi hợp đồng, cư trú, dịch vụ, cọc thực tế, snapshot công nợ và mốc chỉ số trong
+  một transaction. `HoaDonService` gắn công nợ mở sổ đúng một lần vào hóa đơn đầu tiên.
+- Rehearsal DB tạm: migration journal `1..12`; fresh schema có 25 bảng và 4 bảng mở sổ.
+  DB vận hành vẫn SELECT-only, journal `1..11`.
+
 REVIEW-022 apply-once (đã áp DB vận hành ngày 16/07/2026):
 
 - `20260716_review022_monthly_book_lock.sql`: dry-run dữ liệu `ThuChi`, thêm bảng

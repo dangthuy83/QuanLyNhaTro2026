@@ -451,6 +451,28 @@ tạm đã được xóa sau khi lưu evidence.
   Browser QA có auth trên DB tạm.
 - **Cần user quyết định:** Không.
 
+#### REVIEW-027 - Diễn tập mở sổ hợp đồng đang vận hành
+
+**Trạng thái 16/07/2026: RESOLVED trong Phiên 70.** Backup vận hành được restore sang DB tạm;
+21/21 bảng, 7/7 trigger, row count và journal 1..11 khớp. Migration 12 chỉ chạy trên DB tạm,
+không ghi DB vận hành.
+
+`MoSoService` giữ ngày bắt đầu thực tế, ghi cọc thực giữ bằng ledger `SoDuMoSo`, lưu nguồn theo
+`DotMoSo`/`HopDongMoSo`, lưu công nợ cũ trong `CongNoMoSo` và mốc chỉ số trong `ChiSoMoSo`.
+`HoaDonService` gắn snapshot công nợ đúng một lần vào hóa đơn đầu tiên, không tạo thanh toán giả.
+
+Dataset A-D pass: 4 hợp đồng, 4 ledger cọc mở sổ, 2 snapshot công nợ, 4 mốc chỉ số mở sổ, 4 chỉ
+số kỳ, 4 hóa đơn; tổng công nợ `14.030.000`, `ThanhToan=0`, reconcile issue = 0. Ca E thiếu
+mốc chỉ số/chứng từ bị chặn trước transaction. Migration rerun báo không còn pending; fresh schema
+smoke pass với 25 bảng và baseline journal sequence 12. DB vận hành cuối vẫn 0 dữ liệu nghiệp vụ,
+journal 1..11.
+
+- **Mức độ / loại:** High - integrity mở sổ, cọc, công nợ và continuity chỉ số.
+- **Module:** HopDong, GiaoDichCoc, HoaDon, ChiSo, MigrationRunner, reconcile.
+- **Bằng chứng:** backup/restore, migration status/apply/rerun, fresh-schema smoke, service harness,
+  blocker ca E và SELECT-only hậu kiểm DB vận hành.
+- **Cần user quyết định:** Không.
+
 ### 0.4. Câu hỏi nghiệp vụ cần chốt
 
 1. `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay còn trường hợp hủy sau khi đã nhận phòng?

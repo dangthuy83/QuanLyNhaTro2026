@@ -196,6 +196,29 @@ public class GiaoDichCocService(
         await InsertDeltaAsync(conn, tx, hopDongId, "ThuCoc", soTien, ngayGiaoDich, null, null, ghiChu);
     }
 
+    public async Task GhiNhanSoDuMoSoAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hopDongId,
+        decimal soTien,
+        DateTime ngayChot,
+        int dotMoSoId,
+        string nguonThamChieu)
+    {
+        if (soTien < 0)
+            throw new InvalidOperationException("So du coc mo so khong duoc am.");
+        if (soTien == 0) return;
+        if (string.IsNullOrWhiteSpace(nguonThamChieu))
+            throw new InvalidOperationException("So du coc mo so phai co nguon tham chieu.");
+        if (await giaoDichCocRepo.HasAnyAsync(conn, tx, hopDongId))
+            throw new InvalidOperationException("Hop dong da co ledger coc; khong the ghi so du mo so.");
+
+        await InsertDeltaAsync(
+            conn, tx, hopDongId, "SoDuMoSo", soTien, ngayChot,
+            null, null, "So du coc thuc te tai ngay mo so",
+            dotMoSoId, nguonThamChieu.Trim());
+    }
+
     public async Task ChuyenCocSangHopDongMoiAsync(
         MySqlConnection conn,
         MySqlTransaction tx,
@@ -316,7 +339,9 @@ public class GiaoDichCocService(
         DateTime ngayGiaoDich,
         int? hoaDonId,
         string? phuongThuc,
-        string? ghiChu)
+        string? ghiChu,
+        int? dotMoSoId = null,
+        string? nguonThamChieu = null)
     {
         if (delta == 0) return;
 
@@ -341,6 +366,8 @@ public class GiaoDichCocService(
             NgayGiaoDich = ngayGiaoDich,
             HoaDonId = hoaDonId,
             PhuongThuc = phuongThuc,
+            DotMoSoId = dotMoSoId,
+            NguonThamChieu = nguonThamChieu,
             GhiChu = ghiChu
         });
     }
@@ -365,7 +392,7 @@ public class GiaoDichCocService(
         var amount = Math.Abs(soTien);
         return loaiGiaoDich switch
         {
-            "ThuCoc" or "ThuThemCoc" => amount,
+            "ThuCoc" or "ThuThemCoc" or "SoDuMoSo" => amount,
             "HoanCoc" or "TruNo" => -amount,
             "DieuChinh" => soTien,
             _ => throw new InvalidOperationException("Loai giao dich coc khong hop le.")

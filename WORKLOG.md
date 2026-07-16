@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | REVIEW-001 đến REVIEW-026 đã hoàn tất; REVIEW-026 diễn tập quyết toán cọc/công nợ trên DB restore tạm, DB vận hành không bị ghi |
+| Giai đoạn | REVIEW-001 đến REVIEW-027 đã hoàn tất; REVIEW-027 mở sổ hợp đồng trên DB restore tạm, DB vận hành không bị ghi |
 | Build | Phiên 69: app build sạch 0 warning/0 error; service harness và Browser QA trả phòng pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 69: backup/restore REVIEW-026 pass; 4 ca quyết toán chỉ chạy trên DB tạm. DB vận hành hậu kiểm SELECT-only vẫn 0 hợp đồng/hóa đơn/thu chi và journal liên tục 1..11. |
+| Database | Phiên 70: backup/restore REVIEW-027 pass; 4 ca mở sổ chạy trên DB tạm, ca thiếu chứng từ bị chặn. DB vận hành hậu kiểm SELECT-only vẫn 0 hợp đồng/hóa đơn/thu chi và journal liên tục 1..11. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 

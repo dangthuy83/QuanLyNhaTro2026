@@ -10,6 +10,8 @@ public class GiaoDichCoc
     public DateTime NgayGiaoDich { get; set; } = DateTime.Today;
     public int? HoaDonId { get; set; }
     public string? PhuongThuc { get; set; }
+    public int? DotMoSoId { get; set; }
+    public string? NguonThamChieu { get; set; }
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
 

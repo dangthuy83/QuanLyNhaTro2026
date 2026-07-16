@@ -53,6 +53,47 @@ public class KiemTraDuLieuRepository(IDbConnection db) : BaseRepository(db)
                    'HoaDon',hd.Id,'HoaDon','Details'
             FROM KhoanPhatSinhHopDong k JOIN HoaDon hd ON hd.Id=k.HoaDonId
             WHERE k.TrangThai<>'DaDuaVaoHoaDon' OR k.HopDongId<>hd.HopDongId OR k.MoTaHoaDonSnapshot IS NULL OR k.SoTienHoaDonSnapshot IS NULL
+
+            UNION ALL
+            SELECT 'MoSoCoc', 'So du coc mo so thieu dot hoac nguon tham chieu.',
+                   'HopDong',gd.HopDongId,'GiaoDichCoc','Index'
+            FROM GiaoDichCoc gd
+            WHERE gd.LoaiGiaoDich='SoDuMoSo'
+              AND (gd.DotMoSoId IS NULL OR NULLIF(TRIM(gd.NguonThamChieu),'') IS NULL
+                   OR gd.PhuongThuc IS NOT NULL OR gd.HoaDonId IS NOT NULL)
+
+            UNION ALL
+            SELECT 'MoSoCongNo', 'Cong no mo so gan sai hop dong hoac lon hon no ky truoc tren hoa don tiep nhan.',
+                   'HoaDon',hd.Id,'HoaDon','Details'
+            FROM HoaDon hd
+            INNER JOIN CongNoMoSo cn ON cn.HoaDonTiepNhanId=hd.Id
+            GROUP BY hd.Id,hd.HopDongId,hd.TienNoKyTruoc
+            HAVING MIN(cn.HopDongId)<>hd.HopDongId OR MAX(cn.HopDongId)<>hd.HopDongId
+                OR SUM(cn.SoTien)>hd.TienNoKyTruoc
+
+            UNION ALL
+            SELECT 'MoSoChiSo', 'Moc chi so mo so khong khop phong/hop dong/dich vu dang ky.',
+                   'HopDong',cs.HopDongId,'HopDong','Details'
+            FROM ChiSoMoSo cs
+            INNER JOIN HopDong hop ON hop.Id=cs.HopDongId
+            WHERE cs.PhongId<>hop.PhongId
+               OR NOT EXISTS (
+                    SELECT 1 FROM HopDongDichVu hdv
+                    INNER JOIN PhongDichVu pdv ON pdv.Id=hdv.PhongDichVuId
+                    INNER JOIN DichVu dv ON dv.Id=pdv.DichVuId
+                    WHERE hdv.HopDongId=cs.HopDongId AND pdv.DichVuId=cs.DichVuId
+                      AND dv.LoaiTinhPhi='TheoChiSo')
+
+            UNION ALL
+            SELECT 'MoSoDaiDien', 'Hop dong mo so khong co dung mot dai dien tai ngay chot.',
+                   'HopDong',hm.HopDongId,'HopDong','Details'
+            FROM HopDongMoSo hm
+            INNER JOIN DotMoSo dot ON dot.Id=hm.DotMoSoId
+            LEFT JOIN HopDongKhachThue hdkt ON hdkt.HopDongId=hm.HopDongId
+              AND hdkt.LaDaiDien=1 AND hdkt.NgayBatDau<=dot.NgayChot
+              AND (hdkt.NgayKetThuc IS NULL OR hdkt.NgayKetThuc>=dot.NgayChot)
+            GROUP BY hm.HopDongId
+            HAVING COUNT(hdkt.Id)<>1
             ORDER BY Loai,DoiTuongId
             """;
         return await _db.QueryAsync<ReconcileIssue>(sql);

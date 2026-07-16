@@ -8,8 +8,8 @@ CREATE DATABASE IF NOT EXISTS QuanLyNhaTro
 
 USE QuanLyNhaTro;
 
--- Fresh databases are created at the repository baseline through REVIEW-022.
--- Migration runners treat this row as covering all ordered migrations <= 11.
+-- Fresh databases are created at the repository baseline through REVIEW-027.
+-- Migration runners treat this row as covering all ordered migrations <= 12.
 CREATE TABLE MigrationJournal (
     MigrationId VARCHAR(160) PRIMARY KEY,
     SequenceNo INT NOT NULL,
@@ -23,8 +23,8 @@ CREATE TABLE MigrationJournal (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO MigrationJournal(MigrationId, SequenceNo, Sha256, Source, Notes)
-VALUES ('schema-baseline-20260716', 11, NULL, 'FreshBaseline',
-        'Fresh schema already includes ordered migrations 1..11; no update script was replayed.');
+VALUES ('schema-baseline-20260716-review027', 12, NULL, 'FreshBaseline',
+        'Fresh schema already includes ordered migrations 1..12; no update script was replayed.');
 
 -- ============================================================
 -- 1. NHA — Nhà trọ (bảng gốc, dù chỉ quản lý 1 nhà vẫn nên giữ
@@ -204,6 +204,38 @@ CREATE INDEX IX_HopDong_Phong_KhoangNgay
     ON HopDong(PhongId, NgayBatDau, NgayKetThuc, TrangThai);
 
 -- ============================================================
+-- REVIEW-027: dot mo so va lien ket hop dong voi dong nguon.
+-- ============================================================
+CREATE TABLE DotMoSo (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    NgayChot DATE NOT NULL,
+    TenNguon VARCHAR(255) NOT NULL,
+    Sha256 CHAR(64) NOT NULL,
+    NguoiDuyet VARCHAR(100) NOT NULL,
+    GhiChu VARCHAR(500) NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT UQ_DotMoSo_Sha256 UNIQUE (Sha256),
+    CONSTRAINT CK_DotMoSo_Ngay CHECK (YEAR(NgayChot) BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_DotMoSo_Nguon CHECK (
+        CHAR_LENGTH(TRIM(TenNguon)) > 0
+        AND Sha256 REGEXP '^[0-9A-F]{64}$'
+        AND CHAR_LENGTH(TRIM(NguoiDuyet)) > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE HopDongMoSo (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    DotMoSoId INT NOT NULL,
+    HopDongId INT NOT NULL,
+    NguonThamChieu VARCHAR(100) NOT NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT UQ_HopDongMoSo_HopDong UNIQUE (HopDongId),
+    CONSTRAINT UQ_HopDongMoSo_Nguon UNIQUE (DotMoSoId,NguonThamChieu),
+    CONSTRAINT FK_HopDongMoSo_Dot FOREIGN KEY (DotMoSoId) REFERENCES DotMoSo(Id),
+    CONSTRAINT FK_HopDongMoSo_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
+    CONSTRAINT CK_HopDongMoSo_Nguon CHECK (CHAR_LENGTH(TRIM(NguonThamChieu)) > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
 -- 7. HOPDONGKHACHTHUE — Liên kết nhiều-nhiều Hợp đồng <-> Khách thuê
 -- LaDaiDien: 1 = người đại diện ký hợp đồng, 0 = người ở thêm
 -- ============================================================
@@ -329,6 +361,28 @@ CREATE INDEX IX_ChiSo_Phong_FK
 
 CREATE INDEX IX_ChiSo_DichVu_FK
     ON ChiSoDienNuoc(DichVuId);
+
+-- Moc chi so tai ngay chot mo so; khong phai san luong hay dong chi so tinh tien.
+CREATE TABLE ChiSoMoSo (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    DotMoSoId INT NOT NULL,
+    HopDongId INT NOT NULL,
+    PhongId INT NOT NULL,
+    DichVuId INT NOT NULL,
+    NgayChot DATE NOT NULL,
+    ChiSo DECIMAL(10,2) NOT NULL,
+    NguonThamChieu VARCHAR(100) NOT NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT UQ_ChiSoMoSo_HopDongDichVu UNIQUE (HopDongId,DichVuId),
+    CONSTRAINT UQ_ChiSoMoSo_Nguon UNIQUE (DotMoSoId,NguonThamChieu),
+    CONSTRAINT FK_ChiSoMoSo_Dot FOREIGN KEY (DotMoSoId) REFERENCES DotMoSo(Id),
+    CONSTRAINT FK_ChiSoMoSo_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
+    CONSTRAINT FK_ChiSoMoSo_Phong FOREIGN KEY (PhongId) REFERENCES Phong(Id),
+    CONSTRAINT FK_ChiSoMoSo_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
+    CONSTRAINT CK_ChiSoMoSo_Ngay CHECK (YEAR(NgayChot) BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_ChiSoMoSo_GiaTri CHECK (ChiSo >= 0),
+    CONSTRAINT CK_ChiSoMoSo_Nguon CHECK (CHAR_LENGTH(TRIM(NguonThamChieu)) > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
 -- 8.1. CHISONGOAIHOPDONG - chỉ số phát sinh khi phòng không gắn hợp đồng
@@ -490,6 +544,29 @@ CREATE TABLE HoaDon (
 -- ChiSoDienNuocId chỉ có giá trị nếu dòng này thuộc dịch vụ TheoChiSo,
 -- để biết hóa đơn dùng số liệu đọc nào.
 -- ============================================================
+-- Snapshot cong no cu tai ngay mo so; lien ket dung mot lan vao hoa don dau tien.
+CREATE TABLE CongNoMoSo (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    DotMoSoId INT NOT NULL,
+    HopDongId INT NOT NULL,
+    SoTien DECIMAL(12,0) NOT NULL,
+    DenKyThang TINYINT NOT NULL,
+    DenKyNam SMALLINT NOT NULL,
+    MaChungTu VARCHAR(100) NOT NULL,
+    NguonThamChieu VARCHAR(100) NOT NULL,
+    HoaDonTiepNhanId INT NULL,
+    NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX IX_CongNoMoSo_HopDong (HopDongId,HoaDonTiepNhanId),
+    CONSTRAINT UQ_CongNoMoSo_Nguon UNIQUE (DotMoSoId,NguonThamChieu),
+    CONSTRAINT FK_CongNoMoSo_Dot FOREIGN KEY (DotMoSoId) REFERENCES DotMoSo(Id),
+    CONSTRAINT FK_CongNoMoSo_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
+    CONSTRAINT FK_CongNoMoSo_HoaDon FOREIGN KEY (HoaDonTiepNhanId) REFERENCES HoaDon(Id),
+    CONSTRAINT CK_CongNoMoSo_Tien CHECK (SoTien > 0),
+    CONSTRAINT CK_CongNoMoSo_Ky CHECK (DenKyThang BETWEEN 1 AND 12 AND DenKyNam BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_CongNoMoSo_Nguon CHECK (
+        CHAR_LENGTH(TRIM(MaChungTu)) > 0 AND CHAR_LENGTH(TRIM(NguonThamChieu)) > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE ChiTietHoaDon (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     HoaDonId INT NOT NULL,
