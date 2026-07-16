@@ -351,10 +351,12 @@ tổng/snapshot hóa đơn, liên kết chỉ số và khoản phát sinh. Kết
 
 #### REVIEW-022 - ThuChi cho phép dữ liệu âm/sai loại và sửa/xóa không audit
 
-**Trạng thái 16/07/2026: RESOLVED trong code/schema; migration DB vận hành CHƯA ÁP.**
+**Trạng thái 16/07/2026: RESOLVED; migration DB vận hành ĐÃ ÁP.**
 Model/service/CHECK hiện hành chặn loại, tiền và ngày sai; `ThuChiKySo` cùng ba trigger
 khóa INSERT/UPDATE/DELETE trực tiếp. Không có unlock UI. Điều chỉnh tháng đã khóa là dòng
 mới ở tháng mở có `ThuChiGocId`; migration add-path/rerun/blocker và direct-SQL smoke pass.
+DB vận hành đã dry-run sạch, backup/restore drill pass và apply qua migration runner số 11;
+hậu kiểm bảng/cột/index/FK, ba CHECK và ba trigger đều đủ, không backfill giao dịch.
 
 - **Mức độ / loại:** Medium - bug/rủi ro xác nhận bằng code/schema.
 - **Module:** L, M.
@@ -386,11 +388,12 @@ phát hiện và sửa bằng menu trượt ở viewport 390x844.
 
 #### REVIEW-024 - Migration hiện tại có guard, nhưng archive không được coi là idempotent cho baseline mới
 
-**Trạng thái 16/07/2026: RESOLVED trong repo; journal DB vận hành CHƯA BOOTSTRAP.**
+**Trạng thái 16/07/2026: RESOLVED; journal DB vận hành ĐÃ BOOTSTRAP/APPLY.**
 `migration-manifest.json` đánh số 1..11 và khóa SHA-256; runner cung cấp `status`, bootstrap
 theo schema evidence prefix liên tục và `apply-next` chống lệch thứ tự/checksum. Fresh
 schema có marker bao phủ 1..11. Smoke DB tạm chứng minh bootstrap 1..10 rồi chỉ apply số 11;
-không file archive nào được thực thi.
+DB vận hành sau backup/restore drill đã bootstrap evidence 1..10 và apply-next số 11, journal
+có 11 dòng liên tục; không file archive nào được thực thi.
 
 - **Mức độ / loại:** Medium - lưu ý vận hành database.
 - **Module:** M.
@@ -450,8 +453,8 @@ không file archive nào được thực thi.
 
 #### Phase 4 - UX, báo cáo, hiệu năng và vận hành
 
-**Cập nhật 16/07/2026:** REVIEW-020..024 đã hoàn tất trong repo. Schema đổi hẹp cho
-khóa sổ/journal; migration và journal DB vận hành vẫn chờ phiên apply riêng có backup.
+**Cập nhật 16/07/2026:** REVIEW-020..024 đã hoàn tất trong repo và DB vận hành. Backup đã
+restore-validate; journal bootstrap evidence 1..10 và migration khóa sổ số 11 đã apply/hậu kiểm.
 
 - **Phạm vi file:** controllers/view mặc định kỳ, `HoaDonRepository.GetCongNoAsync`, `KiemTraDuLieu`, `ExcelService`,
   `ThuChi`, `Program.cs`/deployment docs.

@@ -1,6 +1,6 @@
 # Database updates
 
-REVIEW-022 apply-once (chưa áp DB vận hành trong phiên 16/07/2026):
+REVIEW-022 apply-once (đã áp DB vận hành ngày 16/07/2026):
 
 - `20260716_review022_monthly_book_lock.sql`: dry-run dữ liệu `ThuChi`, thêm bảng
   `ThuChiKySo`, liên kết `ThuChiGocId` và ba trigger chặn INSERT/UPDATE/DELETE trực tiếp
@@ -11,6 +11,10 @@ REVIEW-022 apply-once (chưa áp DB vận hành trong phiên 16/07/2026):
   migration kế tiếp. DB mới từ `Database/schema.sql` có marker `FreshBaseline` qua số 11.
 - Không chạy file trong `archive_pre_20260710`. Trước `bootstrap`/`apply-next` trên DB thật
   phải có backup, lưu dry-run và xác nhận riêng.
+- DB vận hành đã dry-run sạch (`InvalidThuChiRows=0`, `ThuChi=0`), backup/restore drill
+  khớp 19 bảng và 4 trigger. Runner bootstrap evidence 1..10 rồi apply-next số 11; hậu kiểm
+  journal 11 dòng, bảng/cột/index/FK và ba trigger REVIEW-022 đều đủ. Không replay migration
+  1..10 và không chạy archive.
 
 REVIEW-019 apply-once:
 

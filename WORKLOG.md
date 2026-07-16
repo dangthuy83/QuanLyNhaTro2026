@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Phase 3: REVIEW-020 đến REVIEW-024 đã hoàn tất trong repo; DB vận hành chưa nhận migration/journal mới |
+| Giai đoạn | Phase 3: REVIEW-020 đến REVIEW-024 đã hoàn tất trong repo và DB vận hành đã nhận journal/migration REVIEW-022 |
 | Build | Phiên 66: app và hai tool build sạch; fresh schema, migration, runner và browser QA pass |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 66 chỉ đọc xác nhận DB vận hành chưa có `MigrationJournal`, không có token/file ảnh CCCD. REVIEW-022 migration và bootstrap REVIEW-024 chỉ chạy trên DB tạm; DB vận hành chưa thay đổi. |
+| Database | Phiên 67 đã restore-validate backup, bootstrap `MigrationJournal` bằng evidence 1..10 và apply-next REVIEW-022 số 11. Journal có 11 dòng liên tục; hậu kiểm bảng/cột/index/FK/3 CHECK/3 trigger pass. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,24 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 67 - Áp migration journal và REVIEW-022 trên DB vận hành
+
+- Xác minh Git trước apply: `HEAD=8f6845b`, `main` khớp `origin/main`, worktree sạch.
+- Dry-run DB vận hành chạy trong transaction `READ ONLY`: `MigrationJournal=0`,
+  `InvalidThuChiRows=0`, chưa có `ThuChiGocId`, `ThuChiKySo` hoặc trigger REVIEW-022;
+  bảng `ThuChi` có 0 dòng.
+- Tạo dump nhất quán `quanlynhatro_pre_review022_20260716_204132.sql`, SHA-256
+  `07CA4ADE4997BB289AEFB76BC3342E102CE0794622EDDB716DF8512E464251FA`.
+- Restore drill DB tạm pass: 19/19 bảng, 4/4 trigger và row count của mọi bảng khớp;
+  DB tạm đã được xóa sau kiểm tra.
+- Sau xác nhận riêng của user, runner bootstrap đúng prefix evidence 1..10, không replay SQL cũ;
+  migration 11 được xác nhận pending trước apply.
+- `apply-next` chỉ áp `20260716_review022_monthly_book_lock`; journal sau apply có 11 dòng
+  liên tục (`BootstrapEvidence=10`, `Runner=1`). Hậu kiểm pass: `ThuChiKySo=1`,
+  `ThuChiGocId=1`, index/FK=1/1, 3 CHECK, 3 trigger BEFORE INSERT/UPDATE/DELETE,
+  procedure tạm không còn và không phát sinh dòng `ThuChi`/`ThuChiKySo`.
+- Không chạy `archive_pre_20260710`, không sửa/chạy lại REVIEW-014..019 và không push.
 
 ### Phiên 66 - REVIEW-020 đến REVIEW-024: kỳ mặc định, reconcile, khóa sổ, bảo vệ LAN và migration journal
 
