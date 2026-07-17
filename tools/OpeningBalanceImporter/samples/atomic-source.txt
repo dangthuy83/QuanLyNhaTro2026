@@ -1,0 +1,2 @@
+REVIEW-028 ATOMIC RETRY REHEARSAL ONLY
+Synthetic two-contract evidence package. Never use for production.

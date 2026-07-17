@@ -1,0 +1,43 @@
+{
+  "dotMoSo": {
+    "ngayChot": "2026-06-01",
+    "tenNguon": "review028-atomic-source.txt",
+    "sha256": "C608478AAC60F049F87DAF8073D50C78412B0F9CA6708F5F351906255C491CD0",
+    "nguoiDuyet": "REHEARSAL",
+    "ghiChu": "Ca crash-retry gia lap; cam dung production"
+  },
+  "hopDong": [
+    {
+      "nguonThamChieu": "R028-ATOMIC-HD-001",
+      "hopDong": { "phongId": 2, "ngayBatDau": "2026-02-01", "ngayKetThuc": null, "tienThueThoaThuan": 3100000, "tienCoc": 2000000, "ngayThanhToanHangThang": 5 },
+      "cuTru": [
+        { "khachThueId": 2, "ngayBatDau": "2026-02-01", "ngayKetThucDuKien": null, "ngayKetThuc": null, "laDaiDien": true, "nguonThamChieu": "R028-ATOMIC-CUTRU-001" }
+      ],
+      "dichVu": [
+        { "phongDichVuId": 9, "nguonThamChieu": "R028-ATOMIC-DV-001" }
+      ],
+      "soDuCocThucTe": 1000000,
+      "soDuCocNguonThamChieu": "R028-ATOMIC-COC-001",
+      "congNo": [],
+      "chiSo": [
+        { "dichVuId": 1, "chiSo": 2000, "nguonThamChieu": "R028-ATOMIC-CHISO-001" }
+      ]
+    },
+    {
+      "nguonThamChieu": "R028-ATOMIC-HD-002",
+      "hopDong": { "phongId": 3, "ngayBatDau": "2026-03-01", "ngayKetThuc": null, "tienThueThoaThuan": 3200000, "tienCoc": 2000000, "ngayThanhToanHangThang": 5 },
+      "cuTru": [
+        { "khachThueId": 3, "ngayBatDau": "2026-03-01", "ngayKetThucDuKien": null, "ngayKetThuc": null, "laDaiDien": true, "nguonThamChieu": "R028-ATOMIC-CUTRU-002" }
+      ],
+      "dichVu": [
+        { "phongDichVuId": 23, "nguonThamChieu": "R028-ATOMIC-DV-002" }
+      ],
+      "soDuCocThucTe": 1200000,
+      "soDuCocNguonThamChieu": "R028-ATOMIC-COC-002",
+      "congNo": [],
+      "chiSo": [
+        { "dichVuId": 1, "chiSo": 3000, "nguonThamChieu": "R028-ATOMIC-CHISO-002" }
+      ]
+    }
+  ]
+}

@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | REVIEW-001 đến REVIEW-027 đã hoàn tất; REVIEW-027 mở sổ hợp đồng trên DB restore tạm, DB vận hành không bị ghi |
-| Build | Phiên 69: app build sạch 0 warning/0 error; service harness và Browser QA trả phòng pass |
+| Giai đoạn | REVIEW-001 đến REVIEW-027 hoàn tất; REVIEW-028 đã chuẩn bị importer/release và áp migration 12 production; còn gate import thật và switch/start release |
+| Build | Phiên 71: Debug/Release/publish sạch 0 warning/0 error; Browser QA artifact publish pass trên desktop/mobile |
 | Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 70: backup/restore REVIEW-027 pass; 4 ca mở sổ chạy trên DB tạm, ca thiếu chứng từ bị chặn. DB vận hành hậu kiểm SELECT-only vẫn 0 hợp đồng/hóa đơn/thu chi và journal liên tục 1..11. |
+| Database | Phiên 72: migration 12 đã áp production qua MigrationRunner sau backup/restore verify; journal 1..12, tổng 78, bốn bảng mở sổ rỗng và dữ liệu nghiệp vụ không đổi. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,54 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 72 - Áp migration 12 production trong downtime
+
+- Người duyệt production write: Đỗ Đăng Thuỷ. Phạm vi chỉ gồm preflight, backup/restore verify,
+  `MigrationRunner apply-next` sequence 12 và hậu kiểm; không import, không start app/release.
+- Preflight xác nhận server `X2`, schema `quanlynhatro`, journal liên tục 1..11 (11 dòng, tổng 66),
+  sequence 12/hash đúng manifest, bốn bảng mở sổ chưa tồn tại và
+  `HopDong/HoaDon/ThanhToan/GiaoDichCoc/ThuChi=0`. Hai session MySQL Workbench được người dùng
+  ngắt trước khi tiếp tục; gate downtime sau đó giữ `OTHER_CLIENTS=0`.
+- Backup `quanlynhatro_pre_migration12_20260717_212738.sql`: 55.244 byte, SHA-256
+  `CD9ACECE1D98A7FD19208F874C0507DE8DE8996B5988302894745DCE3AE8F855`. Restore sang
+  `qlnt_m12_verify_20260717_212819` khớp 21/21 bảng, 7/7 trigger, 21/21 exact row counts và
+  journal 11/11.
+- `MigrationRunner status` báo đúng một pending sequence 12; `apply-next` chạy đúng một lần và áp
+  `20260716_review027_opening_balances`; status sau không còn pending.
+- Hậu kiểm production pass: journal 12 dòng liên tục 1..12, tổng 78; sequence 12 đúng tên/hash;
+  bốn bảng mở sổ và hai cột ledger đủ, 13/13 constraint cùng index đủ; bảng mở sổ đều rỗng,
+  21 bảng cũ giữ row count, 7 trigger giữ nguyên và năm bảng nghiệp vụ vẫn 0. Không rollback.
+- Không chạy OpeningBalanceImporter, ứng dụng, release hoặc migration khác. Backup và DB restore
+  tạm được giữ để làm bằng chứng; working tree REVIEW-028 được giữ nguyên đến bước commit riêng.
+
+### Phiên 71 - REVIEW-028: chuẩn bị cutover và release, dừng trước production
+
+- Xác minh `HEAD=main=origin/main=742f098`, worktree đầu phiên sạch. DB vận hành được đọc trong
+  transaction `READ ONLY`: 1 nhà, 11 phòng, 13 khách, 7 dịch vụ; hợp đồng/cư trú/dịch vụ hợp
+  đồng/chỉ số/hóa đơn/thanh toán/cọc/thu-chi đều 0; journal liên tục 1..11 và migration 12 pending.
+- Thêm `tools/OpeningBalanceImporter`: input JSON + file chứng từ nguồn, SHA-256 tính từ file,
+  validate tuyệt đối không ghi, apply xác nhận SHA và atomic cả batch qua `MoSoService`. Log chỉ
+  in hash/tổng dòng; không đọc appsettings và không in CCCD, điện thoại hay connection string.
+- Mở rộng model/service cho lịch sử cư trú có hiệu lực, nguồn dịch vụ/cọc/công nợ/chỉ số riêng,
+  đúng một đại diện tại cutover, kiểm tra room/service/tenant tồn tại và không suy diễn trường thiếu.
+- Backup nhất quán DB vận hành: 58.217 byte, SHA-256
+  `EEE8EB475E0C5A353E72D3B51FFFB55C733DFD04DAE0908C24D66296561E669A`; restore khớp 21/21
+  bảng, 7/7 trigger, toàn bộ row count và journal 1..11.
+- MigrationRunner trên DB tạm áp đúng migration 12, rerun trả `No pending migration`. Blocker thiếu
+  chỉ số bị chặn và không tạo hash/row. Dataset rehearsal tạo 3 hợp đồng, 3 cư trú, 9 đăng ký dịch
+  vụ, 3 mốc chỉ số, cọc 3.700.000, công nợ 800.000; `HoaDon/ThanhToan/ThuChi=0`.
+- Crash giả lập sau hợp đồng đầu rollback về 0 row của batch; retry áp đủ 2 hợp đồng và replay sau
+  commit bị chặn. Hậu kiểm journal 1..12, snapshot công nợ chưa gắn, continuity không trùng ngày,
+  reconcile issue = 0. Fresh schema: 25 bảng, 7 trigger, 4 bảng mở sổ, baseline sequence 12.
+- Build Debug/Release và publish pass 0 warning/0 error. Web package cuối không chứa config local,
+  tools, Database hay smoke build artifact. Browser QA pass login, phòng, hợp đồng, ledger cọc,
+  công nợ, chỉ số, preview hóa đơn, readiness, Excel download; console sạch, mobile không overflow.
+- Production HTTPS artifact khởi động được trên localhost nhưng Browser không nhận certificate dev
+  chưa trust; trust bị từ chối vì thay đổi hệ thống lâu dài. UI QA dùng cùng binary publish trên HTTP
+  Development riêng; đây không thay thế kiểm thử certificate/LAN production.
+- Chưa có file dữ liệu thật. Không áp migration 12, không import và không đổi/start release trên DB
+  vận hành. Chờ ba approval riêng theo `DEPLOYMENT.md`; không push.
 
 ### Phiên 69 - REVIEW-026: diễn tập quyết toán cọc/công nợ
 

@@ -1,0 +1,37 @@
+{
+  "dotMoSo": {
+    "ngayChot": "2026-06-01",
+    "tenNguon": "ten-goi-chung-tu-da-duyet.zip",
+    "sha256": "THAY_BANG_SHA256_64_KY_TU_CUA_FILE_NGUON",
+    "nguoiDuyet": "ten-nguoi-duyet",
+    "ghiChu": "Khong ghi CCCD, so dien thoai hoac secret"
+  },
+  "hopDong": [
+    {
+      "nguonThamChieu": "HD-001",
+      "hopDong": {
+        "phongId": 0,
+        "ngayBatDau": "2026-01-01",
+        "ngayKetThuc": null,
+        "tienThueThoaThuan": 0,
+        "tienCoc": 0,
+        "ngayThanhToanHangThang": 5,
+        "ghiChu": "Mo so tu chung tu da duyet"
+      },
+      "cuTru": [
+        { "khachThueId": 0, "ngayBatDau": "2026-01-01", "ngayKetThucDuKien": null, "ngayKetThuc": null, "laDaiDien": true, "nguonThamChieu": "CUTRU-001" }
+      ],
+      "dichVu": [
+        { "phongDichVuId": 0, "nguonThamChieu": "DV-001" }
+      ],
+      "soDuCocThucTe": 0,
+      "soDuCocNguonThamChieu": "COC-001",
+      "congNo": [
+        { "soTien": 0, "denKyThang": 5, "denKyNam": 2026, "maChungTu": "CN-001", "nguonThamChieu": "CONGNO-001" }
+      ],
+      "chiSo": [
+        { "dichVuId": 0, "chiSo": 0, "nguonThamChieu": "CHISO-001" }
+      ]
+    }
+  ]
+}

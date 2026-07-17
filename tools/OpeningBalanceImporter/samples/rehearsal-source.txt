@@ -1,0 +1,3 @@
+REVIEW-028 REHEARSAL ONLY
+Synthetic evidence package. Never use for production.
+Contract R028-001; room 1; tenant 1; cutoff 2026-06-01.

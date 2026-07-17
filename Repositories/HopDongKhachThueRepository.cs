@@ -73,6 +73,29 @@ public class HopDongKhachThueRepository(IDbConnection db) : BaseRepository(db)
             transaction: tx);
     }
 
+    public async Task InsertAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int hopDongId,
+        CuTruMoSoInput cuTru)
+    {
+        const string sql = """
+            INSERT INTO HopDongKhachThue
+                (HopDongId, KhachThueId, NgayBatDau, NgayKetThucDuKien, NgayKetThuc, LaDaiDien)
+            VALUES
+                (@HopDongId, @KhachThueId, @NgayBatDau, @NgayKetThucDuKien, @NgayKetThuc, @LaDaiDien)
+            """;
+        await conn.ExecuteAsync(sql, new
+        {
+            HopDongId = hopDongId,
+            cuTru.KhachThueId,
+            NgayBatDau = cuTru.NgayBatDau.Date,
+            NgayKetThucDuKien = cuTru.NgayKetThucDuKien?.Date,
+            NgayKetThuc = cuTru.NgayKetThuc?.Date,
+            cuTru.LaDaiDien
+        }, transaction: tx);
+    }
+
     public async Task<IEnumerable<HopDongKhachThue>> GetByKhachThueAsync(int khachThueId)
     {
         const string sql = """

@@ -9,6 +9,13 @@
 
   <ItemGroup>
     <Compile Remove="tools\**\*.cs" />
+    <Compile Remove="ReviewSchemaSmokeObj\**\*.cs" />
+    <Content Update="appsettings.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Remove="tools\**\*" />
+    <None Remove="tools\**\*" />
+    <Content Update="Database\**\*" CopyToPublishDirectory="Never" />
+    <Content Update="ReviewSchemaSmokeObj\**\*" CopyToPublishDirectory="Never" />
     <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="MySqlConnector" Version="2.3.7" />
     <PackageReference Include="ClosedXML" Version="0.102.3" />

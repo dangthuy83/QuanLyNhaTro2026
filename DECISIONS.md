@@ -79,6 +79,24 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   DB vận hành giữ journal 1..11; schema fresh bao phủ đến 12 và migration 12 chỉ được áp trên
   DB tạm trong rehearsal này.
 
+## Quyết định chốt REVIEW-028 ngày 17/07/2026
+
+- Import mở sổ production chỉ nhận JSON và một file chứng từ nguồn đã duyệt. SHA-256 được tính
+  trực tiếp từ file nguồn, phải khớp input và là khóa chống replay của `DotMoSo`; không nhập lại
+  cùng nguồn bằng cách sửa file JSON.
+- `validate` luôn dùng transaction `READ ONLY`. `apply` chạy lại toàn bộ validate, yêu cầu xác
+  nhận đúng SHA-256 và ghi cả đợt trong một transaction `SERIALIZABLE`; không để lại hợp đồng
+  nửa vời khi crash và retry sau commit bị unique SHA chặn.
+- Mọi dòng hợp đồng, cư trú, dịch vụ, cọc thực giữ, công nợ cũ và chỉ số cutover phải có mã
+  chứng từ riêng, không rỗng và không trùng trong batch. Không suy diễn người đại diện, dịch vụ,
+  số dư cọc, công nợ hay chỉ số từ dữ liệu thiếu.
+- Web artifact không được chứa `appsettings.json`, `appsettings.Development.json`, `tools/**`,
+  `Database/**` hoặc build artifact của smoke harness. MigrationRunner và importer chạy riêng
+  từ repo/runbook trước khi đổi bản web.
+- Gate migration production đã hoàn tất ngày 17/07/2026 theo phê duyệt của Đỗ Đăng Thuỷ:
+  backup mới được restore/đối chiếu tuyệt đối, rồi MigrationRunner áp đúng sequence 12 và hậu kiểm
+  journal 1..12. Hai gate độc lập còn lại vẫn đóng: chưa import file thật và chưa đổi/start release.
+
 ---
 
 ## Quyết định chốt cho Phase 1 ngày 12/07/2026

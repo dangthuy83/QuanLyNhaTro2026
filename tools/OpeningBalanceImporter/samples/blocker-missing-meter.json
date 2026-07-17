@@ -1,0 +1,38 @@
+{
+  "dotMoSo": {
+    "ngayChot": "2026-06-01",
+    "tenNguon": "review028-blocker-source.txt",
+    "sha256": "5A0FE58209771E7B6F1FEA7CC64E50DF12DB3F5565DD38171F5275E61BB04B39",
+    "nguoiDuyet": "REHEARSAL",
+    "ghiChu": "Ca am tinh thieu moc chi so; cam dung production"
+  },
+  "hopDong": [
+    {
+      "nguonThamChieu": "R028-BLOCK-HD-001",
+      "hopDong": {
+        "phongId": 1,
+        "ngayBatDau": "2026-01-01",
+        "ngayKetThuc": null,
+        "tienThueThoaThuan": 3000000,
+        "tienCoc": 2000000,
+        "ngayThanhToanHangThang": 5
+      },
+      "cuTru": [
+        { "khachThueId": 1, "ngayBatDau": "2026-01-01", "ngayKetThucDuKien": null, "ngayKetThuc": null, "laDaiDien": true, "nguonThamChieu": "R028-BLOCK-CUTRU-001" }
+      ],
+      "dichVu": [
+        { "phongDichVuId": 1, "nguonThamChieu": "R028-BLOCK-DV-001" },
+        { "phongDichVuId": 2, "nguonThamChieu": "R028-BLOCK-DV-002" },
+        { "phongDichVuId": 3, "nguonThamChieu": "R028-BLOCK-DV-003" },
+        { "phongDichVuId": 4, "nguonThamChieu": "R028-BLOCK-DV-004" },
+        { "phongDichVuId": 5, "nguonThamChieu": "R028-BLOCK-DV-005" },
+        { "phongDichVuId": 6, "nguonThamChieu": "R028-BLOCK-DV-006" },
+        { "phongDichVuId": 7, "nguonThamChieu": "R028-BLOCK-DV-007" }
+      ],
+      "soDuCocThucTe": 1500000,
+      "soDuCocNguonThamChieu": "R028-BLOCK-COC-001",
+      "congNo": [],
+      "chiSo": []
+    }
+  ]
+}

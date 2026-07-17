@@ -1,0 +1,43 @@
+{
+  "dotMoSo": {
+    "ngayChot": "2026-06-01",
+    "tenNguon": "review028-rehearsal-source.txt",
+    "sha256": "3E6D6110FBB111D5BE99E5F7AC94A832D1086304C2D499DD59548FF88F9B5B18",
+    "nguoiDuyet": "REHEARSAL",
+    "ghiChu": "Du lieu gia tong hop REVIEW-028; cam dung production"
+  },
+  "hopDong": [
+    {
+      "nguonThamChieu": "R028-HD-001",
+      "hopDong": {
+        "phongId": 1,
+        "ngayBatDau": "2026-01-01",
+        "ngayKetThuc": null,
+        "tienThueThoaThuan": 3000000,
+        "tienCoc": 2000000,
+        "ngayThanhToanHangThang": 5,
+        "ghiChu": "REHEARSAL ONLY"
+      },
+      "cuTru": [
+        { "khachThueId": 1, "ngayBatDau": "2026-01-01", "ngayKetThucDuKien": null, "ngayKetThuc": null, "laDaiDien": true, "nguonThamChieu": "R028-CUTRU-001" }
+      ],
+      "dichVu": [
+        { "phongDichVuId": 1, "nguonThamChieu": "R028-DV-001" },
+        { "phongDichVuId": 2, "nguonThamChieu": "R028-DV-002" },
+        { "phongDichVuId": 3, "nguonThamChieu": "R028-DV-003" },
+        { "phongDichVuId": 4, "nguonThamChieu": "R028-DV-004" },
+        { "phongDichVuId": 5, "nguonThamChieu": "R028-DV-005" },
+        { "phongDichVuId": 6, "nguonThamChieu": "R028-DV-006" },
+        { "phongDichVuId": 7, "nguonThamChieu": "R028-DV-007" }
+      ],
+      "soDuCocThucTe": 1500000,
+      "soDuCocNguonThamChieu": "R028-COC-001",
+      "congNo": [
+        { "soTien": 800000, "denKyThang": 5, "denKyNam": 2026, "maChungTu": "R028-CN-001", "nguonThamChieu": "R028-CONGNO-001" }
+      ],
+      "chiSo": [
+        { "dichVuId": 1, "chiSo": 1234, "nguonThamChieu": "R028-CHISO-001" }
+      ]
+    }
+  ]
+}
