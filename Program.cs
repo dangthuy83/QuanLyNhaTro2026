@@ -7,6 +7,8 @@ using QuanLyNhaTro.Repositories;
 using QuanLyNhaTro.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+var useHttps = builder.Configuration.GetValue<bool?>("Security:UseHttps")
+    ?? !builder.Environment.IsDevelopment();
 
 if (builder.Configuration.GetValue<bool>("UseEphemeralDataProtection"))
 {
@@ -29,12 +31,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Account/Login";
         options.AccessDeniedPath = "/Account/AccessDenied";
-        options.Cookie.Name = "QuanLyNhaTro.Admin";
+        options.Cookie.Name = useHttps
+            ? "QuanLyNhaTro.Admin"
+            : "QuanLyNhaTro.Admin.Http";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-            ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always;
+        options.Cookie.SecurePolicy = useHttps
+            ? CookieSecurePolicy.Always
+            : CookieSecurePolicy.SameAsRequest;
         options.SlidingExpiration = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
     });
@@ -101,8 +105,11 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-    app.UseHttpsRedirection();
+    if (useHttps)
+    {
+        app.UseHsts();
+        app.UseHttpsRedirection();
+    }
 }
 
 app.UseStaticFiles();

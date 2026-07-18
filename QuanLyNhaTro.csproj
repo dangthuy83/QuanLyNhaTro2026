@@ -12,6 +12,8 @@
     <Compile Remove="ReviewSchemaSmokeObj\**\*.cs" />
     <Content Update="appsettings.json" CopyToPublishDirectory="Never" />
     <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Remove="opening-balance*.json" />
+    <None Remove="opening-balance*.json" />
     <Content Remove="tools\**\*" />
     <None Remove="tools\**\*" />
     <Content Update="Database\**\*" CopyToPublishDirectory="Never" />

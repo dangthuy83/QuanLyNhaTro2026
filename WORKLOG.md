@@ -2579,6 +2579,23 @@ Ghi chú:
 | 45 | `LichSuThayDoiGia` | Lập bù kỳ trước lần đổi giá đầu tiên có thể rơi về giá hiện tại | Dùng `GiaCu` của lần đổi đầu tiên, unique đối tượng/kỳ và transaction cập nhật chuỗi giá |
 | 45 | `PhongController`, `PhongService` | `DELETE FROM Phong` lỗi khóa ngoại ngay cả với phòng mới có `PhongDichVu` | Xóa cấu hình trong transaction nếu phòng chưa dùng; chặn và báo rõ khi đã có dữ liệu nghiệp vụ |
 
+## Phiên 18/07/2026 - HTTP production authentication
+
+- Chủ hệ thống duyệt chuyển production gia đình từ HTTPS tự ký sang HTTP LAN để giảm chi phí
+  cài đặt/gia hạn chứng thư trên 1-2 thiết bị; chấp nhận rủi ro dữ liệu truyền không mã hóa và
+  giữ nguyên điều kiện không port-forward/mở Internet.
+- Sửa `Program.cs` để `Security:UseHttps` điều khiển HSTS, HTTPS redirect và cookie
+  `SecurePolicy`; HTTP dùng tên cookie riêng để không xung đột cookie Secure cũ. Mặc định
+  Production vẫn là HTTPS, NSSM production đặt rõ `false`.
+- `QuanLyNhaTro.csproj` loại `opening-balance*.json` ở root khỏi publish sau khi gate artifact
+  phát hiện file dữ liệu untracked bị Web SDK tự động đưa vào output; file nguồn được giữ nguyên.
+- Release active: `C:\Apps\QuanLyNhaTro-Releases\6927ffc-httpauth-20260718-220927`, DLL SHA-256
+  `12C5F2C34A438A1CFC520AB9CBB3B1441DA22E7A6C946E370959484E73B41FC3`.
+- Hậu kiểm production: service `Running`, listener `0.0.0.0:5001`, `/healthz` 200, Login 200,
+  route `/Phong` chưa xác thực trả 302 về `/Account/Login`; rollback không dùng ở lần switch
+  cuối. Chủ hệ thống đã xác nhận đăng nhập thực tế bằng tài khoản production pass tại
+  `http://192.168.1.112:5001`.
+
 ---
 
 ## Hướng Dẫn Cập Nhật File Này

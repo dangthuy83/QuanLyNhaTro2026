@@ -376,6 +376,13 @@ qua controller có auth/no-store. `DEPLOYMENT.md` ghi LAN HTTPS, backup/restore 
 không port-forward. Browser QA pass login/logout/protected route; responsive overflow được
 phát hiện và sửa bằng menu trượt ở viewport 390x844.
 
+**Cập nhật vận hành 18/07/2026:** chủ hệ thống chấp nhận rủi ro còn lại và chọn HTTP cho LAN
+gia đình có 1-2 người dùng để tránh vòng đời chứng thư trên client. Authentication/password
+hash vẫn bắt buộc; `Security:UseHttps` điều khiển HSTS, redirect và Secure cookie, mặc định
+Production vẫn là HTTPS. Ngoại lệ HTTP chỉ hợp lệ khi không port-forward hoặc mở ra Internet.
+Đăng nhập thực tế bằng tài khoản production tại `http://192.168.1.112:5001` đã pass sau khi
+release HTTP dùng cookie riêng được kích hoạt.
+
 - **Mức độ / loại:** High nếu triển khai LAN/Internet; khoảng trống vận hành đã biết.
 - **Module:** L, M, `Program.cs`.
 - **Hiện trạng:** không đăng nhập/phân quyền; mọi route tài chính và upload đều truy cập được; chưa thấy health check, backup/restore drill,
@@ -384,7 +391,7 @@ phát hiện và sửa bằng menu trượt ở viewport 390x844.
 - **Tái hiện:** mở cổng app cho thiết bị khác trong LAN.
 - **Hậu quả:** bất kỳ ai truy cập được có thể sửa/xóa dữ liệu tài chính và xem ảnh CCCD.
 - **Sửa nhỏ nhất:** nếu chỉ localhost thì bind localhost; nếu LAN thì thêm auth tối thiểu, HTTPS, backup và audit actor trước go-live.
-- **Cần user quyết định:** Không - đã chốt LAN HTTPS, không Internet.
+- **Cần user quyết định:** Không - đã chốt ngoại lệ HTTP cho LAN gia đình, không Internet.
 
 #### REVIEW-024 - Migration hiện tại có guard, nhưng archive không được coi là idempotent cho baseline mới
 

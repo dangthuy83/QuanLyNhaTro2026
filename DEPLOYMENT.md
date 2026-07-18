@@ -20,13 +20,14 @@ dotnet run --project tools/AdminPasswordHasher/AdminPasswordHasher.csproj
 qua controller sau đăng nhập. Thư mục `private-data` phải được backup cùng database nhưng
 không được web server/static-file middleware phục vụ trực tiếp.
 
-## 2. Localhost và LAN HTTPS
+## 2. Localhost và giao thức LAN
 
-Profile phát triển tiếp tục bind `http://localhost:5000`. Khi chạy trong LAN, dùng địa chỉ
-HTTPS cụ thể và chứng thư tin cậy trên các thiết bị nội bộ, ví dụ:
+Profile phát triển tiếp tục bind `http://localhost:5000`. Mặc định Production vẫn yêu cầu
+HTTPS. Dùng địa chỉ HTTPS cụ thể và chứng thư tin cậy trên các thiết bị nội bộ, ví dụ:
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT='Production'
+$env:Security__UseHttps='true'
 $env:ASPNETCORE_URLS='https://192.168.1.20:5443'
 $env:ASPNETCORE_Kestrel__Certificates__Default__Path='C:\secure\quanlynhatro.pfx'
 $env:ASPNETCORE_Kestrel__Certificates__Default__Password='...'
@@ -36,9 +37,19 @@ $env:AdminAuth__PasswordHash='...'
 dotnet QuanLyNhaTro.dll
 ```
 
-Chỉ mở đúng cổng LAN cần dùng trong firewall sau khi HTTPS và đăng nhập đã được kiểm tra.
-Không port-forward trên router. `/healthz` chỉ trả `{"status":"healthy"}` hoặc trạng thái 503,
-không lộ connection string, phiên bản hay dữ liệu nghiệp vụ.
+Ngoại lệ đã duyệt ngày 18/07/2026 cho production gia đình có 1-2 người dùng là HTTP nội bộ:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT='Production'
+$env:Security__UseHttps='false'
+dotnet QuanLyNhaTro.dll --urls "http://0.0.0.0:5001"
+```
+
+Khi `Security__UseHttps=false`, ứng dụng không bật HSTS/HTTPS redirect và cookie đăng nhập dùng
+chính giao thức của request. Thông tin đăng nhập và dữ liệu truyền qua HTTP không được mã hóa;
+chỉ dùng trên LAN/Wi-Fi gia đình tin cậy. Chỉ mở đúng port LAN cần dùng trong firewall và tuyệt
+đối không port-forward trên router. `/healthz` chỉ trả `{"status":"healthy"}` hoặc trạng thái
+503, không lộ connection string, phiên bản hay dữ liệu nghiệp vụ.
 
 ## 3. Migration có journal
 

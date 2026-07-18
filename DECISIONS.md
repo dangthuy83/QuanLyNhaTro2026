@@ -38,6 +38,17 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   từ `schema.sql` dùng marker `FreshBaseline`. Không chạy archive và không replay migration
   đã được journal/baseline bao phủ.
 
+## Quyết định vận hành ngày 18/07/2026 - HTTP trong LAN gia đình
+
+- Chủ hệ thống chủ động thay thế yêu cầu LAN HTTPS của REVIEW-023 bằng HTTP cho mô hình gia
+  đình có 1-2 người dùng, do chi phí cài đặt/gia hạn chứng thư trên từng thiết bị không phù hợp.
+- Production vẫn bắt buộc password hash và cookie authentication. `Security:UseHttps=false`
+  tắt HSTS/HTTPS redirect và đặt cookie theo request để đăng nhập hoạt động qua HTTP; mặc định
+  khi không cấu hình vẫn là HTTPS trong Production.
+- Chấp nhận rủi ro thông tin đăng nhập và dữ liệu truyền trong LAN không được mã hóa. Chỉ được
+  bind/mở firewall trong LAN tin cậy; tuyệt đối không port-forward port ứng dụng hoặc mở trực
+  tiếp ra Internet.
+
 ## Quyết định chốt REVIEW-025 ngày 16/07/2026
 
 - Diễn tập kỳ hóa đơn đầu tiên chỉ ghi trên DB restore tạm; DB vận hành chỉ được đọc để lập
