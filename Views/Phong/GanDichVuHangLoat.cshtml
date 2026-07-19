@@ -6,272 +6,226 @@
     var dichVu = Model.DichVuDangChon;
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-    <div>
-        <h5 class="mb-1">Gán dịch vụ hàng loạt</h5>
-        <div class="text-muted small">Gán mới hoặc bật lại dịch vụ cho nhiều phòng. Giá đang dùng của phòng đã có dịch vụ sẽ được giữ nguyên.</div>
-    </div>
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Danh sách phòng
-    </a>
-</div>
+<div class="rooms-page rooms-bulk-page">
+    <a asp-action="Index" class="rooms-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách phòng</a>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (Model.SoPhongDangThueThieuKhach > 0)
-{
-    <div class="alert alert-warning py-2">
-        <i class="bi bi-exclamation-triangle me-1"></i>
-        Có @Model.SoPhongDangThueThieuKhach phòng đang có hợp đồng hiệu lực nhưng chưa gắn khách.
-        Dịch vụ tính theo người sẽ bị chặn khi preview/chốt hóa đơn nếu chưa bổ sung khách.
-    </div>
-}
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Gán dịch vụ hàng loạt</h1>
+            <p class="app-page-subtitle">Gán mới hoặc bật lại một dịch vụ cho nhiều phòng. Đơn giá đang dùng của phòng đã có dịch vụ luôn được giữ nguyên.</p>
+        </div>
+    </header>
 
-<form method="get" class="border rounded p-3 mb-3 bg-light">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label small text-muted mb-1">Dịch vụ</label>
-            <select name="dichVuId" class="form-select form-select-sm" required>
-                @foreach (var dv in Model.DanhSachDichVu)
-                {
-                    <option value="@dv.Id" selected="@(Model.DichVuId == dv.Id)">
-                        @dv.TenDichVu - @dv.LoaiTinhPhiHienThi@(dv.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh ? $" / {dv.CachTinhCoDinhHienThi}" : "")
-                    </option>
-                }
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small text-muted mb-1">Nhà</label>
-            <select name="nhaId" class="form-select form-select-sm">
-                <option value="">Tất cả nhà</option>
-                @foreach (var nha in Model.DanhSachNha)
-                {
-                    <option value="@nha.Id" selected="@(Model.NhaId == nha.Id)">@nha.TenNha</option>
-                }
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small text-muted mb-1">Trạng thái phòng</label>
-            <select name="trangThai" class="form-select form-select-sm">
-                <option value="DangThue" selected="@(Model.TrangThai == "DangThue")">Đang thuê</option>
-                <option value="Trong" selected="@(Model.TrangThai == "Trong")">Trống</option>
-                <option value="DangSuaChua" selected="@(Model.TrangThai == "DangSuaChua")">Đang sửa</option>
-                <option value="TatCa" selected="@(Model.TrangThai == "TatCa")">Tất cả</option>
-            </select>
-        </div>
-        <div class="col-md-2 d-grid">
-            <button class="btn btn-sm btn-primary">Lọc</button>
-        </div>
-    </div>
-</form>
-
-<div class="row g-3 mb-3">
-    <div class="col-md-4">
-        <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Dịch vụ đang chọn</div>
-            <div class="fw-semibold">@dichVu?.TenDichVu</div>
-            <div class="small text-muted">
-                @dichVu?.LoaiTinhPhiHienThi
-                @if (dichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh)
-                {
-                    <span> / @dichVu.CachTinhCoDinhHienThi</span>
-                }
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Theo bộ lọc</div>
-            <div class="fs-5 fw-semibold">@Model.Rows.Count phòng</div>
-            <div class="small text-muted">Đã gán: @Model.SoPhongDaGan / Chưa gán: @Model.SoPhongChuaGan</div>
-            @if (Model.SoPhongDangThueThieuKhach > 0)
+    @if (TempData["Success"] != null || TempData["Error"] != null)
+    {
+        <div class="rooms-flash-stack" aria-live="polite">
+            @if (TempData["Success"] != null)
             {
-                <div class="small text-danger">Thiếu khách: @Model.SoPhongDangThueThieuKhach phòng</div>
+                <div class="alert alert-success alert-dismissible fade show" role="status">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
             }
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="border rounded p-3 h-100">
-            <div class="text-muted small">Giá dùng khi gán mới</div>
-            <div class="fs-5 fw-semibold">@Model.DonGia.ToString("N0") đ</div>
-            <div class="small text-muted">Chỉ áp dụng cho phòng chưa từng có dịch vụ này.</div>
+    }
+
+    @if (Model.SoPhongDangThueThieuKhach > 0)
+    {
+        <div class="app-notice is-warning mb-4" role="alert">
+            <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
+            <div>
+                <strong>@Model.SoPhongDangThueThieuKhach phòng đang thuê chưa gắn khách</strong>
+                <div>Dịch vụ tính theo người sẽ bị chặn khi preview hoặc chốt hóa đơn cho tới khi bổ sung khách.</div>
+            </div>
         </div>
-    </div>
-</div>
+    }
 
-<form asp-action="GanDichVuHangLoat" method="post">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="dichVuId" value="@Model.DichVuId" />
-    <input type="hidden" name="nhaId" value="@Model.NhaId" />
-    <input type="hidden" name="trangThai" value="@Model.TrangThai" />
+    <form method="get" class="app-panel rooms-filter-panel" aria-labelledby="bulk-filter-heading">
+        <h2 id="bulk-filter-heading" class="visually-hidden">Bộ lọc phòng và dịch vụ</h2>
+        <div class="rooms-filter-grid">
+            <div class="rooms-filter-field">
+                <label for="bulk-service">Dịch vụ</label>
+                <select id="bulk-service" name="dichVuId" class="form-select" required>
+                    @foreach (var service in Model.DanhSachDichVu)
+                    {
+                        <option value="@service.Id" selected="@(Model.DichVuId == service.Id)">
+                            @service.TenDichVu — @service.LoaiTinhPhiHienThi@(service.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh ? $" / {service.CachTinhCoDinhHienThi}" : "")
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="rooms-filter-field">
+                <label for="bulk-house">Nhà</label>
+                <select id="bulk-house" name="nhaId" class="form-select">
+                    <option value="">Tất cả nhà</option>
+                    @foreach (var nha in Model.DanhSachNha)
+                    {
+                        <option value="@nha.Id" selected="@(Model.NhaId == nha.Id)">@nha.TenNha</option>
+                    }
+                </select>
+            </div>
+            <div class="rooms-filter-field">
+                <label for="bulk-room-status">Trạng thái phòng</label>
+                <select id="bulk-room-status" name="trangThai" class="form-select">
+                    <option value="DangThue" selected="@(Model.TrangThai == "DangThue")">Đang thuê</option>
+                    <option value="Trong" selected="@(Model.TrangThai == "Trong")">Trống</option>
+                    <option value="DangSuaChua" selected="@(Model.TrangThai == "DangSuaChua")">Đang sửa chữa</option>
+                    <option value="TatCa" selected="@(Model.TrangThai == "TatCa")">Tất cả</option>
+                </select>
+            </div>
+            <div class="rooms-filter-reset">
+                <button class="btn btn-primary" type="submit"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-filter"></use></svg>Áp dụng</span></button>
+            </div>
+        </div>
+    </form>
 
-    <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+    <section class="rooms-bulk-context" aria-label="Ngữ cảnh gán dịch vụ">
+        <div>
+            <div class="rooms-bulk-context-label">Dịch vụ đang chọn</div>
+            <div class="rooms-bulk-context-value">@(dichVu?.TenDichVu ?? "Chưa có dịch vụ")</div>
+            <div class="rooms-cell-meta">@dichVu?.LoaiTinhPhiHienThi@if (dichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh) { <text> · @dichVu.CachTinhCoDinhHienThi</text> }</div>
+        </div>
+        <div>
+            <div class="rooms-bulk-context-label">Theo bộ lọc</div>
+            <div class="rooms-bulk-context-value">@Model.Rows.Count phòng</div>
+            <div class="rooms-cell-meta">Đang áp dụng: @Model.SoPhongDaGan · Chưa gán/đang tắt: @Model.SoPhongChuaGan</div>
+        </div>
+        <div>
+            <div class="rooms-bulk-context-label">Giá khi gán mới</div>
+            <div class="rooms-bulk-context-value">@Model.DonGia.ToString("N0") đ</div>
+            <div class="rooms-cell-meta">Không ghi đè đơn giá hiện có.</div>
+        </div>
+    </section>
 
-    <div class="card shadow-sm">
-        <div class="card-body border-bottom">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label small fw-semibold">Đơn giá khi gán mới</label>
-                    <div class="input-group input-group-sm">
-                        <input name="donGia" type="number" min="0" step="1" class="form-control"
-                               value="@Model.DonGia.ToString("0.##", CultureInfo.InvariantCulture)" />
+    <form asp-action="GanDichVuHangLoat" method="post" data-bulk-assignment>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="dichVuId" value="@Model.DichVuId" />
+        <input type="hidden" name="nhaId" value="@Model.NhaId" />
+        <input type="hidden" name="trangThai" value="@Model.TrangThai" />
+
+        <div asp-validation-summary="All" class="mb-3" role="alert"></div>
+
+        <section class="app-panel" aria-labelledby="bulk-room-list-heading">
+            <header class="app-panel-header">
+                <h2 id="bulk-room-list-heading">Chọn phòng để gán</h2>
+                <span class="rooms-selection-count" data-selection-count aria-live="polite">0 phòng đã chọn</span>
+            </header>
+
+            <div class="rooms-bulk-toolbar">
+                <div>
+                    <label for="bulk-price" class="form-label fw-semibold">Đơn giá khi gán mới</label>
+                    <div class="input-group">
+                        <input id="bulk-price" name="donGia" type="number" min="0" step="1" inputmode="numeric"
+                               class="form-control" value="@Model.DonGia.ToString("0.##", CultureInfo.InvariantCulture)"
+                               aria-describedby="bulk-price-hint" />
                         <span class="input-group-text">đ</span>
                     </div>
                 </div>
-                <div class="col-md-8">
-                    <div class="small text-muted">
-                        Nếu phòng đã có dịch vụ này, hệ thống chỉ bật lại và giữ nguyên đơn giá.
-                        Nếu phòng chưa có, hệ thống sẽ gán mới với đơn giá bên trái.
-                    </div>
+                <div id="bulk-price-hint" class="app-notice is-info">
+                    <svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg>
+                    <div>Phòng chưa từng có dịch vụ dùng giá này. Phòng đã có dịch vụ chỉ được bật lại và giữ nguyên đơn giá hiện tại.</div>
                 </div>
             </div>
-        </div>
 
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:48px">
-                            <input class="form-check-input" type="checkbox" id="checkAll" />
-                        </th>
-                        <th>Nhà / phòng</th>
-                        <th>Hợp đồng</th>
-                        <th class="text-end">Số khách</th>
-                        <th>Trạng thái dịch vụ</th>
-                        <th class="text-end">Đơn giá hiện tại</th>
-                        <th class="text-end">Số lượng dự kiến</th>
-                        <th class="text-end">Thành tiền dự kiến</th>
-                    </tr>
-                </thead>
-                <tbody>
+            @if (Model.Rows.Any())
+            {
+                <div class="rooms-bulk-head" aria-hidden="true">
+                    <span></span><span>Nhà / phòng</span><span>Hợp đồng</span><span>Số lượng</span><span>Dịch vụ</span><span>Đơn giá hiện tại</span><span class="text-end">Thành tiền dự kiến</span>
+                </div>
+                <ul class="rooms-bulk-list">
                     @foreach (var row in Model.Rows)
                     {
                         var thieuKhach = Model.LaDichVuTheoNguoi && row.HopDongId.HasValue && row.SoKhach == 0;
                         var soLuongDuKien = ResolveSoLuongDuKien(Model, row);
-                        <tr class="@(thieuKhach ? "table-warning" : "")">
-                            <td>
-                                <input class="form-check-input room-check" type="checkbox" name="phongIds" value="@row.PhongId" />
-                            </td>
-                            <td>
-                                <div class="text-muted small">@row.TenNha</div>
-                                <a asp-action="Details" asp-route-id="@row.PhongId" class="fw-semibold text-decoration-none">@row.TenPhong</a>
-                                <div class="small">@Html.Raw(TrangThaiPhongBadge(row.TrangThai))</div>
-                            </td>
-                            <td>
+                        var donGiaDuKien = row.DaGan && row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value : Model.DonGia;
+                        <li class="rooms-bulk-row @(thieuKhach ? "is-warning" : null)">
+                            <label class="rooms-bulk-check">
+                                <input class="form-check-input" type="checkbox" name="phongIds" value="@row.PhongId" data-room-check />
+                                <span class="visually-hidden">Chọn phòng @row.TenPhong tại @row.TenNha</span>
+                            </label>
+                            <div class="rooms-bulk-room">
+                                <a asp-action="Details" asp-route-id="@row.PhongId" class="rooms-room-name">@row.TenPhong</a>
+                                <div class="rooms-room-meta">@row.TenNha</div>
+                                <partial name="_StatusBadge" model="row.TrangThai" />
+                            </div>
+                            <div class="rooms-bulk-contract">
                                 @if (row.HopDongId.HasValue)
                                 {
-                                    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@row.HopDongId" class="text-decoration-none">
-                                        HD #@row.HopDongId
-                                    </a>
+                                    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@row.HopDongId">Hợp đồng #@row.HopDongId</a>
+                                    <div class="rooms-cell-meta">@row.SoKhach khách@(thieuKhach ? " · Cần bổ sung khách" : "")</div>
                                 }
                                 else
                                 {
-                                    <span class="text-muted small">Chưa có hợp đồng hiệu lực</span>
+                                    <span class="rooms-cell-meta">Chưa có hợp đồng hiệu lực</span>
                                 }
-                            </td>
-                            <td class="text-end @(row.HopDongId.HasValue && row.SoKhach == 0 ? "text-danger fw-semibold" : "")">
-                                @row.SoKhach
-                                @if (thieuKhach)
+                            </div>
+                            <div class="rooms-bulk-quantity">
+                                <span class="rooms-field-label">Số lượng dự kiến</span>
+                                @if (Model.LaDichVuTheoChiSo)
                                 {
-                                    <div class="small">Cần bổ sung khách</div>
+                                    <span class="rooms-cell-meta">Theo chỉ số</span>
                                 }
-                            </td>
-                            <td>
+                                else
+                                {
+                                    <strong>@soLuongDuKien.ToString("N0")</strong>
+                                }
+                            </div>
+                            <div class="rooms-bulk-service-state">
                                 @if (row.DaGan && row.DangApDung)
                                 {
-                                    <span class="badge bg-success">Đang áp dụng</span>
+                                    <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Đang áp dụng</span>
                                 }
                                 else if (row.DaGan)
                                 {
-                                    <span class="badge bg-warning text-dark">Đang tắt</span>
+                                    <span class="app-status-badge is-warning"><span class="app-status-dot" aria-hidden="true"></span>Đang tắt</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Chưa gán</span>
+                                    <span class="app-status-badge is-neutral"><span class="app-status-dot" aria-hidden="true"></span>Chưa gán</span>
                                 }
-                            </td>
-                            <td class="text-end">@(row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value.ToString("N0") + " đ" : "-")</td>
-                            <td class="text-end">
+                                <div class="rooms-current-price-mobile rooms-cell-meta">Giá hiện tại: @(row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value.ToString("N0") + " đ" : "Chưa có")</div>
+                            </div>
+                            <div class="rooms-bulk-current-price rooms-money">@(row.DonGiaHienTai.HasValue ? row.DonGiaHienTai.Value.ToString("N0") + " đ" : "—")</div>
+                            <div class="rooms-bulk-amount">
                                 @if (Model.LaDichVuTheoChiSo)
                                 {
-                                    <span class="text-muted small">Theo chỉ số</span>
+                                    <span class="rooms-cell-meta">Nhập theo chỉ số</span>
                                 }
                                 else
                                 {
-                                    <span>@soLuongDuKien.ToString("N0")</span>
+                                    <strong class="rooms-money" data-preview-amount data-quantity="@soLuongDuKien.ToString("0.##", CultureInfo.InvariantCulture)" data-fixed-price="@(row.DaGan ? donGiaDuKien.ToString("0.##", CultureInfo.InvariantCulture) : null)">
+                                        @((soLuongDuKien * donGiaDuKien).ToString("N0")) đ
+                                    </strong>
+                                    <div class="rooms-cell-meta">@soLuongDuKien.ToString("N0") × <span data-preview-unit-price data-fixed-price="@(row.DaGan ? donGiaDuKien.ToString("0.##", CultureInfo.InvariantCulture) : null)">@donGiaDuKien.ToString("N0")</span></div>
                                 }
-                            </td>
-                            <td class="text-end">
-                                @if (Model.LaDichVuTheoChiSo)
-                                {
-                                    <span class="text-muted small">Nhập chỉ số</span>
-                                }
-                                else
-                                {
-                                    <span class="preview-amount" data-quantity="@soLuongDuKien.ToString("0.##", CultureInfo.InvariantCulture)">
-                                        @((soLuongDuKien * Model.DonGia).ToString("N0")) đ
-                                    </span>
-                                    <div class="small text-muted">
-                                        @soLuongDuKien.ToString("N0") x <span class="preview-unit-price">@Model.DonGia.ToString("N0")</span>
-                                    </div>
-                                }
-                            </td>
-                        </tr>
+                            </div>
+                        </li>
                     }
-                    @if (!Model.Rows.Any())
-                    {
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Không có phòng nào khớp bộ lọc.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2">
-            <div class="small text-muted">Chỉ các phòng được tick mới được gán/cập nhật.</div>
-            <button class="btn btn-primary" type="submit" disabled="@(!Model.Rows.Any())">
-                Gán/cập nhật dịch vụ
-            </button>
-        </div>
-    </div>
-</form>
+                </ul>
+            }
+            else
+            {
+                <div class="app-empty-state">
+                    <div><svg class="app-icon" aria-hidden="true"><use href="#icon-filter"></use></svg><h3>Không có phòng phù hợp</h3><p>Đổi Nhà, trạng thái hoặc dịch vụ trong bộ lọc để tiếp tục.</p></div>
+                </div>
+            }
+
+            <footer class="rooms-bulk-footer">
+                <label class="rooms-bulk-check">
+                    <input class="form-check-input" type="checkbox" data-check-all disabled="@(!Model.Rows.Any())" />
+                    <span>Chọn tất cả phòng đang hiển thị</span>
+                </label>
+                <button class="btn btn-primary" type="submit" data-bulk-submit disabled>
+                    <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-service"></use></svg>Gán / cập nhật dịch vụ</span>
+                </button>
+            </footer>
+        </section>
+    </form>
+</div>
 
 @section Scripts {
-    <script>
-        const checkAll = document.getElementById('checkAll');
-        const priceInput = document.querySelector('[name=donGia]');
-        const currencyFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
-
-        function refreshPreviewAmounts() {
-            const price = Number(priceInput?.value || 0);
-            document.querySelectorAll('.preview-amount').forEach((element) => {
-                const quantity = Number(element.dataset.quantity || 0);
-                element.textContent = `${currencyFormatter.format(quantity * price)} đ`;
-            });
-            document.querySelectorAll('.preview-unit-price').forEach((element) => {
-                element.textContent = currencyFormatter.format(price);
-            });
-        }
-
-        checkAll?.addEventListener('change', () => {
-            document.querySelectorAll('.room-check').forEach((checkbox) => {
-                checkbox.checked = checkAll.checked;
-            });
-        });
-        priceInput?.addEventListener('input', refreshPreviewAmounts);
-    </script>
+    <script src="~/js/rooms.js" asp-append-version="true"></script>
 }
 
 @functions {
@@ -281,11 +235,4 @@
         if (model.LaDichVuTheoPhong) return 1;
         return 0;
     }
-
-    static string TrangThaiPhongBadge(string tt) => tt switch
-    {
-        "DangThue" => "<span class='badge bg-success'>Đang thuê</span>",
-        "DangSuaChua" => "<span class='badge bg-warning text-dark'>Đang sửa</span>",
-        _ => "<span class='badge bg-secondary'>Trống</span>"
-    };
 }

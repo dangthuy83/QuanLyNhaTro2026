@@ -2,64 +2,97 @@
 @{
     ViewData["Title"] = "Đối chiếu trạng thái phòng";
     ViewData["ActiveMenu"] = "phong";
+    var rows = Model.Rows
+        .OrderByDescending(x => x.CanXuLy)
+        .ThenBy(x => x.TenNha)
+        .ThenBy(x => x.TenPhong)
+        .ToList();
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-    <div>
-        <h5 class="mb-1">Đối chiếu trạng thái phòng</h5>
-        <div class="text-muted small">Ngày đối chiếu: @Model.NgayDoiChieu.ToString("dd/MM/yyyy"). Báo cáo chỉ đọc, không tự sửa dữ liệu.</div>
-    </div>
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Quay lại danh sách phòng</a>
-</div>
+<div class="rooms-page rooms-reconcile-page">
+    <a asp-action="Index" class="rooms-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách phòng</a>
 
-<div class="row g-3 mb-3">
-    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Tổng phòng</div><div class="fs-5 fw-semibold">@Model.TongSoPhong</div></div></div>
-    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Lệch trạng thái</div><div class="fs-5 fw-semibold text-danger">@Model.SoPhongLechTrangThai</div></div></div>
-    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Sửa chữa xung đột</div><div class="fs-5 fw-semibold text-danger">@Model.SoPhongDangSuaXungDot</div></div></div>
-    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Overlap/nhiều HĐ</div><div class="fs-5 fw-semibold text-danger">@Model.SoPhongNhieuHopDong</div></div></div>
-    <div class="col-6 col-md"><div class="border rounded p-3 h-100"><div class="text-muted small">Có lịch sử</div><div class="fs-5 fw-semibold">@Model.SoPhongCoLichSu</div></div></div>
-</div>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Đối chiếu trạng thái phòng</h1>
+            <p class="app-page-subtitle">Kiểm tra snapshot phòng với hợp đồng tại ngày @Model.NgayDoiChieu.ToString("dd/MM/yyyy"). Báo cáo chỉ đọc và không tự sửa dữ liệu.</p>
+        </div>
+    </header>
 
-@if (!Model.CoBatThuong)
-{
-    <div class="alert alert-success py-2">Không phát hiện lệch trạng thái, xung đột sửa chữa, overlap hay giá trị lạ.</div>
-}
+    <section class="rooms-stat-strip" aria-label="Tổng hợp kết quả đối chiếu">
+        <div class="rooms-stat-item"><div class="rooms-stat-label">Tổng phòng</div><div class="rooms-stat-value">@Model.TongSoPhong</div></div>
+        <div class="rooms-stat-item @(Model.SoPhongLechTrangThai > 0 ? "is-danger" : null)"><div class="rooms-stat-label">Lệch trạng thái</div><div class="rooms-stat-value">@Model.SoPhongLechTrangThai</div></div>
+        <div class="rooms-stat-item @(Model.SoPhongDangSuaXungDot > 0 ? "is-danger" : null)"><div class="rooms-stat-label">Sửa chữa xung đột</div><div class="rooms-stat-value">@Model.SoPhongDangSuaXungDot</div></div>
+        <div class="rooms-stat-item @(Model.SoPhongNhieuHopDong > 0 ? "is-danger" : null)"><div class="rooms-stat-label">Overlap / nhiều HĐ</div><div class="rooms-stat-value">@Model.SoPhongNhieuHopDong</div></div>
+        <div class="rooms-stat-item"><div class="rooms-stat-label">Có lịch sử</div><div class="rooms-stat-value">@Model.SoPhongCoLichSu</div></div>
+    </section>
 
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Nhà / phòng</th>
-                    <th>Snapshot</th>
-                    <th>Theo hợp đồng</th>
-                    <th>Hợp đồng</th>
-                    <th>Lịch sử</th>
-                    <th>Kết quả</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var row in Model.Rows)
+    @if (!Model.CoBatThuong)
+    {
+        <div class="app-notice is-success mb-4" role="status">
+            <svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg>
+            <div><strong>Dữ liệu đang khớp</strong><div>Không phát hiện lệch trạng thái, xung đột sửa chữa, overlap hợp đồng hoặc mã trạng thái lạ.</div></div>
+        </div>
+    }
+    else
+    {
+        <div class="app-notice is-warning mb-4" role="alert">
+            <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
+            <div><strong>Có phòng cần kiểm tra</strong><div>Các dòng bất thường được đưa lên đầu. Mở chi tiết phòng và xử lý theo đúng luồng hợp đồng hoặc trạng thái sửa chữa.</div></div>
+        </div>
+    }
+
+    <section class="app-panel" aria-labelledby="reconcile-results-heading">
+        <header class="app-panel-header">
+            <h2 id="reconcile-results-heading">Kết quả theo phòng</h2>
+            <span class="rooms-cell-meta">@rows.Count dòng · Chỉ đọc</span>
+        </header>
+        <div class="rooms-audit-head" aria-hidden="true">
+            <span>Nhà / phòng</span><span>Snapshot</span><span>Theo hợp đồng</span><span>Hợp đồng</span><span>Kết quả</span>
+        </div>
+        <ul class="rooms-audit-list">
+            @foreach (var row in rows)
             {
-                <tr class="@(row.CanXuLy ? "table-warning" : "")">
-                    <td><div class="text-muted small">@row.TenNha</div><a asp-action="Details" asp-route-id="@row.PhongId" class="fw-semibold text-decoration-none">@row.TenPhong</a></td>
-                    <td><code>@row.TrangThaiSnapshot</code></td>
-                    <td><code>@row.TrangThaiTheoNgay</code></td>
-                    <td>
-                        <div>Hiệu lực: @row.SoHopDongHieuLuc</div>
-                        <div class="small text-muted">Tương lai: @row.SoHopDongTuongLai</div>
-                        @if (row.CoOverlapHopDong) { <span class="badge bg-danger">Có overlap</span> }
-                    </td>
-                    <td>@(row.CoDuLieuNghiepVu ? "Đã có - khóa đổi Nhà" : "Chưa có")</td>
-                    <td>
-                        @if (row.TrangThaiLa) { <span class="badge bg-danger">Trạng thái lạ</span> }
-                        @if (row.LechTrangThai) { <span class="badge bg-warning text-dark">Lệch snapshot</span> }
-                        @if (row.DangSuaXungDot) { <span class="badge bg-danger">Sửa chữa xung đột</span> }
-                        @if (!row.CanXuLy) { <span class="badge bg-success">Khớp</span> }
-                    </td>
-                </tr>
+                <li class="rooms-audit-row @(row.CanXuLy ? "is-issue" : null)">
+                    <div class="rooms-audit-room">
+                        <a asp-action="Details" asp-route-id="@row.PhongId" class="rooms-room-name">@row.TenPhong</a>
+                        <div class="rooms-room-meta">@row.TenNha</div>
+                    </div>
+                    <div>
+                        <span class="rooms-field-label">Snapshot</span>
+                        <span class="rooms-code-value">@TrangThaiHienThi(row.TrangThaiSnapshot)</span>
+                    </div>
+                    <div>
+                        <span class="rooms-field-label">Theo hợp đồng</span>
+                        <span class="rooms-code-value">@TrangThaiHienThi(row.TrangThaiTheoNgay)</span>
+                    </div>
+                    <div>
+                        <span class="rooms-field-label">Hợp đồng</span>
+                        <div><strong>@row.SoHopDongHieuLuc</strong> hiệu lực · <strong>@row.SoHopDongTuongLai</strong> tương lai</div>
+                        <div class="rooms-cell-meta">@(row.CoDuLieuNghiepVu ? "Đã có lịch sử — khóa đổi Nhà" : "Chưa có lịch sử")</div>
+                    </div>
+                    <div class="rooms-audit-result">
+                        <span class="rooms-field-label">Kết quả</span>
+                        <div class="rooms-service-type">
+                            @if (row.TrangThaiLa) { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Trạng thái lạ</span> }
+                            @if (row.LechTrangThai) { <span class="app-status-badge is-warning"><span class="app-status-dot" aria-hidden="true"></span>Lệch snapshot</span> }
+                            @if (row.DangSuaXungDot) { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Sửa chữa xung đột</span> }
+                            @if (row.CoOverlapHopDong || row.SoHopDongHieuLuc > 1) { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Overlap hợp đồng</span> }
+                            @if (!row.CanXuLy) { <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Khớp</span> }
+                        </div>
+                    </div>
+                </li>
             }
-            </tbody>
-        </table>
-    </div>
+        </ul>
+    </section>
 </div>
+
+@functions {
+    static string TrangThaiHienThi(string trangThai) => trangThai switch
+    {
+        "DangThue" => "Đang thuê",
+        "DangSuaChua" => "Đang sửa chữa",
+        "Trong" => "Trống",
+        _ => trangThai
+    };
+}

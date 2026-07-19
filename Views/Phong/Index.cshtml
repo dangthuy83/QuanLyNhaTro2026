@@ -2,87 +2,126 @@
 @{
     ViewData["Title"] = "Danh sách phòng";
     ViewData["ActiveMenu"] = "phong";
+    var rooms = Model.ToList();
+    var houses = rooms
+        .GroupBy(x => new { x.NhaId, TenNha = x.Nha?.TenNha ?? $"Nhà #{x.NhaId}" })
+        .Select(x => x.Key)
+        .OrderBy(x => x.TenNha)
+        .ToList();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">Danh sách phòng</h5>
-    <div class="d-flex gap-2">
-        <a asp-action="Reconcile" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-clipboard-check me-1"></i>Đối chiếu trạng thái
-        </a>
-        <a asp-action="GanDichVuHangLoat" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-ui-checks-grid me-1"></i>Gán dịch vụ hàng loạt
-        </a>
-        <a asp-action="Create" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i>Thêm phòng
-        </a>
-    </div>
-</div>
+<div class="rooms-page rooms-index-page" data-rooms-list>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Danh sách phòng</h1>
+            <p class="app-page-subtitle">Theo dõi tình trạng sử dụng, giá niêm yết và truy cập nhanh các thao tác vận hành của từng phòng.</p>
+        </div>
+        <div class="app-page-actions" aria-label="Thao tác module Phòng">
+            <a asp-action="Reconcile" class="btn btn-outline-secondary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>Đối chiếu</span></a>
+            <a asp-action="GanDichVuHangLoat" class="btn btn-outline-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-service"></use></svg>Gán dịch vụ</span></a>
+            <a asp-action="Create" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>Thêm phòng</span></a>
+        </div>
+    </header>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle align-center">
-            <thead class="table-light">
-                <tr>
-                    <th>Tên Nhà</th>
-                    <th>Tên Phòng</th>
-                    <th>Diện Tích</th>
-                    <th class="text-end">Giá Phòng</th>
-                    <th>Trạng Thái</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in Model)
-                {
-                    <tr>
-                        <td>@(p.Nha?.TenNha ?? $"#{p.NhaId}")</td>
-                        <td><a asp-action="Details" asp-route-id="@p.Id" class="fw-semibold text-decoration-none">@p.TenPhong</a></td>
-                        <td>@(p.DienTich.HasValue ? $"{p.DienTich:N1} m2" : "-")</td>
-                        <td class="text-end">@p.GiaThueMacDinh.ToString("N0") đ</td>
-                        <td>@Html.Raw(TrangThaiPhongBadge(p.TrangThai))</td>
-                        <td class="text-end">
-                            <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary me-1">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <form asp-action="Delete" asp-route-id="@p.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('Xóa phòng @p.TenPhong?')">
-                                @Html.AntiForgeryToken()
-                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                }
-                @if (!Model.Any())
-                {
-                    <tr><td colspan="6" class="text-center text-muted py-4">Chưa có phòng nào.</td></tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-@functions {
-    static string TrangThaiPhongBadge(string tt) => tt switch
+    @if (TempData["Success"] != null || TempData["Error"] != null)
     {
-        "DangThue" => "<span class='badge bg-success'>Đang thuê</span>",
-        "DangSuaChua" => "<span class='badge bg-warning text-dark'>Đang sửa</span>",
-        _ => "<span class='badge bg-secondary'>Trống</span>"
-    };
+        <div class="rooms-flash-stack" aria-live="polite">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="status">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
+            }
+        </div>
+    }
+
+    @if (rooms.Any())
+    {
+        <section class="app-panel rooms-filter-panel" aria-labelledby="rooms-filter-heading">
+            <h2 id="rooms-filter-heading" class="visually-hidden">Tìm và lọc phòng</h2>
+            <div class="rooms-filter-grid">
+                <div class="rooms-filter-field">
+                    <label for="room-search">Tìm phòng</label>
+                    <div class="rooms-search-control">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+                        <input id="room-search" class="form-control" type="search" inputmode="search" placeholder="Tên phòng hoặc tên nhà" autocomplete="off" data-room-filter-search />
+                    </div>
+                </div>
+                <div class="rooms-filter-field">
+                    <label for="room-house-filter">Nhà</label>
+                    <select id="room-house-filter" class="form-select" data-room-filter-house>
+                        <option value="">Tất cả nhà</option>
+                        @foreach (var house in houses)
+                        {
+                            <option value="@house.NhaId">@house.TenNha</option>
+                        }
+                    </select>
+                </div>
+                <div class="rooms-filter-field">
+                    <label for="room-status-filter">Trạng thái</label>
+                    <select id="room-status-filter" class="form-select" data-room-filter-status>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Trong">Trống</option>
+                        <option value="DangThue">Đang thuê</option>
+                        <option value="DangSuaChua">Đang sửa chữa</option>
+                    </select>
+                </div>
+                <div class="rooms-filter-reset">
+                    <button class="btn btn-outline-secondary" type="button" data-room-filter-reset><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>Đặt lại</span></button>
+                </div>
+            </div>
+            <div class="rooms-filter-meta">
+                <span>Kết quả cập nhật ngay khi nhập hoặc đổi bộ lọc.</span>
+                <output class="rooms-result-count" data-room-result-count aria-live="polite">@rooms.Count phòng</output>
+            </div>
+        </section>
+
+        <section class="app-panel rooms-list-panel" aria-labelledby="rooms-list-heading">
+            <h2 id="rooms-list-heading" class="visually-hidden">Các phòng</h2>
+            <div class="rooms-list-head" aria-hidden="true"><span>Nhà / phòng</span><span>Diện tích</span><span>Giá niêm yết</span><span>Trạng thái</span><span class="text-end">Thao tác</span></div>
+            <ul class="rooms-list">
+                @foreach (var room in rooms)
+                {
+                    var houseName = room.Nha?.TenNha ?? $"Nhà #{room.NhaId}";
+                    <li class="rooms-list-row" data-room-row data-search="@houseName @room.TenPhong" data-house="@room.NhaId" data-status="@room.TrangThai">
+                        <div class="rooms-room-identity">
+                            <a asp-action="Details" asp-route-id="@room.Id" class="rooms-room-name">@room.TenPhong</a>
+                            <div class="rooms-room-meta">@houseName</div>
+                        </div>
+                        <div class="rooms-room-area"><span class="rooms-field-label">Diện tích</span><span>@(room.DienTich.HasValue ? $"{room.DienTich:N1} m²" : "Chưa nhập")</span></div>
+                        <div class="rooms-room-price"><span class="rooms-field-label">Giá niêm yết</span><span class="rooms-money">@room.GiaThueMacDinh.ToString("N0") đ</span></div>
+                        <div class="rooms-room-status"><partial name="_StatusBadge" model="room.TrangThai" /></div>
+                        <div class="rooms-row-actions" aria-label="Thao tác phòng @room.TenPhong">
+                            <a asp-action="Details" asp-route-id="@room.Id" class="btn btn-outline-primary" aria-label="Xem chi tiết phòng @room.TenPhong"><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+                            <a asp-action="Edit" asp-route-id="@room.Id" class="btn btn-outline-secondary" aria-label="Sửa phòng @room.TenPhong"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg></a>
+                            <form asp-action="Delete" asp-route-id="@room.Id" method="post" onsubmit="return confirm('Xóa phòng @room.TenPhong? Thao tác chỉ thành công khi phòng chưa có dữ liệu nghiệp vụ liên quan.')">
+                                @Html.AntiForgeryToken()
+                                <button class="btn btn-outline-danger" type="submit" aria-label="Xóa phòng @room.TenPhong"><svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg></button>
+                            </form>
+                        </div>
+                    </li>
+                }
+            </ul>
+            <div class="app-empty-state rooms-filter-empty" data-room-filter-empty hidden>
+                <div><svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><h3>Không có phòng phù hợp</h3><p>Thử đổi từ khóa, Nhà hoặc trạng thái để xem lại danh sách.</p></div>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="app-panel app-empty-state" aria-labelledby="rooms-empty-heading">
+            <div>
+                <svg class="app-icon" aria-hidden="true"><use href="#icon-door"></use></svg>
+                <h2 id="rooms-empty-heading">Chưa có phòng nào</h2>
+                <p>Thêm phòng đầu tiên để bắt đầu cấu hình giá, dịch vụ và hợp đồng.</p>
+                <a asp-action="Create" class="btn btn-primary mt-3"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>Thêm phòng</span></a>
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/rooms.js" asp-append-version="true"></script>
 }

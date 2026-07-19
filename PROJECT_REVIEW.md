@@ -1225,6 +1225,21 @@ Tien coc | Tong no | Tru no vao coc | Hoan lai | Khach con no
 - Browser QA pass 1440/768/390, khong tran ngang, target mobile >= 44px, drawer/backdrop/Escape
   va focus pass, console sach. Impeccable detector khong con canh bao sau sua.
 
+### 5.6. UI-002 - Module Phong - DA TRIEN KHAI 19/07/2026
+
+- Sau man Phong da duoc redesign tren app shell/token UI-001: danh sach, chi tiet, tao, sua,
+  reconcile va gan dich vu hang loat. Route, action, field, validation, auth va nghiep vu duoc giu.
+- Danh sach co search/filter va chien luoc desktop/tablet/mobile ro rang; cac trang thai trong,
+  dang thue, dang sua, rong, validation va thao tac bi chan deu co noi dung/icon de giai thich.
+- Component dung chung moi gioi han o page header, panel, status badge, notice va empty state.
+  Style rieng module duoc scope bang `.rooms-page`; JavaScript rieng nam trong `rooms.js`.
+- Trang thai tren man sua duoc doc theo trang thai hieu luc trong ngay, tranh hien snapshot cu
+  trong khi phong co hop dong; khong thay doi logic ghi hay quy tac nghiep vu.
+- Build pass 0 warning/0 error. Browser QA pass ca 6 route tai 1440/768/390, khong tran ngang,
+  target mobile >= 44px, keyboard/focus pass va console sach. Impeccable detector tra `[]`.
+- QA dung database tam biet lap; khong doc/ghi database van hanh. Khong migration, publish,
+  NSSM hay deploy. Chu he thong duyet commit UI-002 ngay 19/07/2026 va se push thu cong.
+
 ## 6. Huong mo rong sau nay
 
 Nen chuan bi som cho multi-user/multi-tenant:

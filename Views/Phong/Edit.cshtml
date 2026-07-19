@@ -3,137 +3,180 @@
 @{
     ViewData["Title"] = "Sửa phòng";
     ViewData["ActiveMenu"] = "phong";
-    var danhSachNha = ViewBag.DanhSachNha as IEnumerable<QuanLyNhaTro.Models.Nha> ?? [];
-    var dichVuPhong = ViewBag.DichVuPhong as IEnumerable<QuanLyNhaTro.Models.PhongDichVu> ?? [];
-    var danhSachDichVu = ViewBag.DanhSachDichVu as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? [];
+    var danhSachNha = (ViewBag.DanhSachNha as IEnumerable<QuanLyNhaTro.Models.Nha> ?? []).ToList();
+    var dichVuPhong = (ViewBag.DichVuPhong as IEnumerable<QuanLyNhaTro.Models.PhongDichVu> ?? []).ToList();
+    var danhSachDichVu = (ViewBag.DanhSachDichVu as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? []).ToList();
     var dichVuTheoId = dichVuPhong.ToDictionary(x => x.DichVuId);
     var coNha = danhSachNha.Any();
     var khoaDoiNha = ViewBag.KhoaDoiNha == true;
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Sửa phòng — @Model.TenPhong</h5>
-</div>
+<div class="rooms-page rooms-form-page">
+    <a asp-action="Details" asp-route-id="@Model.Id" class="rooms-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Chi tiết phòng</a>
 
-<div class="card shadow-sm" style="max-width:640px">
-    <div class="card-body">
-        <form asp-action="Edit" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
-            <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Sửa phòng @Model.TenPhong</h1>
+            <p class="app-page-subtitle">Cập nhật thông tin vận hành và dịch vụ. Trạng thái thuê tiếp tục được suy từ hợp đồng theo ngày.</p>
+        </div>
+        <div class="app-page-actions"><partial name="_StatusBadge" model="Model.TrangThai" /></div>
+    </header>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Nhà <span class="text-danger">*</span></label>
-                <select asp-for="NhaId" class="form-select" required disabled="@(!coNha || khoaDoiNha)">
-                    <option value="">-- Chọn nhà --</option>
-                    @foreach (var nha in danhSachNha)
-                    {
-                        <option value="@nha.Id">@nha.TenNha</option>
-                    }
-                </select>
-                <span asp-validation-for="NhaId" class="text-danger small"></span>
-                @if (khoaDoiNha)
-                {
-                    <div class="form-text">Phòng đã có dữ liệu nghiệp vụ nên không thể chuyển sang Nhà khác.</div>
-                }
-            </div>
+    <form asp-action="Edit" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        @if (khoaDoiNha)
+        {
+            <input type="hidden" name="NhaId" value="@Model.NhaId" />
+        }
+        <div asp-validation-summary="ModelOnly" class="mb-3" role="alert"></div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Tên phòng <span class="text-danger">*</span></label>
-                <input asp-for="TenPhong" class="form-control" required />
-            </div>
-
-            <div class="row g-3 mb-3">
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Diện tích (m²)</label>
-                    <input asp-for="DienTich" type="number" step="0.1" min="0" class="form-control" />
-                </div>
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Sức chứa (người)</label>
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Giá niêm yết (đ)</label>
-                <input asp-for="GiaThueMacDinh" type="number" min="0" class="form-control" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Trạng thái phòng</label>
-                <div class="form-check form-switch mb-2">
-                    <input class="form-check-input" type="checkbox" id="dangSuaChua"
-                           name="dangSuaChua" value="true" checked="@(Model.TrangThai == "DangSuaChua")" />
-                    <label class="form-check-label" for="dangSuaChua">Chỉ đặt tay khi phòng đang sửa chữa</label>
-                </div>
-                <select asp-for="TrangThai" class="form-select" disabled>
-                    <option value="Trong">Trống</option>
-                    <option value="DangThue">Đang thuê</option>
-                    <option value="DangSuaChua">Đang sửa chữa</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Ghi chú</label>
-                <textarea asp-for="GhiChu" class="form-control" rows="2"></textarea>
-            </div>
-
-            @if (danhSachDichVu.Any())
-            {
-                <hr />
-                <p class="fw-semibold mb-2">Dịch vụ cung cấp tại phòng</p>
-                @foreach (var dv in danhSachDichVu)
-                {
-                    dichVuTheoId.TryGetValue(dv.Id, out var pdv);
-                    var isChecked = dv.BatBuocKhiThue || pdv?.DangApDung == true;
-                    var donGia = pdv?.DonGia ?? dv.DonGiaMacDinh;
-                    <div class="d-flex align-items-center gap-3 mb-2">
-                        <div class="form-check" style="min-width:220px">
-                            <input class="form-check-input dv-check" type="checkbox"
-                                   id="dv_@dv.Id" name="dichVuIds" value="@dv.Id"
-                                   checked="@isChecked"
-                                   onclick="@(dv.BatBuocKhiThue ? "return false" : null)" />
-                            <label class="form-check-label" for="dv_@dv.Id">
-                                @dv.TenDichVu
-                                @if (dv.BatBuocKhiThue)
+        <div class="rooms-form-shell">
+            <div class="rooms-form-column">
+                <section class="app-panel" aria-labelledby="edit-room-information-heading">
+                    <header class="app-panel-header"><h2 id="edit-room-information-heading">Thông tin phòng</h2></header>
+                    <div class="app-panel-body rooms-form-grid">
+                        <div class="rooms-form-field">
+                            <label asp-for="NhaId" class="form-label">Nhà <span class="rooms-required" aria-hidden="true">*</span></label>
+                            <select asp-for="NhaId" class="form-select" required disabled="@(!coNha || khoaDoiNha)" aria-required="true">
+                                <option value="">Chọn Nhà</option>
+                                @foreach (var nha in danhSachNha)
                                 {
-                                    <span class="badge bg-danger ms-1">Bắt buộc</span>
+                                    <option value="@nha.Id">@nha.TenNha</option>
                                 }
-                                <small class="text-muted">(@dv.LoaiTinhPhiHienThi)</small>
-                            </label>
+                            </select>
+                            <span asp-validation-for="NhaId"></span>
+                            @if (khoaDoiNha)
+                            {
+                                <div class="rooms-form-hint">Đã khóa vì phòng có dữ liệu nghiệp vụ hoặc lịch sử. Tạo phòng mới nếu cần chuyển sang Nhà khác.</div>
+                            }
                         </div>
-                        <div class="input-group input-group-sm" style="max-width:170px">
-                            <input type="number" min="0" name="donGias" id="gia_@dv.Id"
-                                   class="form-control dv-gia" value="@donGia.ToString("0.##", CultureInfo.InvariantCulture)"
-                                   disabled="@(!isChecked)" readonly="@(pdv != null)" />
-                            <span class="input-group-text">đ</span>
+
+                        <div class="rooms-form-field">
+                            <label asp-for="TenPhong" class="form-label">Tên phòng <span class="rooms-required" aria-hidden="true">*</span></label>
+                            <input asp-for="TenPhong" class="form-control" required aria-required="true" autocomplete="off" />
+                            <span asp-validation-for="TenPhong"></span>
                         </div>
-                        @if (pdv != null)
-                        {
-                            <a asp-controller="Gia" asp-action="DichVu" asp-route-phongDichVuId="@pdv.Id"
-                               class="btn btn-sm btn-outline-warning">Đổi giá theo kỳ</a>
-                        }
+
+                        <div class="rooms-form-field">
+                            <label asp-for="DienTich" class="form-label">Diện tích (m²)</label>
+                            <input asp-for="DienTich" type="number" step="0.1" min="0" class="form-control" inputmode="decimal" />
+                            <span asp-validation-for="DienTich"></span>
+                        </div>
+
+                        <div class="rooms-form-field">
+                            <label asp-for="GiaThueMacDinh" class="form-label">Giá thuê niêm yết (đ)</label>
+                            <input asp-for="GiaThueMacDinh" type="number" min="0" step="1" class="form-control"
+                                   inputmode="numeric" data-money-preview="edit-room-rent-preview" aria-describedby="edit-room-rent-preview edit-room-rent-hint" />
+                            <div id="edit-room-rent-preview" class="rooms-money-preview">@Model.GiaThueMacDinh.ToString("N0", CultureInfo.InvariantCulture) đ</div>
+                            <div id="edit-room-rent-hint" class="rooms-form-hint">Không làm thay đổi giá thỏa thuận của hợp đồng hiện có.</div>
+                            <span asp-validation-for="GiaThueMacDinh"></span>
+                        </div>
+
+                        <div class="rooms-form-field is-wide">
+                            <label asp-for="GhiChu" class="form-label">Ghi chú</label>
+                            <textarea asp-for="GhiChu" class="form-control" rows="3" placeholder="Thông tin vị trí, nội thất hoặc lưu ý vận hành"></textarea>
+                            <span asp-validation-for="GhiChu"></span>
+                        </div>
                     </div>
+                </section>
+
+                @if (danhSachDichVu.Any())
+                {
+                    <section class="app-panel" aria-labelledby="edit-room-services-heading">
+                        <header class="app-panel-header">
+                            <div><h2 id="edit-room-services-heading">Dịch vụ tại phòng</h2><div class="rooms-cell-meta">Bật hoặc tắt dịch vụ; giá hiện có chỉ đổi qua luồng giá theo kỳ.</div></div>
+                        </header>
+                        <div>
+                            @foreach (var dichVu in danhSachDichVu)
+                            {
+                                dichVuTheoId.TryGetValue(dichVu.Id, out var phongDichVu);
+                                var isChecked = dichVu.BatBuocKhiThue || phongDichVu?.DangApDung == true;
+                                var donGia = phongDichVu?.DonGia ?? dichVu.DonGiaMacDinh;
+                                var pricePreviewId = $"edit-service-price-{dichVu.Id}";
+                                <div class="rooms-service-option" data-service-row>
+                                    <div class="rooms-service-option-main">
+                                        <input class="form-check-input" type="checkbox" id="service-@dichVu.Id"
+                                               name="dichVuIds" value="@dichVu.Id" checked="@isChecked"
+                                               data-service-toggle data-price-target="service-price-@dichVu.Id"
+                                               onclick="@(dichVu.BatBuocKhiThue ? "return false" : null)" />
+                                        <label class="form-check-label" for="service-@dichVu.Id">
+                                            <span class="rooms-service-option-title">
+                                                @dichVu.TenDichVu
+                                                @if (dichVu.BatBuocKhiThue)
+                                                {
+                                                    <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Bắt buộc</span>
+                                                }
+                                            </span>
+                                            <span class="rooms-service-option-meta">
+                                                @dichVu.LoaiTinhPhiHienThi@if (dichVu.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh) { <text> · @dichVu.CachTinhCoDinhHienThi</text> }
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="rooms-service-option-price">
+                                        <label class="visually-hidden" for="service-price-@dichVu.Id">Đơn giá @dichVu.TenDichVu</label>
+                                        <div class="input-group">
+                                            <input id="service-price-@dichVu.Id" name="donGias" type="number" min="0" step="1"
+                                                   class="form-control" inputmode="numeric"
+                                                   value="@donGia.ToString("0.##", CultureInfo.InvariantCulture)"
+                                                   disabled="@(!isChecked)" readonly="@(phongDichVu != null)"
+                                                   data-money-preview="@pricePreviewId" />
+                                            <span class="input-group-text">đ</span>
+                                        </div>
+                                        <div id="@pricePreviewId" class="rooms-money-preview">@donGia.ToString("N0", CultureInfo.InvariantCulture) đ</div>
+                                        @if (phongDichVu != null)
+                                        {
+                                            <a asp-controller="Gia" asp-action="DichVu" asp-route-phongDichVuId="@phongDichVu.Id" class="btn btn-outline-primary btn-sm mt-2">Đổi giá theo kỳ</a>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </section>
                 }
-                <div class="form-text">Tắt dịch vụ ở phòng không làm thay đổi hợp đồng đã đăng ký. Giá dịch vụ hiện có chỉ thay đổi qua luồng giá theo kỳ.</div>
-            }
-
-            <div class="mt-4 d-flex gap-2">
-                <button type="submit" class="btn btn-primary" disabled="@(!coNha)">Lưu thay đổi</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Huỷ</a>
             </div>
-        </form>
 
-    </div>
+            <aside class="rooms-form-column rooms-form-sidebar">
+                <section class="app-panel" aria-labelledby="room-operating-state-heading">
+                    <header class="app-panel-header"><h2 id="room-operating-state-heading">Trạng thái vận hành</h2></header>
+                    <div class="app-panel-body rooms-form-column">
+                        <div>
+                            <label asp-for="TrangThai" class="form-label fw-semibold">Trạng thái hiệu lực</label>
+                            <select asp-for="TrangThai" class="form-select" disabled aria-describedby="effective-room-state-hint">
+                                <option value="Trong">Trống</option>
+                                <option value="DangThue">Đang thuê</option>
+                                <option value="DangSuaChua">Đang sửa chữa</option>
+                            </select>
+                            <div id="effective-room-state-hint" class="rooms-form-hint">Đang thuê/Trống được hệ thống suy theo hợp đồng.</div>
+                        </div>
+
+                        <div class="rooms-maintenance-control">
+                            <label for="dangSuaChua">
+                                <strong>Đang sửa chữa</strong>
+                                <span class="rooms-form-hint d-block">Chỉ bật khi không có hợp đồng hiệu lực hoặc tương lai.</span>
+                            </label>
+                            <input class="form-check-input" type="checkbox" role="switch" id="dangSuaChua"
+                                   name="dangSuaChua" value="true" checked="@(Model.TrangThai == "DangSuaChua")" />
+                        </div>
+                    </div>
+                </section>
+
+                <div class="app-notice is-info">
+                    <svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg>
+                    <div><strong>Phạm vi thay đổi</strong><div>Tắt dịch vụ ở phòng không thay đổi dịch vụ đã đăng ký trên hợp đồng. Giá hiện có vẫn đi qua luồng giá theo kỳ.</div></div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="rooms-form-actions">
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Hủy</a>
+            <button type="submit" class="btn btn-primary" disabled="@(!coNha)">
+                <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-save"></use></svg>Lưu thay đổi</span>
+            </button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
-<script>
-    document.querySelectorAll('.dv-check').forEach(cb => {
-        cb.addEventListener('change', function () {
-            const input = document.getElementById('gia_' + this.value);
-            if (input) input.disabled = !this.checked;
-        });
-    });
-</script>
+    <script src="~/js/rooms.js" asp-append-version="true"></script>
 }

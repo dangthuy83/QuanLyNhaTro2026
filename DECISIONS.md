@@ -66,6 +66,26 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   thật tới danh sách hóa đơn của kỳ hiện tại, không tạo dropdown giả khi controller chưa hỗ trợ
   đổi kỳ Dashboard.
 
+## Quyết định UI-002 ngày 19/07/2026
+
+- Redesign hoàn chỉnh sáu màn của module Phòng: danh sách, chi tiết, tạo, sửa, reconcile và gán
+  dịch vụ hàng loạt. Giữ nguyên route, action, tên field, validation, phân quyền và các thao tác
+  nghiệp vụ; view chỉ dùng dữ liệu thật do controller/ViewModel cung cấp.
+- Danh sách Phòng dùng một cấu trúc responsive thống nhất: desktop ưu tiên quét nhanh theo cột,
+  tablet thu gọn thao tác trùng lặp và mobile chuyển thành thẻ thông tin. Tìm kiếm/lọc tại trang
+  không thay đổi URL hoặc query nghiệp vụ; luôn có trạng thái rỗng ban đầu và rỗng do bộ lọc.
+- Trạng thái hiển thị phải là trạng thái hiệu lực theo ngày, không lấy snapshot cũ từ bản ghi
+  `Phong`. Màn sửa dùng cùng truy vấn trạng thái hiệu lực với danh sách/chi tiết nhưng vẫn giữ
+  nguyên quy tắc khóa Nhà, trạng thái và giá dịch vụ hiện hữu.
+- Component có thể tái sử dụng (`.app-page-header`, `.app-panel`, `.app-status-badge`,
+  `.app-notice`, `.app-empty-state`) nằm trong nền dùng chung. Toàn bộ bố cục/biến thể chỉ dành
+  cho module Phòng được scope dưới `.rooms-page`; hành vi riêng nằm trong `rooms.js`.
+- Trạng thái không chỉ truyền đạt bằng màu: badge luôn có nhãn/chấm trạng thái, notice có icon và
+  nội dung, thao tác bị chặn có giải thích. Form giữ label, validation, disabled/read-only rõ ràng;
+  target tương tác mobile tối thiểu 44px và dùng focus-visible từ UI-001.
+- QA UI-002 chỉ dùng database tạm biệt lập và app foreground cục bộ; không đọc/ghi database vận
+  hành, không publish/deploy và không tác động NSSM service.
+
 ## Quyết định chốt REVIEW-025 ngày 16/07/2026
 
 - Diễn tập kỳ hóa đơn đầu tiên chỉ ghi trên DB restore tạm; DB vận hành chỉ được đọc để lập

@@ -3,104 +3,103 @@
     ViewData["Title"] = "Chi tiết phòng";
     ViewData["ActiveMenu"] = "phong";
     var hopDong = ViewBag.HopDong as QuanLyNhaTro.Models.HopDong;
-    var dichVuPhong = ViewBag.DichVuPhong as IEnumerable<QuanLyNhaTro.Models.PhongDichVu> ?? [];
+    var dichVuPhong = (ViewBag.DichVuPhong as IEnumerable<QuanLyNhaTro.Models.PhongDichVu> ?? []).ToList();
+    var houseName = Model.Nha?.TenNha ?? $"Nhà #{Model.NhaId}";
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Phòng @Model.TenPhong</h5>
-    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-auto">
-        <i class="bi bi-pencil me-1"></i>Sửa
-    </a>
-</div>
+<div class="rooms-page rooms-details-page">
+    <a asp-action="Index" class="rooms-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách phòng</a>
 
-<div class="row g-3">
-    <div class="col-md-5">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Thông tin phòng</h6>
-                <dl class="row mb-0">
-                    <dt class="col-5">Nhà</dt><dd class="col-7">@(Model.Nha?.TenNha ?? $"#{Model.NhaId}")</dd>
-                    <dt class="col-5">Diện tích</dt><dd class="col-7">@(Model.DienTich.HasValue ? $"{Model.DienTich:N1} m2" : "-")</dd>
-                    <dt class="col-5">Giá niêm yết</dt><dd class="col-7">@Model.GiaThueMacDinh.ToString("N0") đ</dd>
-                    <dt class="col-5">Trạng thái</dt>
-                    <dd class="col-7">
-                        @Html.Raw(Model.TrangThai switch {
-                            "DangThue"    => "<span class='badge bg-success'>Đang thuê</span>",
-                            "DangSuaChua" => "<span class='badge bg-warning text-dark'>Đang sửa</span>",
-                            _             => "<span class='badge bg-secondary'>Trống</span>"
-                        })
-                    </dd>
-                    @if (!string.IsNullOrEmpty(Model.GhiChu))
-                    {
-                        <dt class="col-5">Ghi chú</dt><dd class="col-7">@Model.GhiChu</dd>
-                    }
-                </dl>
-            </div>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Phòng @Model.TenPhong</h1>
+            <p class="app-page-subtitle">@houseName · Thông tin vận hành, hợp đồng hiện tại và cấu hình dịch vụ.</p>
         </div>
-    </div>
+        <div class="app-page-actions">
+            <partial name="_StatusBadge" model="Model.TrangThai" />
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>Sửa phòng</span></a>
+        </div>
+    </header>
 
-    <div class="col-md-7">
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Hợp đồng hiện tại</h6>
+    <div class="rooms-details-grid">
+        <div class="rooms-details-main">
+            <section class="app-panel" aria-labelledby="room-information-heading">
+                <header class="app-panel-header"><h2 id="room-information-heading">Thông tin phòng</h2></header>
+                <div class="app-panel-body">
+                    <dl class="rooms-definition-list">
+                        <div class="rooms-definition-item"><dt>Nhà</dt><dd>@houseName</dd></div>
+                        <div class="rooms-definition-item"><dt>Diện tích</dt><dd>@(Model.DienTich.HasValue ? $"{Model.DienTich:N1} m²" : "Chưa nhập")</dd></div>
+                        <div class="rooms-definition-item"><dt>Giá thuê niêm yết</dt><dd class="rooms-money">@Model.GiaThueMacDinh.ToString("N0") đ</dd></div>
+                        <div class="rooms-definition-item"><dt>Trạng thái</dt><dd><partial name="_StatusBadge" model="Model.TrangThai" /></dd></div>
+                        <div class="rooms-definition-item is-wide"><dt>Ghi chú</dt><dd>@(string.IsNullOrWhiteSpace(Model.GhiChu) ? "Không có ghi chú" : Model.GhiChu)</dd></div>
+                    </dl>
+                </div>
+            </section>
+
+            <section class="app-panel" aria-labelledby="room-services-heading">
+                <header class="app-panel-header">
+                    <h2 id="room-services-heading">Dịch vụ tại phòng</h2>
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">Cấu hình</a>
+                </header>
+                @if (dichVuPhong.Any())
+                {
+                    <ul class="rooms-service-list">
+                        @foreach (var roomService in dichVuPhong)
+                        {
+                            <li class="rooms-service-row">
+                                <div><div class="rooms-service-name">@(roomService.DichVu?.TenDichVu ?? $"Dịch vụ #{roomService.DichVuId}")</div><div class="rooms-cell-meta">Đơn giá áp dụng tại phòng</div></div>
+                                <div class="rooms-service-type">
+                                    <span class="app-status-badge is-info">@roomService.DichVu?.LoaiTinhPhiHienThi</span>
+                                    @if (roomService.DichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh)
+                                    {
+                                        <span class="app-status-badge is-neutral">@roomService.DichVu.CachTinhCoDinhHienThi</span>
+                                    }
+                                </div>
+                                <div class="rooms-service-price rooms-money">@roomService.DonGia.ToString("N0") đ</div>
+                                <div class="rooms-service-state">
+                                    <span class="app-status-badge @(roomService.DangApDung ? "is-success" : "is-warning")"><span class="app-status-dot" aria-hidden="true"></span>@(roomService.DangApDung ? "Đang áp dụng" : "Đang tắt")</span>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="app-empty-state"><div><svg class="app-icon" aria-hidden="true"><use href="#icon-service"></use></svg><h3>Chưa có dịch vụ</h3><p>Mở màn sửa phòng để chọn dịch vụ và đơn giá áp dụng.</p></div></div>
+                }
+            </section>
+        </div>
+
+        <aside class="app-panel" aria-labelledby="current-contract-heading">
+            <header class="app-panel-header"><h2 id="current-contract-heading">Hợp đồng hiện tại</h2></header>
+            <div class="app-panel-body rooms-contract-state">
                 @if (hopDong != null)
                 {
-                    <dl class="row mb-0">
-                        <dt class="col-5">Ngày bắt đầu</dt><dd class="col-7">@hopDong.NgayBatDau.ToString("dd/MM/yyyy")</dd>
-                        <dt class="col-5">Giá thuê TT</dt><dd class="col-7">@hopDong.TienThueThoaThuan.ToString("N0") đ</dd>
-                        <dt class="col-5">Tiền cọc</dt><dd class="col-7">@hopDong.TienCoc.ToString("N0") đ</dd>
+                    <div class="rooms-contract-lead">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-contract"></use></svg>
+                        <div><h3>Hợp đồng #@hopDong.Id đang hiệu lực</h3><p>Giá thỏa thuận và tiền cọc được giữ theo hợp đồng.</p></div>
+                    </div>
+                    <dl class="rooms-contract-facts">
+                        <div><dt>Ngày bắt đầu</dt><dd>@hopDong.NgayBatDau.ToString("dd/MM/yyyy")</dd></div>
+                        <div><dt>Giá thuê thỏa thuận</dt><dd>@hopDong.TienThueThoaThuan.ToString("N0") đ</dd></div>
+                        <div><dt>Tiền cọc</dt><dd>@hopDong.TienCoc.ToString("N0") đ</dd></div>
                     </dl>
-                    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong.Id"
-                       class="btn btn-sm btn-outline-primary mt-2">Xem hợp đồng</a>
+                    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong.Id" class="btn btn-primary">Xem hợp đồng</a>
                 }
                 else if (Model.TrangThai == "DangSuaChua")
                 {
-                    <p class="text-warning mb-0">Phòng đang sửa chữa và chưa thể nhận hợp đồng.</p>
+                    <div class="app-notice is-warning"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Chưa thể nhận hợp đồng</strong><div>Phòng đang được đánh dấu sửa chữa. Tắt trạng thái sửa chữa trước khi tạo hợp đồng mới.</div></div></div>
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Cập nhật trạng thái</a>
                 }
                 else
                 {
-                    <p class="text-muted mb-2">Phòng đang trống.</p>
-                    <a asp-controller="HopDong" asp-action="Create" asp-route-phongId="@Model.Id"
-                       class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus me-1"></i>Tạo hợp đồng
-                    </a>
+                    <div class="rooms-contract-lead">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-door"></use></svg>
+                        <div><h3>Phòng đang trống</h3><p>Có thể tạo hợp đồng mới cho phòng này.</p></div>
+                    </div>
+                    <a asp-controller="HopDong" asp-action="Create" asp-route-phongId="@Model.Id" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>Tạo hợp đồng</span></a>
                 }
             </div>
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Dịch vụ</h6>
-                @if (dichVuPhong.Any())
-                {
-                    <table class="table table-sm mb-0">
-                        <thead class="table-light">
-                            <tr><th>Dịch vụ</th><th>Loại</th><th class="text-end">Đơn giá</th></tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var pdv in dichVuPhong)
-                            {
-                                <tr>
-                                    <td>@pdv.DichVu?.TenDichVu</td>
-                                    <td>
-                                        <span class="badge bg-light text-dark border">@pdv.DichVu?.LoaiTinhPhiHienThi</span>
-                                        @if (pdv.DichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh)
-                                        {
-                                            <span class="badge bg-light text-dark border">@pdv.DichVu.CachTinhCoDinhHienThi</span>
-                                        }
-                                    </td>
-                                    <td class="text-end">@pdv.DonGia.ToString("N0") đ</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-                else
-                {
-                    <p class="text-muted mb-0">Chưa có dịch vụ.</p>
-                }
-            </div>
-        </div>
+        </aside>
     </div>
 </div>

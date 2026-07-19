@@ -50,17 +50,17 @@ public class PhongController(
         trangThai = NormalizeTrangThaiFilter(trangThai);
 
         if (dichVuId <= 0)
-            ModelState.AddModelError(nameof(dichVuId), "Vui long chon dich vu.");
+            ModelState.AddModelError(nameof(dichVuId), "Vui lòng chọn dịch vụ.");
 
         if (donGia < 0)
-            ModelState.AddModelError(nameof(donGia), "Don gia khong duoc am.");
+            ModelState.AddModelError(nameof(donGia), "Đơn giá không được âm.");
 
         if (phongIds.Length == 0)
-            ModelState.AddModelError(nameof(phongIds), "Vui long chon it nhat mot phong.");
+            ModelState.AddModelError(nameof(phongIds), "Vui lòng chọn ít nhất một phòng.");
 
         var dichVu = await dichVuRepo.GetByIdAsync(dichVuId);
         if (dichVu == null)
-            ModelState.AddModelError(nameof(dichVuId), "Dich vu da chon khong ton tai.");
+            ModelState.AddModelError(nameof(dichVuId), "Dịch vụ đã chọn không tồn tại.");
 
         if (!ModelState.IsValid)
         {
@@ -131,7 +131,7 @@ public class PhongController(
     public async Task<IActionResult> Edit(int id)
     {
         ViewData["ActiveMenu"] = "phong";
-        var phong = await phongRepo.GetByIdAsync(id);
+        var phong = await phongRepo.GetByIdTheoTrangThaiHieuLucAsync(id, DateTime.Today);
         if (phong == null) return NotFound();
 
         await LoadPhongFormDataAsync(id);
@@ -236,14 +236,14 @@ public class PhongController(
     {
         if (nhaId <= 0)
         {
-            ModelState.AddModelError(nameof(Phong.NhaId), "Vui long chon nha.");
+            ModelState.AddModelError(nameof(Phong.NhaId), "Vui lòng chọn Nhà.");
             return;
         }
 
         var nha = await nhaRepo.GetByIdAsync(nhaId);
         if (nha == null)
         {
-            ModelState.AddModelError(nameof(Phong.NhaId), "Nha da chon khong ton tai.");
+            ModelState.AddModelError(nameof(Phong.NhaId), "Nhà đã chọn không tồn tại.");
         }
     }
 

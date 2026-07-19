@@ -1,0 +1,13 @@
+@model string
+@{
+    var (label, variant) = Model switch
+    {
+        "DangThue" => ("Đang thuê", "is-success"),
+        "DangSuaChua" => ("Đang sửa chữa", "is-warning"),
+        _ => ("Trống", "is-neutral")
+    };
+}
+<span class="app-status-badge @variant">
+    <span class="app-status-dot" aria-hidden="true"></span>
+    @label
+</span>

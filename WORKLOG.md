@@ -2585,6 +2585,57 @@ Ranh giới dữ liệu và phát hành:
 
 ---
 
+### UI-002 - Thiết Kế Lại Module Phòng
+
+Ngày: 19/07/2026
+
+Baseline:
+
+- `main` và `origin/main` cùng trỏ tới `cf7e791` (`feat(ui): implement dashboard shell and design system`).
+- Build baseline và build sau triển khai đều pass với intermediate/output riêng do cache `obj`
+  mặc định bị từ chối ghi: 0 warning, 0 error.
+
+Đã làm:
+
+- Thiết kế lại `Index`, `Details`, `Create`, `Edit`, `Reconcile` và `GanDichVuHangLoat` theo
+  design tokens/app shell UI-001; giữ nguyên route, form field, validation, authorization và
+  toàn bộ link/thao tác hiện có.
+- Danh sách có tìm kiếm theo tên phòng/nhà, lọc Nhà/trạng thái, đếm kết quả và trạng thái rỗng;
+  desktop dùng hàng dễ quét, tablet thu gọn thao tác trùng và mobile dùng card ưu tiên thông tin.
+- Chi tiết phân biệt rõ phòng trống/đang thuê/đang sửa, hợp đồng hiệu lực và cấu hình dịch vụ.
+  Tạo/sửa có label, validation, preview tiền, disabled/read-only và mô tả trạng thái đầy đủ.
+- Reconcile đưa bất thường lên trước và giải thích cách xử lý. Gán dịch vụ hàng loạt giữ đúng
+  filter/POST hiện có, có chọn tất cả, đếm lựa chọn, cảnh báo thiếu số người và preview giá đúng
+  giữa dịch vụ đã gán với dịch vụ mới.
+- Bổ sung partial `_StatusBadge.cshtml`, icon SVG còn thiếu và `rooms.js`. Component dùng chung
+  mới là page header, panel, status badge, notice và empty state; CSS riêng module luôn nằm dưới
+  `.rooms-page`.
+- Màn sửa đọc trạng thái phòng hiệu lực theo ngày để không hiển thị snapshot `Trống` khi đang có
+  hợp đồng; không thay đổi nghiệp vụ ghi dữ liệu.
+
+Kết quả kiểm tra:
+
+```text
+Impeccable detector: []
+Browser: 1440px, 768px, 390px; cả 6 route Phòng không tràn ngang.
+Index search/filter/reset pass; Create/Edit validation, service toggle và money preview pass.
+Details pass cho phòng trống/đang thuê/đang sửa; Reconcile và bulk-selection/price preview pass.
+Drawer/Escape/focus return pass; focus-visible 3px; target tương tác mobile thực tế >= 44px.
+Console: 0 warning, 0 error.
+```
+
+Ranh giới dữ liệu và phát hành:
+
+- Browser QA dùng database tạm biệt lập có dataset đại diện; không dùng database vận hành và
+  không submit thao tác nghiệp vụ. Database/process/harness QA được dọn sau kiểm tra.
+- Không migration, không publish, không NSSM và không deploy. Chủ hệ thống duyệt commit phạm vi
+  UI-002 ngày 19/07/2026; push `origin/main` sẽ do chủ hệ thống thực hiện thủ công sau khi nhận
+  commit hash.
+- Hai file untracked `opening-balance.json` và
+  `tools/OpeningBalanceImporter/templates/opening-balance.sample.json` được giữ nguyên.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
