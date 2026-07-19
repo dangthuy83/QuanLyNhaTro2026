@@ -86,6 +86,26 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - QA UI-002 chỉ dùng database tạm biệt lập và app foreground cục bộ; không đọc/ghi database vận
   hành, không publish/deploy và không tác động NSSM service.
 
+## Quyết định UI-003 ngày 19/07/2026
+
+- Redesign hoàn chỉnh năm màn module Hợp đồng: danh sách, chi tiết, tạo, sửa và dịch vụ theo kỳ.
+  Giữ nguyên route, action, tên field, validation, authorization và mọi flow nghiệp vụ; phần đọc
+  chỉ bổ sung Nhà và khách đại diện để danh sách có đủ ngữ cảnh vận hành.
+- Danh sách dùng một cấu trúc responsive: desktop quét theo cột, tablet thu gọn thông tin phụ,
+  mobile chuyển thành thẻ; tìm kiếm/lọc tại client theo phòng, Nhà, khách đại diện và trạng thái,
+  không thay đổi URL hay truy vấn nghiệp vụ.
+- Chi tiết luôn tách rõ tổng quan, người đang ở, dịch vụ theo kỳ, khoản phát sinh, lịch sử cư trú,
+  thao tác vận hành và vùng nguy hiểm. Thao tác bị khóa vẫn hiện lý do, không chỉ biến mất; các
+  đích nghiệp vụ ngoài module giữ nguyên controller/action hiện có.
+- Form tạo/sửa giữ guard server hiện có, hiển thị rõ trường bắt buộc, read-only/disabled, preview
+  tiền và vai trò đại diện. Màn dịch vụ lấy kỳ áp dụng làm ngữ cảnh chính; dịch vụ bắt buộc không
+  thể bỏ, dịch vụ tùy chọn vẫn thay đổi được và bộ đếm cập nhật tại chỗ.
+- Dùng lại component UI-001 (`.app-page-header`, `.app-panel`, `.app-status-badge`, `.app-notice`,
+  `.app-empty-state`). Biến thể Hợp đồng scope dưới `.contracts-page`; hành vi riêng nằm trong
+  `contracts.js`; không thêm thư viện UI hoặc màu hard-code.
+- QA UI-003 chỉ dùng database tạm biệt lập và app foreground cục bộ. Không truy cập database vận
+  hành, không migration, publish/deploy hoặc tác động NSSM service.
+
 ## Quyết định chốt REVIEW-025 ngày 16/07/2026
 
 - Diễn tập kỳ hóa đơn đầu tiên chỉ ghi trên DB restore tạm; DB vận hành chỉ được đọc để lập

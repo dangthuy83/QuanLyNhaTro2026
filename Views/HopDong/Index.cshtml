@@ -1,77 +1,145 @@
 @model IEnumerable<QuanLyNhaTro.Models.HopDong>
 @{
-    ViewData["Title"] = "Hợp đồng";
+    ViewData["Title"] = "Danh sách hợp đồng";
     ViewData["ActiveMenu"] = "hopdong";
+    var contracts = Model.ToList();
+    var houses = contracts
+        .GroupBy(x => new { x.Phong!.NhaId, TenNha = x.Phong.Nha?.TenNha ?? $"Nhà #{x.Phong.NhaId}" })
+        .Select(x => x.Key)
+        .OrderBy(x => x.TenNha)
+        .ToList();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">Danh sách hợp đồng</h5>
-    <a asp-action="Create" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg me-1"></i>Tạo hợp đồng
-    </a>
-</div>
+<div class="contracts-page contracts-index-page" data-contracts-list>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Danh sách hợp đồng</h1>
+            <p class="app-page-subtitle">Theo dõi thời hạn, người đại diện và trạng thái từng hợp đồng để xử lý đúng luồng vận hành.</p>
+        </div>
+        <div class="app-page-actions" aria-label="Thao tác module Hợp đồng">
+            <a asp-action="Create" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>Tạo hợp đồng</span></a>
+        </div>
+    </header>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Phòng</th>
-                    <th>Ngày bắt đầu</th>
-                    <th>Ngày kết thúc</th>
-                    <th class="text-end">Giá thuê TT</th>
-                    <th class="text-end">Tiền cọc</th>
-                    <th>Trạng thái</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var hd in Model)
-                {
-                    <tr>
-                        <td>
-                            <a asp-action="Details" asp-route-id="@hd.Id" class="fw-semibold text-decoration-none">
-                                @hd.Phong?.TenPhong
-                            </a>
-                        </td>
-                        <td>@hd.NgayBatDau.ToString("dd/MM/yyyy")</td>
-                        <td>@(hd.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Không xác định")</td>
-                        <td class="text-end">@hd.TienThueThoaThuan.ToString("N0") đ</td>
-                        <td class="text-end">@hd.TienCoc.ToString("N0") đ</td>
-                        <td>@Html.Raw(TrangThaiBadge(hd.TrangThai))</td>
-                        <td class="text-end">
-                            <a asp-action="Details" asp-route-id="@hd.Id"
-                               class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                }
-                @if (!Model.Any())
-                {
-                    <tr><td colspan="7" class="text-center text-muted py-4">Chưa có hợp đồng nào.</td></tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-@functions {
-    static string TrangThaiBadge(string tt) => tt switch
+    @if (TempData["Success"] != null || TempData["Error"] != null)
     {
-        "DangHieuLuc"    => "<span class='badge bg-success'>Đang hiệu lực</span>",
-        "ChoHieuLuc"     => "<span class='badge bg-warning text-dark'>Chờ hiệu lực</span>",
-        "DaKetThuc"      => "<span class='badge bg-secondary'>Đã kết thúc</span>",
-        "DaHuy"          => "<span class='badge bg-danger'>Đã huỷ</span>",
-        "DaChuyenPhong"  => "<span class='badge bg-info text-dark'>Đã chuyển phòng</span>",
-        _                => $"<span class='badge bg-light text-dark'>{tt}</span>"
-    };
+        <div class="contracts-flash-stack" aria-live="polite">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="status">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
+            }
+        </div>
+    }
+
+    @if (contracts.Any())
+    {
+        <section class="app-panel contracts-filter-panel" aria-labelledby="contracts-filter-heading">
+            <h2 id="contracts-filter-heading" class="visually-hidden">Tìm và lọc hợp đồng</h2>
+            <div class="contracts-filter-grid">
+                <div class="contracts-filter-field">
+                    <label for="contract-search">Tìm hợp đồng</label>
+                    <div class="contracts-search-control">
+                        <svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+                        <input id="contract-search" class="form-control" type="search" inputmode="search" placeholder="Phòng, nhà hoặc khách đại diện" autocomplete="off" data-contract-filter-search />
+                    </div>
+                </div>
+                <div class="contracts-filter-field">
+                    <label for="contract-house-filter">Nhà</label>
+                    <select id="contract-house-filter" class="form-select" data-contract-filter-house>
+                        <option value="">Tất cả nhà</option>
+                        @foreach (var house in houses)
+                        {
+                            <option value="@house.NhaId">@house.TenNha</option>
+                        }
+                    </select>
+                </div>
+                <div class="contracts-filter-field">
+                    <label for="contract-status-filter">Trạng thái</label>
+                    <select id="contract-status-filter" class="form-select" data-contract-filter-status>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="ChoHieuLuc">Chờ hiệu lực</option>
+                        <option value="DangHieuLuc">Đang hiệu lực</option>
+                        <option value="DaKetThuc">Đã kết thúc</option>
+                        <option value="DaHuy">Đã hủy</option>
+                        <option value="DaChuyenPhong">Đã chuyển phòng</option>
+                    </select>
+                </div>
+                <div class="contracts-filter-reset">
+                    <button class="btn btn-outline-secondary" type="button" data-contract-filter-reset><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>Đặt lại</span></button>
+                </div>
+            </div>
+            <div class="contracts-filter-meta">
+                <span>Kết quả cập nhật ngay khi nhập hoặc đổi bộ lọc.</span>
+                <output class="contracts-result-count" data-contract-result-count aria-live="polite">@contracts.Count hợp đồng</output>
+            </div>
+        </section>
+
+        <section class="app-panel contracts-list-panel" aria-labelledby="contracts-list-heading">
+            <h2 id="contracts-list-heading" class="visually-hidden">Các hợp đồng</h2>
+            <div class="contracts-list-head" aria-hidden="true"><span>Nhà / phòng</span><span>Khách đại diện</span><span>Thời hạn</span><span>Tài chính</span><span>Trạng thái</span><span class="text-end">Thao tác</span></div>
+            <ul class="contracts-list">
+                @foreach (var contract in contracts)
+                {
+                    var houseName = contract.Phong?.Nha?.TenNha ?? $"Nhà #{contract.Phong?.NhaId}";
+                    var roomName = contract.Phong?.TenPhong ?? $"Phòng #{contract.PhongId}";
+                    var representativeName = contract.KhachDaiDien?.HoTen ?? "Chưa xác định";
+                    <li class="contracts-list-row" data-contract-row data-search="@houseName @roomName @representativeName" data-house="@contract.Phong?.NhaId" data-status="@contract.TrangThai">
+                        <div class="contracts-identity">
+                            <a asp-action="Details" asp-route-id="@contract.Id" class="contracts-room-name">@roomName</a>
+                            <div class="contracts-room-meta">@houseName · HĐ #@contract.Id</div>
+                        </div>
+                        <div class="contracts-representative">
+                            <span class="contracts-field-label">Khách đại diện</span>
+                            @if (contract.KhachDaiDien != null)
+                            {
+                                <span class="contracts-representative-name">@contract.KhachDaiDien.HoTen</span>
+                                <span class="contracts-representative-meta">@(contract.KhachDaiDien.SoDienThoai ?? "Chưa có số điện thoại")</span>
+                            }
+                            else
+                            {
+                                <span class="contracts-representative-name is-missing">Chưa xác định</span>
+                                <span class="contracts-representative-meta">Cần kiểm tra lịch sử cư trú</span>
+                            }
+                        </div>
+                        <div class="contracts-period">
+                            <span class="contracts-field-label">Thời hạn</span>
+                            <span>@contract.NgayBatDau.ToString("dd/MM/yyyy")</span>
+                            <span class="contracts-period-end">đến @(contract.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "không xác định")</span>
+                        </div>
+                        <div class="contracts-finance">
+                            <span class="contracts-field-label">Tài chính</span>
+                            <span class="contracts-money">@contract.TienThueThoaThuan.ToString("N0") đ / tháng</span>
+                            <span class="contracts-deposit">Cọc @contract.TienCoc.ToString("N0") đ</span>
+                        </div>
+                        <div class="contracts-status"><partial name="_StatusBadge" model="contract.TrangThai" /></div>
+                        <div class="contracts-row-actions" aria-label="Thao tác hợp đồng phòng @roomName">
+                            <a asp-action="Details" asp-route-id="@contract.Id" class="btn btn-outline-primary"><span class="contracts-action-label">Xem chi tiết</span><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+                        </div>
+                    </li>
+                }
+            </ul>
+            <div class="app-empty-state contracts-filter-empty" data-contract-filter-empty hidden>
+                <div><svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><h3>Không có hợp đồng phù hợp</h3><p>Thử đổi từ khóa, Nhà hoặc trạng thái để xem lại danh sách.</p></div>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="app-panel app-empty-state" aria-labelledby="contracts-empty-heading">
+            <div>
+                <svg class="app-icon" aria-hidden="true"><use href="#icon-contract"></use></svg>
+                <h2 id="contracts-empty-heading">Chưa có hợp đồng nào</h2>
+                <p>Tạo hợp đồng đầu tiên để gắn phòng, khách đại diện và dịch vụ theo kỳ.</p>
+                <a asp-action="Create" class="btn btn-primary mt-3"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>Tạo hợp đồng</span></a>
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/contracts.js" asp-append-version="true"></script>
 }

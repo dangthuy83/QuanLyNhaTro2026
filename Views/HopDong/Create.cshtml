@@ -12,54 +12,64 @@
     int? khachChinhIdDaChon = ViewBag.KhachChinhIdDaChon;
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Tạo hợp đồng mới</h5>
-</div>
+<div class="contracts-page contracts-form-page contracts-create-page"
+     data-contract-create
+     data-services-url="@Url.Action("DichVuTheoPhong")"
+     data-tenant-search-url="@Url.Action("Search", "KhachThue")"
+     data-selected-service-ids="@selectedJson"
+     data-restore-selection="@restoreSelection.ToString().ToLowerInvariant()">
+    <a asp-action="Index" class="contracts-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách hợp đồng</a>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Tạo hợp đồng mới</h1>
+            <p class="app-page-subtitle">Chọn phòng, thời hạn, dịch vụ và đúng một khách đại diện trước khi lưu hợp đồng.</p>
+        </div>
+    </header>
 
-<div class="card shadow-sm" style="max-width:640px">
-    <div class="card-body">
-        <form asp-action="Create" method="post">
+    <section class="app-panel contracts-form-panel" aria-labelledby="contract-create-form-heading">
+        <div class="app-panel-header"><div><h2 id="contract-create-form-heading">Thông tin hợp đồng</h2><p>Thông tin có dấu <span class="contracts-required">*</span> là bắt buộc.</p></div></div>
+        <div class="app-panel-body">
+        <form asp-action="Create" method="post" class="contracts-form">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+            <div asp-validation-summary="ModelOnly" class="contracts-validation-summary"></div>
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Phòng <span class="text-danger">*</span></label>
-                <select name="PhongId" class="form-select" required>
+                <label class="form-label" for="contract-room">Phòng <span class="contracts-required">*</span></label>
+                <select id="contract-room" name="PhongId" class="form-select" required>
                     <option value="">— Chọn phòng —</option>
                     @foreach (var p in danhSachPhong)
                     {
-                        <option value="@p.Id" data-gia="@p.GiaThueMacDinh.ToString("0")" selected="@(p.Id == phongIdMacDinh || p.Id == Model?.PhongId)">
-                            @p.TenPhong (@p.TrangThai)
+                        <option value="@p.Id" data-price="@p.GiaThueMacDinh.ToString("0")" selected="@(p.Id == phongIdMacDinh || p.Id == Model?.PhongId)">
+                            @(p.Nha?.TenNha ?? $"Nhà #{p.NhaId}") · @p.TenPhong (@p.TrangThai)
                         </option>
                     }
                 </select>
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Dịch vụ đăng ký</label>
-                <div id="dichVuHopDong" class="border rounded p-2">
-                    <p class="text-muted small mb-0">Chọn phòng để tải danh sách dịch vụ.</p>
+                <label class="form-label" id="contract-services-label">Dịch vụ đăng ký</label>
+                <div id="dichVuHopDong" class="contracts-service-options" data-contract-services aria-labelledby="contract-services-label">
+                    <div class="contracts-inline-empty"><svg class="app-icon" aria-hidden="true"><use href="#icon-service"></use></svg><span>Chọn phòng để tải dịch vụ có thể đăng ký.</span></div>
                 </div>
-                <div class="form-text">Tất cả dịch vụ của phòng được chọn sẵn; dịch vụ bắt buộc không thể bỏ.</div>
+                <div id="required-service-help" class="contracts-form-hint">Tất cả dịch vụ của phòng được chọn sẵn; dịch vụ bắt buộc không thể bỏ.</div>
             </div>
 
             <div class="row g-3 mb-3">
                 <div class="col-6">
-                    <label class="form-label fw-semibold">Ngày bắt đầu <span class="text-danger">*</span></label>
-                    <input name="NgayBatDau" type="date" class="form-control" required
-                           value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    <label class="form-label" for="contract-start">Ngày bắt đầu <span class="contracts-required">*</span></label>
+                    <input id="contract-start" asp-for="NgayBatDau" type="date" class="form-control" required
+                           value="@((Model?.NgayBatDau == default ? DateTime.Today : Model!.NgayBatDau).ToString("yyyy-MM-dd"))" />
                 </div>
                 <div class="col-6">
-                    <label class="form-label fw-semibold">Ngày kết thúc</label>
-                    <input name="NgayKetThuc" type="date" class="form-control" />
+                    <label class="form-label" for="contract-end">Ngày kết thúc</label>
+                    <input id="contract-end" asp-for="NgayKetThuc" type="date" class="form-control" />
                     <div class="form-text">Để trống nếu không xác định.</div>
                 </div>
             </div>
 
             <div class="mb-3">
-                <label asp-for="NgayThanhToanHangThang" class="form-label fw-semibold">
-                    Ngày thanh toán hàng tháng <span class="text-danger">*</span>
+                <label asp-for="NgayThanhToanHangThang" class="form-label">
+                    Ngày thanh toán hàng tháng <span class="contracts-required">*</span>
                 </label>
                 <input asp-for="NgayThanhToanHangThang" type="number" min="1" max="31"
                        value="@(Model?.NgayThanhToanHangThang ?? 5)" class="form-control" required />
@@ -69,148 +79,51 @@
 
             <div class="row g-3 mb-3">
                 <div class="col-6">
-                    <label class="form-label fw-semibold">Giá thuê thỏa thuận (đ) <span class="text-danger">*</span></label>
-                    <input name="TienThueThoaThuan" id="tienThue" type="number" min="0" class="form-control" required value="@(Model?.TienThueThoaThuan.ToString("0") ?? "")" />
+                    <label class="form-label" for="tienThue">Giá thuê thỏa thuận (đ) <span class="contracts-required">*</span></label>
+                    <input name="TienThueThoaThuan" id="tienThue" type="number" min="0" class="form-control" required value="@(Model?.TienThueThoaThuan.ToString("0") ?? "")" data-contract-money-preview="rent-preview" />
+                    <div id="rent-preview" class="contracts-money-preview" aria-live="polite"></div>
                 </div>
                 <div class="col-6">
-                    <label class="form-label fw-semibold">Tiền cọc (đ)</label>
-                    <input name="TienCoc" id="tienCoc" type="number" min="0" class="form-control" value="@(Model?.TienCoc.ToString("0") ?? "")" />
+                    <label class="form-label" for="tienCoc">Tiền cọc (đ)</label>
+                    <input name="TienCoc" id="tienCoc" type="number" min="0" class="form-control" value="@(Model?.TienCoc.ToString("0") ?? "")" data-contract-money-preview="deposit-preview" />
+                    <div id="deposit-preview" class="contracts-money-preview" aria-live="polite"></div>
                 </div>
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Khách thuê</label>
-                <input id="tenantSearch" type="search" class="form-control" autocomplete="off"
+                <label class="form-label" for="tenantSearch">Khách thuê và người đại diện <span class="contracts-required">*</span></label>
+                <input id="tenantSearch" type="search" class="form-control" autocomplete="off" data-tenant-search
                        placeholder="Tìm theo tên, SĐT, CCCD hoặc biển số (ít nhất 2 ký tự)" />
-                <div id="tenantSearchResults" class="list-group mt-1"></div>
-                <div id="selectedTenants" class="border rounded p-2 mt-2">
+                <div id="tenantSearchResults" class="contracts-search-results" data-tenant-results hidden></div>
+                <div id="selectedTenants" class="contracts-selected-tenants" data-selected-tenants>
                     @foreach (var k in danhSachKhach)
                     {
-                        <div class="d-flex align-items-center gap-2 mb-2 tenant-row" data-id="@k.Id">
+                        <div class="contracts-tenant-row" data-tenant-row data-tenant-id="@k.Id">
                             <input type="hidden" name="khachThueIds" value="@k.Id" />
-                            <input type="radio" name="khachChinhId" value="@k.Id" checked="@(k.Id == khachChinhIdDaChon)" />
-                            <span class="flex-grow-1">@k.HoTen <small class="text-muted">@k.SoDienThoai · @k.CCCD</small></span>
-                            <button type="button" class="btn btn-sm btn-outline-danger remove-tenant">Bỏ</button>
+                            <label class="contracts-representative-choice"><input type="radio" name="khachChinhId" value="@k.Id" checked="@(k.Id == khachChinhIdDaChon)" /><span><strong>@k.HoTen</strong><small>@(k.SoDienThoai ?? "Chưa có SĐT") · CCCD @(k.CCCD ?? "chưa có")</small></span></label>
+                            <button type="button" class="btn btn-outline-danger" data-remove-tenant aria-label="Bỏ @k.HoTen khỏi hợp đồng">Bỏ</button>
                         </div>
                     }
+                    <div class="contracts-inline-empty" data-selected-tenants-empty><svg class="app-icon" aria-hidden="true"><use href="#icon-users"></use></svg><span>Chưa chọn khách thuê.</span></div>
                 </div>
-                <div class="form-text">Chọn hồ sơ cũ để tạo giai đoạn cư trú mới; nút tròn đánh dấu người đại diện.</div>
-                <a asp-controller="KhachThue" asp-action="Create" class="small">Chưa có hồ sơ? Thêm khách mới</a>
+                <div class="contracts-form-hint">Chọn hồ sơ cũ để tạo giai đoạn cư trú mới; nút tròn đánh dấu đúng một người đại diện.</div>
+                <a asp-controller="KhachThue" asp-action="Create" class="contracts-text-link">Chưa có hồ sơ? Thêm khách mới</a>
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Ghi chú</label>
-                <textarea name="GhiChu" class="form-control" rows="2"></textarea>
+                <label class="form-label" for="contract-note">Ghi chú</label>
+                <textarea id="contract-note" name="GhiChu" class="form-control" rows="3">@Model?.GhiChu</textarea>
             </div>
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Tạo hợp đồng</button>
+            <div class="contracts-form-actions">
+                <button type="submit" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-save"></use></svg>Tạo hợp đồng</span></button>
                 <a asp-action="Index" class="btn btn-outline-secondary">Huỷ</a>
             </div>
         </form>
+        </div>
+    </section>
     </div>
-</div>
 
 @section Scripts {
-<script>
-(() => {
-    const phongSelect = document.querySelector("[name='PhongId']");
-    const container = document.getElementById('dichVuHopDong');
-    const tienThue = document.getElementById('tienThue');
-    const tienCoc = document.getElementById('tienCoc');
-    let restoreSelection = @restoreSelection.ToString().ToLowerInvariant();
-    const selectedIds = new Set(@Html.Raw(selectedJson));
-
-    const money = value => Number(value || 0).toLocaleString('vi-VN');
-    const loadServices = async () => {
-        const phongId = phongSelect?.value;
-        if (!phongId) {
-            container.innerHTML = '<p class="text-muted small mb-0">Chọn phòng để tải danh sách dịch vụ.</p>';
-            return;
-        }
-
-        const response = await fetch(`@Url.Action("DichVuTheoPhong")?phongId=${encodeURIComponent(phongId)}`);
-        if (!response.ok) {
-            container.innerHTML = '<p class="text-danger small mb-0">Không tải được danh sách dịch vụ.</p>';
-            return;
-        }
-        const rows = await response.json();
-        if (!rows.length) {
-            container.innerHTML = '<p class="text-warning small mb-0">Phòng chưa được cấu hình dịch vụ.</p>';
-            return;
-        }
-
-        container.innerHTML = rows.map(item => {
-            const checked = item.batBuoc || !restoreSelection || selectedIds.has(item.id);
-            const required = item.batBuoc
-                ? '<span class="badge bg-danger ms-1">Bắt buộc</span>'
-                : '';
-            const lock = item.batBuoc ? 'onclick="return false"' : '';
-            const detail = [item.loaiTinhPhi, item.cachTinh].filter(Boolean).join(', ');
-            return `<div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" name="phongDichVuIds"
-                       value="${item.id}" id="pdv_${item.id}" ${checked ? 'checked' : ''} ${lock}>
-                <label class="form-check-label" for="pdv_${item.id}">
-                    <strong>${item.tenDichVu}</strong> ${required}
-                    <span class="text-muted small">(${detail}) — ${money(item.donGia)} đ</span>
-                </label>
-            </div>`;
-        }).join('');
-    };
-
-    const applyRoomPrice = () => {
-        const gia = phongSelect?.selectedOptions[0]?.dataset.gia;
-        if (gia !== undefined) { tienThue.value = gia; tienCoc.value = gia; }
-    };
-
-    phongSelect?.addEventListener('change', () => {
-        selectedIds.clear();
-        restoreSelection = false;
-        applyRoomPrice();
-        loadServices();
-    });
-    if (!restoreSelection && phongSelect?.value) applyRoomPrice();
-    loadServices();
-
-    const searchInput = document.getElementById('tenantSearch');
-    const results = document.getElementById('tenantSearchResults');
-    const selected = document.getElementById('selectedTenants');
-    let searchTimer;
-    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({
-        '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
-    }[c]));
-    const bindRemove = () => selected.querySelectorAll('.remove-tenant').forEach(button => {
-        button.onclick = () => button.closest('.tenant-row')?.remove();
-    });
-    const addTenant = item => {
-        if (selected.querySelector(`[data-id="${item.id}"]`)) return;
-        const row = document.createElement('div');
-        row.className = 'd-flex align-items-center gap-2 mb-2 tenant-row';
-        row.dataset.id = item.id;
-        row.innerHTML = `<input type="hidden" name="khachThueIds" value="${item.id}">
-            <input type="radio" name="khachChinhId" value="${item.id}">
-            <span class="flex-grow-1">${escapeHtml(item.hoTen)} <small class="text-muted">${escapeHtml(item.soDienThoai)} · ${escapeHtml(item.cccd)}</small></span>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-tenant">Bỏ</button>`;
-        selected.appendChild(row);
-        bindRemove();
-    };
-    searchInput?.addEventListener('input', () => {
-        clearTimeout(searchTimer);
-        const term = searchInput.value.trim();
-        if (term.length < 2) { results.innerHTML = ''; return; }
-        searchTimer = setTimeout(async () => {
-            const response = await fetch(`@Url.Action("Search", "KhachThue")?term=${encodeURIComponent(term)}&limit=20`);
-            const rows = response.ok ? await response.json() : [];
-            results.innerHTML = rows.map(x => `<button type="button" class="list-group-item list-group-item-action">
-                <strong>${escapeHtml(x.hoTen)}</strong><br><small>${escapeHtml(x.soDienThoai)} · CCCD ${escapeHtml(x.cccd)} · ${escapeHtml(x.bienSoXe)}</small></button>`).join('');
-            results.querySelectorAll('button').forEach((button, index) => button.onclick = () => {
-                addTenant(rows[index]);
-                results.innerHTML = '';
-                searchInput.value = '';
-            });
-        }, 300);
-    });
-    bindRemove();
-})();
-</script>
+    <script src="~/js/contracts.js" asp-append-version="true"></script>
 }

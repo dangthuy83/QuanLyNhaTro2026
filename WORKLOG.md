@@ -2636,6 +2636,63 @@ Ranh giới dữ liệu và phát hành:
 
 ---
 
+### UI-003 - Thiết Kế Lại Module Hợp Đồng
+
+Ngày: 19/07/2026
+
+Baseline:
+
+- Sau `git fetch origin main --prune`, `main` và `origin/main` cùng trỏ tới `8ea27d6`; ahead/behind
+  là `0/0`. Baseline chỉ có hai file untracked được bảo vệ của opening-balance.
+- Build baseline và build UI-003: `dotnet build QuanLyNhaTro.csproj --no-restore`, 0 warning,
+  0 error. Lần build trong sandbox bị từ chối ghi cache `obj`; chạy ngoài sandbox thành công.
+
+Đã làm:
+
+- Thiết kế lại `Index`, `Details`, `Create`, `Edit`, `DichVu` theo app shell/token UI-001; giữ
+  route, action, form field, validation, authorization và toàn bộ flow nghiệp vụ hiện hữu.
+- Danh sách có Nhà, phòng, khách đại diện, thời hạn, tài chính, trạng thái; search/filter/reset,
+  đếm kết quả và empty state. Bổ sung read-model `KhachDaiDien` và join chỉ đọc trong repository.
+- Chi tiết phân nhóm tổng quan, người đang ở, thao tác vận hành, vùng nguy hiểm, dịch vụ theo kỳ,
+  khoản phát sinh và lịch sử cư trú. Trạng thái khóa luôn có giải thích thay vì ẩn hoàn toàn.
+- Form tạo/sửa làm rõ required/read-only/disabled, preview tiền, dịch vụ của phòng, chọn khách và
+  đúng một đại diện. Màn dịch vụ ưu tiên kỳ áp dụng, giải thích không hồi tố, khóa đúng dịch vụ
+  bắt buộc và giữ tùy chọn có thể bật/tắt; bộ đếm chọn cập nhật tại chỗ.
+- Thêm partial `_StatusBadge.cshtml` và `contracts.js`. CSS riêng module scope dưới
+  `.contracts-page`; component dùng chung tiếp tục lấy từ UI-001.
+
+Kết quả kiểm tra:
+
+```text
+Impeccable detector: []
+Impeccable audit: Accessibility 4/4, Performance 4/4, Theming 4/4,
+                  Responsive 4/4, Anti-patterns 4/4; tổng 20/20.
+Browser: 1440px, 768px, 390px; 5 route Hợp đồng không tràn ngang.
+Index search/filter/reset pass; reset trả focus về ô tìm kiếm.
+Create tải 3 dịch vụ, nhận đúng giá phòng, tìm/chọn khách và HTML validation pass.
+Details render 5 thao tác, vùng nguy hiểm, 3 dòng cư trú và tìm hồ sơ pass.
+Edit giữ 3 khách read-only; DichVu có 4 dịch vụ, đúng 1 bắt buộc,
+tùy chọn đổi được, bắt buộc không bỏ được và bộ đếm pass.
+Focus-visible có vòng 3.2px; target tên phòng mobile thực tế 44x44px.
+Browser console cuối: 0 warning, 0 error. Server: không HTTP 500/unhandled.
+```
+
+Ảnh QA thực tế được lưu ngoài repository trong thư mục artifact Codex: danh sách 1440px, chi tiết
+768px và danh sách mobile 390px.
+
+Ranh giới dữ liệu và phát hành:
+
+- Browser QA dùng database tạm `qlnt_ui003_019f7aa6` dựng từ `Database/schema.sql`, có 5 hợp
+  đồng/7 giai đoạn cư trú/14 dịch vụ hợp đồng/2 khoản phát sinh. Không submit nghiệp vụ; database
+  vận hành không được truy cập. Cảnh báo antiforgery duy nhất là cookie cũ không giải mã được sau
+  khi restart Data Protection tạm, login mới thành công và không có HTTP 500.
+- Database/process/log harness QA được dọn sau kiểm tra. Không migration, commit, push, publish,
+  deploy hoặc tác động NSSM.
+- Hai file untracked `opening-balance.json` và
+  `tools/OpeningBalanceImporter/templates/opening-balance.sample.json` được giữ nguyên.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |

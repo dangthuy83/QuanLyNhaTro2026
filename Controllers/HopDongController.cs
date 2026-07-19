@@ -36,6 +36,7 @@ public class HopDongController(
         ViewBag.KhoanPhatSinh = await khoanPhatSinhRepo.GetByHopDongAsync(id);
         var kyXem = hd.NgayKetThuc ?? DateTime.Today;
         if (kyXem < hd.NgayBatDau) kyXem = hd.NgayBatDau;
+        ViewBag.KyDichVu = new DateTime(kyXem.Year, kyXem.Month, 1);
         ViewBag.DichVuHopDong = await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
             id, kyXem.Month, kyXem.Year);
         return View(hd);

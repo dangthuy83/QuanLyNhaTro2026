@@ -23,5 +23,6 @@ public class HopDong
     // Navigation
     public Phong? Phong { get; set; }
     public HopDong? HopDongTruoc { get; set; }
+    public KhachThue? KhachDaiDien { get; set; }
     public List<KhachThue> DanhSachKhach { get; set; } = [];
 }

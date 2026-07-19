@@ -1,0 +1,13 @@
+@model string
+@{
+    var (label, cssClass) = Model switch
+    {
+        "DangHieuLuc" => ("Đang hiệu lực", "is-success"),
+        "ChoHieuLuc" => ("Chờ hiệu lực", "is-warning"),
+        "DaKetThuc" => ("Đã kết thúc", "is-neutral"),
+        "DaHuy" => ("Đã hủy", "is-danger"),
+        "DaChuyenPhong" => ("Đã chuyển phòng", "is-info"),
+        _ => (Model, "is-neutral")
+    };
+}
+<span class="app-status-badge @cssClass"><span class="app-status-dot" aria-hidden="true"></span>@label</span>

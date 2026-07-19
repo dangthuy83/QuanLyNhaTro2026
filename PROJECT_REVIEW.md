@@ -1240,6 +1240,25 @@ Tien coc | Tong no | Tru no vao coc | Hoan lai | Khach con no
 - QA dung database tam biet lap; khong doc/ghi database van hanh. Khong migration, publish,
   NSSM hay deploy. Chu he thong duyet commit UI-002 ngay 19/07/2026 va se push thu cong.
 
+### 5.7. UI-003 - Module Hop dong - DA TRIEN KHAI 19/07/2026
+
+- Nam man Hop dong da duoc redesign tren app shell/token UI-001: danh sach, chi tiet, tao, sua va
+  dich vu theo ky. Route, action, field, validation, auth va nghiep vu duoc giu nguyen.
+- Danh sach co search/filter, Nha/phong/khach dai dien/thoi han/tai chinh/trang thai; desktop dung
+  hang de quet, tablet thu gon va mobile chuyen card. Repository chi bo sung join doc Nha va khach
+  dai dien de phuc vu hien thi.
+- Chi tiet tach ro thong tin, nguoi dang o, dich vu, khoan phat sinh, lich su cu tru, thao tac van
+  hanh va vung nguy hiem. Thao tac bi khoa co giai thich; link nghiep vu ngoai module khong doi.
+- Form tao/sua lam ro guard required/read-only/disabled, preview tien, dich vu phong va dung mot
+  dai dien. Man DichVu dat ky ap dung len truoc, giai thich khong hoi to, khoa dung dich vu bat
+  buoc va van cho phep thay doi dich vu tuy chon.
+- Component dung chung tiep tuc la page header, panel, status badge, notice va empty state. Style
+  rieng scope `.contracts-page`; JavaScript rieng la `contracts.js`; khong them dependency UI.
+- Build pass 0 warning/0 error. Impeccable detector `[]`, audit 20/20. Browser QA 5 route pass
+  tai 1440/768/390, khong tran ngang, focus/keyboard pass, target mobile 44x44px va console sach.
+- QA dung database tam biet lap; database van hanh khong duoc truy cap. Khong migration, commit,
+  push, publish, deploy hay tac dong NSSM. Hai file opening-balance untracked duoc giu nguyen.
+
 ## 6. Huong mo rong sau nay
 
 Nen chuan bi som cho multi-user/multi-tenant:

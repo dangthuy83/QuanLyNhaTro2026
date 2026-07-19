@@ -8,186 +8,169 @@
     bool dangHieuLuc = Model.TrangThai == "DangHieuLuc";
     bool choHieuLuc = Model.TrangThai == "ChoHieuLuc";
     decimal soDuCoc = ViewBag.SoDuCoc is decimal value ? value : Model.TienCoc;
+    var kyDichVu = ViewBag.KyDichVu is DateTime ky ? ky : new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    var khachDangO = danhSachKhach.Where(x => x.DangCuTru).ToList();
 }
 
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Hợp đồng — @Model.Phong?.TenPhong</h5>
-    @if (dangHieuLuc || choHieuLuc)
-    {
-        @if (dangHieuLuc)
+<div class="contracts-page contracts-details-page">
+    <a asp-action="Index" class="contracts-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách hợp đồng</a>
+    <header class="app-page-header contracts-details-header">
+        <div class="app-page-heading">
+            <div class="contracts-heading-status"><partial name="_StatusBadge" model="Model.TrangThai" /><span>HĐ #@Model.Id</span></div>
+            <h1>Hợp đồng — @Model.Phong?.TenPhong</h1>
+            <p class="app-page-subtitle">@(Model.Phong?.Nha?.TenNha ?? $"Nhà #{Model.Phong?.NhaId}") · Từ @Model.NgayBatDau.ToString("dd/MM/yyyy") đến @(Model.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "không xác định").</p>
+        </div>
+        @if (dangHieuLuc || choHieuLuc)
         {
-            <a asp-controller="Gia" asp-action="HopDong" asp-route-hopDongId="@Model.Id"
-               class="btn btn-sm btn-outline-warning ms-auto">
-                <i class="bi bi-tag me-1"></i>Thay đổi giá thuê
-            </a>
+            <div class="app-page-actions" aria-label="Thao tác chỉnh sửa hợp đồng">
+                @if (dangHieuLuc)
+                {
+                    <a asp-controller="Gia" asp-action="HopDong" asp-route-hopDongId="@Model.Id" class="btn btn-outline-secondary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>Thay đổi giá thuê</span></a>
+                }
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>Sửa hợp đồng</span></a>
+            </div>
         }
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary @(choHieuLuc ? "ms-auto" : "me-1")">
-            <i class="bi bi-pencil me-1"></i>Sửa
-        </a>
-    }
-</div>
+    </header>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
+    @if (TempData["Error"] != null || TempData["Success"] != null)
+    {
+        <div class="contracts-flash-stack" aria-live="polite">
+            @if (TempData["Error"] != null) { <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div> }
+            @if (TempData["Success"] != null) { <div class="alert alert-success alert-dismissible fade show" role="status">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div> }
+        </div>
+    }
 
 @if (Model.HopDongTruocId.HasValue && !Model.DaXuLyChenhLechCoc)
 {
-    <div class="alert alert-warning d-flex align-items-center justify-content-between gap-3">
+    <div class="app-notice is-warning contracts-deposit-notice">
+        <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
         <div>
             <strong>Chênh lệch cọc chuyển phòng chưa xử lý.</strong>
-            Vào ledger cọc để thu thêm hoặc hoàn lại phần chênh lệch.
+            <p>Vào ledger cọc để thu thêm hoặc hoàn lại phần chênh lệch trước khi quyết toán.</p>
         </div>
         <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id"
-           class="btn btn-sm btn-warning">
+           class="btn btn-outline-secondary">
             Xử lý cọc
         </a>
     </div>
 }
 
-<div class="row g-3">
-    <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Thông tin hợp đồng</h6>
-                <dl class="row mb-0">
-                    <dt class="col-5">Phòng</dt>
-                    <dd class="col-7">
+<div class="contracts-details-grid">
+    <section class="app-panel contracts-overview-panel" aria-labelledby="contract-overview-heading">
+            <div class="app-panel-header"><h2 id="contract-overview-heading">Thông tin hợp đồng</h2></div>
+            <div class="app-panel-body">
+                <dl class="contracts-definition-list">
+                    <div><dt>Nhà</dt><dd>@(Model.Phong?.Nha?.TenNha ?? $"Nhà #{Model.Phong?.NhaId}")</dd></div>
+                    <div><dt>Phòng</dt><dd>
                         <a asp-controller="Phong" asp-action="Details" asp-route-id="@Model.PhongId">
                             @Model.Phong?.TenPhong
                         </a>
-                    </dd>
-                    <dt class="col-5">Số dư cọc</dt>
-                    <dd class="col-7">
+                    </dd></div>
+                    <div><dt>Số dư cọc thực giữ</dt><dd>
                         <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id">
                             @soDuCoc.ToString("N0") đ
                         </a>
-                    </dd>
-                    <dt class="col-5">Ngày bắt đầu</dt> <dd class="col-7">@Model.NgayBatDau.ToString("dd/MM/yyyy")</dd>
-                    <dt class="col-5">Ngày kết thúc</dt><dd class="col-7">@(Model.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Không xác định")</dd>
-                    <dt class="col-5">Giá thuê TT</dt>   <dd class="col-7">@Model.TienThueThoaThuan.ToString("N0") đ</dd>
-                    <dt class="col-5">Tiền cọc</dt>      <dd class="col-7">@Model.TienCoc.ToString("N0") đ</dd>
-                    <dt class="col-5">Ngày thanh toán</dt><dd class="col-7">Ngày @Model.NgayThanhToanHangThang hàng tháng</dd>
-                    <dt class="col-5">Trạng thái</dt>
-                    <dd class="col-7">
-                        @Html.Raw(Model.TrangThai switch {
-                            "DangHieuLuc"   => "<span class='badge bg-success'>Đang hiệu lực</span>",
-                            "ChoHieuLuc"    => "<span class='badge bg-warning text-dark'>Chờ hiệu lực</span>",
-                            "DaKetThuc"     => "<span class='badge bg-secondary'>Đã kết thúc</span>",
-                            "DaHuy"         => "<span class='badge bg-danger'>Đã huỷ</span>",
-                            _               => $"<span class='badge bg-light text-dark border'>{Model.TrangThai}</span>"
-                        })
-                    </dd>
+                    </dd></div>
+                    <div><dt>Ngày bắt đầu</dt><dd>@Model.NgayBatDau.ToString("dd/MM/yyyy")</dd></div>
+                    <div><dt>Ngày kết thúc</dt><dd>@(Model.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Không xác định")</dd></div>
+                    <div><dt>Giá thuê thỏa thuận</dt><dd>@Model.TienThueThoaThuan.ToString("N0") đ / tháng</dd></div>
+                    <div><dt>Tiền cọc thỏa thuận</dt><dd>@Model.TienCoc.ToString("N0") đ</dd></div>
+                    <div><dt>Ngày thanh toán</dt><dd>Ngày @Model.NgayThanhToanHangThang hàng tháng</dd></div>
+                    <div><dt>Trạng thái</dt><dd><partial name="_StatusBadge" model="Model.TrangThai" /></dd></div>
                 </dl>
             </div>
-        </div>
-    </div>
+    </section>
 
-    <div class="col-md-6">
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Khách thuê</h6>
-                @if (danhSachKhach.Any())
+    <section class="app-panel contracts-residents-summary" aria-labelledby="contract-residents-heading">
+            <div class="app-panel-header"><div><h2 id="contract-residents-heading">Người đang ở</h2><p>@khachDangO.Count người hiện diện theo ngày</p></div></div>
+            <div class="app-panel-body">
+                @if (khachDangO.Any())
                 {
-                    <ul class="list-unstyled mb-0">
-                        @foreach (var hdk in danhSachKhach)
+                    <ul class="contracts-resident-list">
+                        @foreach (var hdk in khachDangO.OrderByDescending(x => x.LaDaiDien).ThenBy(x => x.KhachThue?.HoTen))
                         {
-                            <li class="mb-1">
+                            <li>
                                 <a asp-controller="KhachThue" asp-action="Details"
-                                   asp-route-id="@hdk.KhachThueId" class="text-decoration-none">
+                                   asp-route-id="@hdk.KhachThueId">
                                     @hdk.KhachThue?.HoTen
                                 </a>
                                 @if (hdk.LaDaiDien)
                                 {
-                                    <span class="badge bg-primary ms-1">Chính</span>
+                                    <span class="app-status-badge is-info"><span class="app-status-dot" aria-hidden="true"></span>Đại diện</span>
                                 }
-                                <small class="text-muted ms-1">@hdk.KhachThue?.SoDienThoai</small>
+                                <small>@(hdk.KhachThue?.SoDienThoai ?? "Chưa có SĐT") · từ @hdk.NgayBatDau.ToString("dd/MM/yyyy")</small>
                             </li>
                         }
                     </ul>
                 }
                 else
                 {
-                    <p class="text-muted mb-0">Chưa có khách.</p>
+                    <div class="contracts-inline-empty is-warning"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><span>Không có người đang cư trú theo ngày hiện tại.</span></div>
                 }
             </div>
-        </div>
+    </section>
 
-        @if (dangHieuLuc || choHieuLuc)
-        {
-            <div class="card shadow-sm border-warning">
-                <div class="card-body">
-                    <h6 class="card-title text-muted mb-3">Thao tác</h6>
-                    <div class="d-flex gap-2 flex-wrap">
-                        @if (dangHieuLuc)
-                        {
-                            <a asp-controller="ChuyenPhong" asp-action="Create"
-                               asp-route-hopDongId="@Model.Id"
-                               class="btn btn-sm btn-warning me-1">
-                                <i class="bi bi-arrow-left-right"></i> Chuyển phòng
-                            </a>
-                            <a asp-controller="TraPhong" asp-action="Confirm"
-                               asp-route-hopDongId="@Model.Id"
-                               class="btn btn-sm btn-danger me-1">
-                                <i class="bi bi-door-open"></i> Trả phòng
-                            </a>
-                        }
-                        <a asp-controller="HoaDon" asp-action="Create" asp-route-hopDongId="@Model.Id"
-                           class="btn btn-sm btn-success">
-                            <i class="bi bi-receipt me-1"></i>Lập hóa đơn
-                        </a>
-                        <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id"
-                           class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-wallet2 me-1"></i>Ledger cọc
-                        </a>
-                        <a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id"
-                           class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-exclamation-diamond me-1"></i>Khoản phát sinh
-                        </a>
-                        @if (Model.NgayBatDau.Date > DateTime.Today)
-                        {
-                            <form asp-action="Huy" asp-route-id="@Model.Id" method="post"
-                                  onsubmit="return confirm('Chỉ có thể huỷ hợp đồng tương lai chưa phát sinh hóa đơn, chỉ số, cọc, thanh toán hoặc khoản phát sinh. Tiếp tục?')">
-                                @Html.AntiForgeryToken()
-                                <button class="btn btn-sm btn-outline-danger">Huỷ HĐ</button>
-                            </form>
-                        }
-                    </div>
+    <section class="app-panel contracts-operations-panel" aria-labelledby="contract-operations-heading">
+        <div class="app-panel-header"><div><h2 id="contract-operations-heading">Thao tác vận hành</h2><p>Các đích ngoài module giữ nguyên luồng hiện có.</p></div></div>
+        <div class="app-panel-body">
+            @if (dangHieuLuc || choHieuLuc)
+            {
+                <div class="contracts-operation-actions">
+                    @if (dangHieuLuc)
+                    {
+                        <a asp-controller="ChuyenPhong" asp-action="Create" asp-route-hopDongId="@Model.Id" class="contracts-operation-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg><span><strong>Chuyển phòng</strong><small>Kết thúc phòng cũ và tạo hợp đồng phòng mới.</small></span><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+                        <a asp-controller="TraPhong" asp-action="Confirm" asp-route-hopDongId="@Model.Id" class="contracts-operation-link is-danger"><svg class="app-icon" aria-hidden="true"><use href="#icon-door"></use></svg><span><strong>Trả phòng</strong><small>Quyết toán hóa đơn, chỉ số, công nợ và cọc.</small></span><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+                    }
+                    <a asp-controller="HoaDon" asp-action="Create" asp-route-hopDongId="@Model.Id" class="contracts-operation-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg><span><strong>Lập hóa đơn</strong><small>Tạo hóa đơn cho một kỳ sử dụng.</small></span><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+                    <a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id" class="contracts-operation-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-wallet"></use></svg><span><strong>Ledger cọc</strong><small>Xem số dư thực giữ và các giao dịch cọc.</small></span><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+                    <a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id" class="contracts-operation-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><span><strong>Khoản phát sinh</strong><small>Quản lý phụ thu hoặc đền bù một lần.</small></span><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
                 </div>
-            </div>
-        }
-    </div>
+            }
+            else
+            {
+                <div class="contracts-inline-empty"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><span>Thao tác tạo mới đã khóa vì hợp đồng không còn ở trạng thái chờ/đang hiệu lực.</span></div>
+                <div class="contracts-reference-actions"><a asp-controller="GiaoDichCoc" asp-action="Index" asp-route-hopDongId="@Model.Id">Xem ledger cọc</a><a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id">Xem khoản phát sinh</a></div>
+            }
+        </div>
+    </section>
 </div>
 
-<div class="card shadow-sm mt-3">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="card-title text-muted mb-0">Dịch vụ hợp đồng</h6>
+<section class="app-panel contracts-danger-zone" aria-labelledby="contract-danger-heading">
+    <div class="app-panel-header"><div><h2 id="contract-danger-heading">Thao tác nguy hiểm</h2><p>Hủy không thay thế cho Trả phòng.</p></div></div>
+    <div class="app-panel-body contracts-danger-content">
+        @if ((dangHieuLuc || choHieuLuc) && Model.NgayBatDau.Date > DateTime.Today)
+        {
+            <div><strong>Hủy hợp đồng tương lai</strong><p>Chỉ thành công khi chưa phát sinh hóa đơn, chỉ số, cọc, thanh toán hoặc khoản phát sinh.</p></div>
+            <form asp-action="Huy" asp-route-id="@Model.Id" method="post" data-contract-cancel-form
+                  data-confirm-message="Chỉ có thể hủy hợp đồng tương lai chưa phát sinh hóa đơn, chỉ số, cọc, thanh toán hoặc khoản phát sinh. Tiếp tục?">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-danger" type="submit"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>Hủy hợp đồng</span></button>
+            </form>
+        }
+        else
+        {
+            <div><strong>Hủy hợp đồng không khả dụng</strong><p>@(dangHieuLuc ? "Hợp đồng đã bắt đầu; phải dùng Trả phòng để quyết toán đầy đủ." : choHieuLuc ? "Ngày bắt đầu đã đến; không còn thuộc điều kiện hủy hợp đồng tương lai." : "Hợp đồng đã kết thúc, đã hủy hoặc đã chuyển phòng nên không thể hủy lại.")</p></div>
+            <span class="app-status-badge is-neutral"><span class="app-status-dot" aria-hidden="true"></span>Đã khóa</span>
+        }
+    </div>
+</section>
+
+<section class="app-panel contracts-section-panel" aria-labelledby="contract-services-heading">
+        <div class="app-panel-header">
+            <div><h2 id="contract-services-heading">Dịch vụ hợp đồng</h2><p>Kỳ đang xem: @kyDichVu.ToString("MM/yyyy")</p></div>
             @if (dangHieuLuc)
             {
-                <a asp-action="DichVu" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-sliders me-1"></i>Cập nhật từ kỳ tiếp theo
+                <a asp-action="DichVu" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                    <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-service"></use></svg>Cập nhật từ kỳ tiếp theo</span>
                 </a>
             }
         </div>
+    <div class="app-panel-body contracts-table-body">
         @if (dichVuHopDong.Any())
         {
-            <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Dịch vụ</th><th>Loại</th><th class="text-end">Đơn giá hiện tại</th></tr></thead>
+            <div class="table-responsive contracts-data-table">
+                <table class="table mb-0">
+                    <thead><tr><th>Dịch vụ</th><th>Cách tính</th><th class="text-end">Đơn giá</th></tr></thead>
                     <tbody>
                     @foreach (var pdv in dichVuHopDong)
                     {
@@ -196,10 +179,10 @@
                                 @pdv.DichVu?.TenDichVu
                                 @if (pdv.DichVu?.BatBuocKhiThue == true)
                                 {
-                                    <span class="badge bg-danger ms-1">Bắt buộc</span>
+                                    <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Bắt buộc</span>
                                 }
                             </td>
-                            <td>@pdv.DichVu?.LoaiTinhPhiHienThi</td>
+                            <td><strong>@pdv.DichVu?.LoaiTinhPhiHienThi</strong><small>@(pdv.DichVu?.LoaiTinhPhi == QuanLyNhaTro.Models.DichVu.LoaiCoDinh ? pdv.DichVu.CachTinhCoDinhHienThi : "Theo mức sử dụng trong kỳ")</small></td>
                             <td class="text-end">@pdv.DonGia.ToString("N0") đ</td>
                         </tr>
                     }
@@ -209,25 +192,25 @@
         }
         else
         {
-            <p class="text-warning mb-0">Hợp đồng chưa đăng ký dịch vụ trong kỳ đang xem.</p>
+            <div class="contracts-inline-empty is-warning"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><span>Hợp đồng chưa đăng ký dịch vụ trong kỳ @kyDichVu.ToString("MM/yyyy").</span></div>
         }
     </div>
-</div>
+</section>
 
-<div class="card shadow-sm mt-3">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="card-title text-muted mb-0">Khoản phát sinh</h6>
+<section class="app-panel contracts-section-panel" aria-labelledby="contract-charges-heading">
+        <div class="app-panel-header">
+            <div><h2 id="contract-charges-heading">Khoản phát sinh</h2><p>Các khoản một lần gắn với hợp đồng.</p></div>
             <a asp-controller="KhoanPhatSinh" asp-action="Index" asp-route-hopDongId="@Model.Id"
-               class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-plus-lg me-1"></i>Quản lý
+               class="btn btn-outline-secondary">
+                <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg>Quản lý</span>
             </a>
         </div>
+    <div class="app-panel-body contracts-table-body">
         @if (khoanPhatSinh.Any())
         {
-            <div class="table-responsive">
-                <table class="table table-sm mb-0 align-middle">
-                    <thead class="table-light">
+            <div class="table-responsive contracts-data-table">
+                <table class="table mb-0 align-middle">
+                    <thead>
                         <tr><th>Ngày</th><th>Nội dung</th><th class="text-end">Số tiền</th><th>Trạng thái</th></tr>
                     </thead>
                     <tbody>
@@ -246,17 +229,17 @@
         }
         else
         {
-            <p class="text-muted mb-0">Chưa có khoản phát sinh nào.</p>
+            <div class="contracts-inline-empty"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><span>Chưa có khoản phát sinh nào.</span></div>
         }
     </div>
-</div>
+</section>
 
-<div class="card shadow-sm mt-3">
-    <div class="card-body">
-        <h6 class="card-title text-muted mb-3">Lịch sử cư trú</h6>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle">
-                <thead class="table-light">
+<section class="app-panel contracts-section-panel contracts-residency-panel" aria-labelledby="contract-residency-heading">
+    <div class="app-panel-header"><div><h2 id="contract-residency-heading">Lịch sử cư trú</h2><p>Ngày thực tế quyết định số người và dịch vụ Theo người.</p></div></div>
+    <div class="app-panel-body contracts-table-body">
+        <div class="table-responsive contracts-data-table contracts-residency-table">
+            <table class="table align-middle">
+                <thead>
                     <tr><th>Khách</th><th>Bắt đầu thực tế</th><th>Dự kiến rời</th><th>Kết thúc thực tế</th><th>Vai trò</th><th></th></tr>
                 </thead>
                 <tbody>
@@ -271,11 +254,12 @@
                         <td class="text-end">
                             @if (!item.NgayKetThuc.HasValue && (dangHieuLuc || choHieuLuc))
                             {
-                                <form asp-action="KetThucCuTru" asp-route-id="@Model.Id" method="post" class="d-flex gap-1 justify-content-end">
+                                <form asp-action="KetThucCuTru" asp-route-id="@Model.Id" method="post" class="contracts-end-residency-form">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="cuTruId" value="@item.Id" />
-                                    <input type="date" name="ngayKetThuc" class="form-control form-control-sm" style="max-width:145px" required />
-                                    <button class="btn btn-sm btn-outline-danger">Ghi nhận rời</button>
+                                    <label class="visually-hidden" for="resident-end-@item.Id">Ngày rời của @item.KhachThue?.HoTen</label>
+                                    <input id="resident-end-@item.Id" type="date" name="ngayKetThuc" class="form-control" required />
+                                    <button class="btn btn-outline-danger">Ghi nhận rời</button>
                                 </form>
                             }
                         </td>
@@ -291,62 +275,40 @@
 
         @if (dangHieuLuc || choHieuLuc)
         {
-            <hr />
-            <form asp-action="ThemNguoiO" asp-route-id="@Model.Id" method="post" class="row g-2 align-items-end">
+            <div class="contracts-resident-form-heading"><h3>Thêm người ở</h3><p>Tái sử dụng hồ sơ khách cũ để mở giai đoạn cư trú mới.</p></div>
+            <form asp-action="ThemNguoiO" asp-route-id="@Model.Id" method="post" class="contracts-resident-form" data-resident-form data-tenant-search-url="@Url.Action("Search", "KhachThue")">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="residentTenantId" name="khachThueId" required />
-                <div class="col-lg-4 position-relative">
-                    <label class="form-label small">Tìm hồ sơ khách cũ</label>
-                    <input id="residentSearch" class="form-control" autocomplete="off" placeholder="Tên, SĐT, CCCD, biển số" />
-                    <div id="residentResults" class="list-group position-absolute w-100" style="z-index:10"></div>
-                    <div id="residentSelected" class="form-text"></div>
+                <div class="contracts-form-field contracts-resident-search-field">
+                    <label class="form-label" for="residentSearch">Tìm hồ sơ khách cũ <span class="contracts-required">*</span></label>
+                    <input id="residentSearch" class="form-control" autocomplete="off" placeholder="Tên, SĐT, CCCD, biển số" data-resident-search />
+                    <div id="residentResults" class="contracts-search-results" data-resident-results hidden></div>
+                    <div id="residentSelected" class="contracts-form-hint" data-resident-selected>Chưa chọn hồ sơ.</div>
                 </div>
-                <div class="col-sm-3 col-lg-2">
-                    <label class="form-label small">Bắt đầu thực tế</label>
-                    <input type="date" name="ngayBatDau" class="form-control" value="@((Model.NgayBatDau > DateTime.Today ? Model.NgayBatDau : DateTime.Today).ToString("yyyy-MM-dd"))" required />
+                <div class="contracts-form-field">
+                    <label class="form-label" for="resident-start">Bắt đầu thực tế <span class="contracts-required">*</span></label>
+                    <input id="resident-start" type="date" name="ngayBatDau" class="form-control" value="@((Model.NgayBatDau > DateTime.Today ? Model.NgayBatDau : DateTime.Today).ToString("yyyy-MM-dd"))" required />
                 </div>
-                <div class="col-sm-3 col-lg-2">
-                    <label class="form-label small">Dự kiến rời</label>
-                    <input type="date" name="ngayKetThucDuKien" class="form-control" />
+                <div class="contracts-form-field">
+                    <label class="form-label" for="resident-planned-end">Dự kiến rời</label>
+                    <input id="resident-planned-end" type="date" name="ngayKetThucDuKien" class="form-control" />
                 </div>
-                <div class="col-sm-3 col-lg-2">
-                    <div class="form-check mb-2">
+                <div class="contracts-resident-representative">
+                    <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="laDaiDien" value="true" id="laDaiDien" />
                         <label class="form-check-label" for="laDaiDien">Đại diện</label>
                     </div>
                 </div>
-                <div class="col-sm-3 col-lg-2"><button class="btn btn-primary w-100">Thêm người ở</button></div>
+                <div class="contracts-resident-submit"><button class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>Thêm người ở</span></button></div>
             </form>
         }
     </div>
+</section>
+
 </div>
 
 @section Scripts {
-<script>
-(() => {
-    const input = document.getElementById('residentSearch');
-    if (!input) return;
-    const idInput = document.getElementById('residentTenantId');
-    const results = document.getElementById('residentResults');
-    const selected = document.getElementById('residentSelected');
-    let timer;
-    const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-    input.addEventListener('input', () => {
-        clearTimeout(timer); idInput.value = ''; selected.textContent = '';
-        const term = input.value.trim();
-        if (term.length < 2) { results.innerHTML = ''; return; }
-        timer = setTimeout(async () => {
-            const response = await fetch(`@Url.Action("Search", "KhachThue")?term=${encodeURIComponent(term)}&limit=20`);
-            const rows = response.ok ? await response.json() : [];
-            results.innerHTML = rows.map(x => `<button type="button" class="list-group-item list-group-item-action"><strong>${esc(x.hoTen)}</strong><br><small>${esc(x.soDienThoai)} · ${esc(x.cccd)} · ${esc(x.bienSoXe)}</small></button>`).join('');
-            results.querySelectorAll('button').forEach((button, index) => button.onclick = () => {
-                const row = rows[index]; idInput.value = row.id; input.value = row.hoTen;
-                selected.textContent = `Đã chọn hồ sơ #${row.id}`; results.innerHTML = '';
-            });
-        }, 300);
-    });
-})();
-</script>
+    <script src="~/js/contracts.js" asp-append-version="true"></script>
 }
 
 @functions {

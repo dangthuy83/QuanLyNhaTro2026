@@ -9,30 +9,70 @@ public class HopDongRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<HopDong>> GetAllAsync()
     {
         const string sql = """
-            SELECT hd.*, p.Id, p.NhaId, p.TenPhong, p.TrangThai
+            SELECT hd.*,
+                   p.Id AS PhongSplitId, p.Id, p.NhaId, p.TenPhong, p.DienTich,
+                   p.GiaThueMacDinh, p.TrangThai, p.GhiChu, p.NgayTao,
+                   n.Id AS NhaSplitId, n.Id, n.TenNha, n.DiaChi, n.GhiChu, n.NgayTao,
+                   kt.Id AS KhachSplitId, kt.Id, kt.HoTen, kt.CCCD, kt.SoDienThoai,
+                   kt.NgaySinh, kt.NgayCapCCCD, kt.NgheNghiep, kt.LoaiXe, kt.BienSoXe,
+                   kt.QueQuan, kt.AnhCCCDMatTruoc, kt.AnhCCCDMatSau, kt.GhiChu, kt.NgayTao
             FROM HopDong hd
             INNER JOIN Phong p ON p.Id = hd.PhongId
+            INNER JOIN Nha n ON n.Id = p.NhaId
+            LEFT JOIN HopDongKhachThue hdkt ON hdkt.Id = (
+                SELECT resident.Id
+                FROM HopDongKhachThue resident
+                WHERE resident.HopDongId = hd.Id AND resident.LaDaiDien = 1
+                ORDER BY resident.NgayBatDau DESC, resident.Id DESC
+                LIMIT 1)
+            LEFT JOIN KhachThue kt ON kt.Id = hdkt.KhachThueId
             ORDER BY hd.NgayBatDau DESC
             """;
-        return await _db.QueryAsync<HopDong, Phong, HopDong>(
+        return await _db.QueryAsync<HopDong, Phong, Nha, KhachThue, HopDong>(
             sql,
-            (hd, p) => { hd.Phong = p; return hd; },
-            splitOn: "Id");
+            (hd, p, n, khach) =>
+            {
+                p.Nha = n;
+                hd.Phong = p;
+                hd.KhachDaiDien = khach?.Id > 0 ? khach : null;
+                return hd;
+            },
+            splitOn: "PhongSplitId,NhaSplitId,KhachSplitId");
     }
 
     public async Task<HopDong?> GetByIdAsync(int id)
     {
         const string sql = """
-            SELECT hd.*, p.Id, p.NhaId, p.TenPhong, p.GiaThueMacDinh, p.TrangThai
+            SELECT hd.*,
+                   p.Id AS PhongSplitId, p.Id, p.NhaId, p.TenPhong, p.DienTich,
+                   p.GiaThueMacDinh, p.TrangThai, p.GhiChu, p.NgayTao,
+                   n.Id AS NhaSplitId, n.Id, n.TenNha, n.DiaChi, n.GhiChu, n.NgayTao,
+                   kt.Id AS KhachSplitId, kt.Id, kt.HoTen, kt.CCCD, kt.SoDienThoai,
+                   kt.NgaySinh, kt.NgayCapCCCD, kt.NgheNghiep, kt.LoaiXe, kt.BienSoXe,
+                   kt.QueQuan, kt.AnhCCCDMatTruoc, kt.AnhCCCDMatSau, kt.GhiChu, kt.NgayTao
             FROM HopDong hd
             INNER JOIN Phong p ON p.Id = hd.PhongId
+            INNER JOIN Nha n ON n.Id = p.NhaId
+            LEFT JOIN HopDongKhachThue hdkt ON hdkt.Id = (
+                SELECT resident.Id
+                FROM HopDongKhachThue resident
+                WHERE resident.HopDongId = hd.Id AND resident.LaDaiDien = 1
+                ORDER BY resident.NgayBatDau DESC, resident.Id DESC
+                LIMIT 1)
+            LEFT JOIN KhachThue kt ON kt.Id = hdkt.KhachThueId
             WHERE hd.Id = @Id
             """;
-        var rows = await _db.QueryAsync<HopDong, Phong, HopDong>(
+        var rows = await _db.QueryAsync<HopDong, Phong, Nha, KhachThue, HopDong>(
             sql,
-            (hd, p) => { hd.Phong = p; return hd; },
+            (hd, p, n, khach) =>
+            {
+                p.Nha = n;
+                hd.Phong = p;
+                hd.KhachDaiDien = khach?.Id > 0 ? khach : null;
+                return hd;
+            },
             new { Id = id },
-            splitOn: "Id");
+            splitOn: "PhongSplitId,NhaSplitId,KhachSplitId");
         return rows.FirstOrDefault();
     }
 

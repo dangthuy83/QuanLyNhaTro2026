@@ -9,97 +9,108 @@
     bool coDuLieuNghiepVu = ViewBag.CoDuLieuNghiepVu is true;
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i>
-    </a>
-    <h5 class="mb-0">Sửa hợp đồng — @Model.Phong?.TenPhong</h5>
-</div>
+<div class="contracts-page contracts-form-page contracts-edit-page">
+    <a asp-action="Details" asp-route-id="@Model.Id" class="contracts-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Chi tiết hợp đồng</a>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Sửa hợp đồng — @Model.Phong?.TenPhong</h1>
+            <p class="app-page-subtitle">@(Model.Phong?.Nha?.TenNha ?? $"Nhà #{Model.Phong?.NhaId}") · HĐ #@Model.Id. Các trường khóa được giữ nguyên để bảo toàn lịch sử.</p>
+        </div>
+        <partial name="_StatusBadge" model="Model.TrangThai" />
+    </header>
 
-<div class="card shadow-sm" style="max-width:640px">
-    <div class="card-body">
+    @if (coDuLieuNghiepVu)
+    {
+        <div class="app-notice is-warning contracts-form-notice" role="note">
+            <svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
+            <div><strong>Hợp đồng đã có dữ liệu nghiệp vụ.</strong><p>Chỉ ngày thanh toán và ghi chú được sửa. Ngày thanh toán mới chỉ áp dụng cho hóa đơn tạo sau lần sửa; hóa đơn cũ giữ nguyên snapshot.</p></div>
+        </div>
+    }
+
+    <section class="app-panel contracts-form-panel" aria-labelledby="contract-edit-form-heading">
+        <div class="app-panel-header"><div><h2 id="contract-edit-form-heading">Thông tin được phép cập nhật</h2><p>Trạng thái khóa của từng trường phản ánh guard hiện có.</p></div></div>
+        <div class="app-panel-body">
         @if (coDuLieuNghiepVu)
         {
-            <div class="alert alert-warning py-2">
-                Hợp đồng đã phát sinh dữ liệu nghiệp vụ. Ngày thanh toán và ghi chú vẫn được phép sửa;
-                ngày thanh toán mới chỉ áp dụng cho hóa đơn tạo sau lần sửa. Hóa đơn cũ giữ nguyên ngày đến hạn snapshot.
-                Phòng, thời hạn, tiền cọc, giá gốc và danh sách khách được giữ nguyên để bảo toàn lịch sử.
-            </div>
+            <p class="contracts-locked-summary"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg>Phòng, thời hạn, tiền cọc, giá gốc và danh sách khách được giữ nguyên.</p>
         }
-        <form asp-action="Edit" method="post">
+        <form asp-action="Edit" method="post" class="contracts-form">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="PhongId" />
             <input type="hidden" asp-for="TrangThai" />
 
-            <div class="row g-3 mb-3">
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Ngày bắt đầu</label>
+            <div class="contracts-form-grid">
+                <div class="contracts-form-field">
+                    <label class="form-label" asp-for="NgayBatDau">Ngày bắt đầu</label>
                     <input asp-for="NgayBatDau" type="date" class="form-control" readonly="@coDuLieuNghiepVu" />
+                    @if (coDuLieuNghiepVu) { <div class="contracts-form-hint">Đã khóa vì hợp đồng có dữ liệu nghiệp vụ.</div> }
                 </div>
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Ngày kết thúc</label>
+                <div class="contracts-form-field">
+                    <label class="form-label" asp-for="NgayKetThuc">Ngày kết thúc</label>
                     <input asp-for="NgayKetThuc" type="date" class="form-control" readonly="@coDuLieuNghiepVu" />
+                    @if (coDuLieuNghiepVu) { <div class="contracts-form-hint">Kết thúc hợp đồng phải đi qua đúng flow vận hành.</div> }
                 </div>
-            </div>
-
-            <div class="row g-3 mb-3">
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Giá thuê thỏa thuận (đ)</label>
-                    <input asp-for="TienThueThoaThuan" type="number" min="0" class="form-control" readonly />
-                    <div class="form-text">Đổi giá giữa hợp đồng tại màn Lịch sử giá thuê.</div>
+                <div class="contracts-form-field">
+                    <label class="form-label" asp-for="TienThueThoaThuan">Giá thuê thỏa thuận (đ)</label>
+                    <input asp-for="TienThueThoaThuan" type="number" min="0" class="form-control" readonly data-contract-money-preview="edit-rent-preview" />
+                    <div id="edit-rent-preview" class="contracts-money-preview"></div>
+                    <div class="contracts-form-hint">Luôn khóa; đổi giá giữa hợp đồng tại màn Lịch sử giá thuê.</div>
                 </div>
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Tiền cọc (đ)</label>
-                    <input asp-for="TienCoc" type="number" min="0" class="form-control" readonly="@coDuLieuNghiepVu" />
+                <div class="contracts-form-field">
+                    <label class="form-label" asp-for="TienCoc">Tiền cọc thỏa thuận (đ)</label>
+                    <input asp-for="TienCoc" type="number" min="0" class="form-control" readonly="@coDuLieuNghiepVu" data-contract-money-preview="edit-deposit-preview" />
+                    <div id="edit-deposit-preview" class="contracts-money-preview"></div>
                 </div>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="NgayThanhToanHangThang" class="form-label fw-semibold">Ngày thanh toán hàng tháng</label>
+                <div class="contracts-form-field is-wide">
+                <label asp-for="NgayThanhToanHangThang" class="form-label">Ngày thanh toán hàng tháng <span class="contracts-required">*</span></label>
                 <input asp-for="NgayThanhToanHangThang" type="number" min="1" max="31" class="form-control" required />
                 <span asp-validation-for="NgayThanhToanHangThang" class="text-danger small"></span>
-                <div class="form-text">Chỉ ảnh hưởng hóa đơn lập sau lần sửa; hóa đơn đã có giữ nguyên ngày đến hạn.</div>
+                <div class="contracts-form-hint">Chỉ ảnh hưởng hóa đơn lập sau lần sửa; hóa đơn đã có giữ nguyên ngày đến hạn.</div>
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Khách thuê</label>
-                <div class="border rounded p-2" style="max-height:200px; overflow-y:auto">
+            <div class="contracts-form-section">
+                <div class="contracts-form-section-heading"><h3>Khách thuê</h3><span>Chỉ đọc</span></div>
+                <div class="contracts-readonly-tenants">
                     @foreach (var k in danhSachKhach)
                     {
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox"
+                        <div class="contracts-readonly-tenant">
+                            <input class="form-check-input" type="checkbox" aria-label="@k.HoTen thuộc hợp đồng"
                                    name="khachThueIds" value="@k.Id" id="k_@k.Id"
                                    checked="@khachHienTaiIds.Contains(k.Id)" disabled />
                             @if (khachHienTaiIds.Contains(k.Id))
                             {
                                 <input type="hidden" name="khachThueIds" value="@k.Id" />
                             }
-                            <label class="form-check-label" for="k_@k.Id">
-                                @k.HoTen @(k.SoDienThoai != null ? $"({k.SoDienThoai})" : "")
-                                <input type="radio" name="khachChinhId" value="@k.Id"
-                                       class="ms-2"
-                                       checked="@(k.Id == khachChinhId)" disabled />
+                            <label for="k_@k.Id"><strong>@k.HoTen</strong><small>@(k.SoDienThoai ?? "Chưa có SĐT") · CCCD @(k.CCCD ?? "chưa có")</small></label>
+                            <span class="app-status-badge @(k.Id == khachChinhId ? "is-info" : "is-neutral")"><span class="app-status-dot" aria-hidden="true"></span>@(k.Id == khachChinhId ? "Đại diện" : "Người ở")</span>
+                            <input type="radio" name="khachChinhId" value="@k.Id" aria-label="@k.HoTen là người đại diện"
+                                   checked="@(k.Id == khachChinhId)" disabled />
                                 @if (k.Id == khachChinhId)
                                 {
                                     <input type="hidden" name="khachChinhId" value="@k.Id" />
                                 }
-                                <small class="text-muted">chính</small>
-                            </label>
                         </div>
                     }
                 </div>
+                <p class="contracts-form-hint">Thêm người ở hoặc kết thúc cư trú tại màn Chi tiết hợp đồng để giữ lịch sử theo ngày.</p>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Ghi chú</label>
+            <div class="contracts-form-field">
+                <label class="form-label" asp-for="GhiChu">Ghi chú</label>
                 <textarea asp-for="GhiChu" class="form-control" rows="2"></textarea>
             </div>
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+            <div class="contracts-form-actions">
+                <button type="submit" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-save"></use></svg>Lưu thay đổi</span></button>
                 <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Huỷ</a>
             </div>
         </form>
+        </div>
+    </section>
     </div>
-</div>
+
+@section Scripts {
+    <script src="~/js/contracts.js" asp-append-version="true"></script>
+}
