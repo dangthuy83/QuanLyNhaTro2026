@@ -1212,6 +1212,19 @@ Tien coc | Tong no | Tru no vao coc | Hoan lai | Khach con no
 
 ---
 
+### 5.5. UI-001 - Dashboard va app shell dung chung - DA TRIEN KHAI 19/07/2026
+
+- Dashboard da chuyen tu prototype duyet sang Razor, dung du lieu va URL hien co; khong co
+  so lieu demo trong view thuc te.
+- App shell moi co sidebar desktop, drawer tablet/mobile, backdrop, Escape, focus return va
+  bottom navigation duoi 768px. Tat ca menu cu va POST logout duoc giu lai.
+- Design tokens/component foundation nam trong `site.css`; CSS noi dung Dashboard duoc scope
+  bang `.dashboard-page`. Cac module khac chua duoc redesign trong dot nay.
+- Icon app shell/Dashboard dung SVG sprite noi tuyen; Bootstrap Icons CDN chi con la phu thuoc
+  cua cac view cu, khong phai blocker cho dieu huong chinh.
+- Browser QA pass 1440/768/390, khong tran ngang, target mobile >= 44px, drawer/backdrop/Escape
+  va focus pass, console sach. Impeccable detector khong con canh bao sau sua.
+
 ## 6. Huong mo rong sau nay
 
 Nen chuan bi som cho multi-user/multi-tenant:

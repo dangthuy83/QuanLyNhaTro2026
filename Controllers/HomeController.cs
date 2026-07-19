@@ -59,8 +59,16 @@ public class HomeController(
             new { NgayGioiHan = ngayGioiHan },
             splitOn: "Id")).ToList();
 
+        var tenNha = tatCaPhong.Select(p => p.Nha?.TenNha)
+            .Where(ten => !string.IsNullOrWhiteSpace(ten))
+            .Distinct()
+            .Take(2)
+            .ToList();
+
         var vm = new DashboardViewModel
         {
+            TongSoNha          = tatCaPhong.Select(p => p.NhaId).Distinct().Count(),
+            TenNhaTieuDe       = tenNha.Count == 1 ? tenNha[0]! : "Tất cả nhà trọ",
             Thang              = thang,
             Nam                = nam,
             TongSoPhong        = tatCaPhong.Count,

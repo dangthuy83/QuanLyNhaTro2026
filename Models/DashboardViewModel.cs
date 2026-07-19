@@ -2,6 +2,9 @@ namespace QuanLyNhaTro.Models;
 
 public class DashboardViewModel
 {
+    public int TongSoNha         { get; set; }
+    public string TenNhaTieuDe   { get; set; } = "Tất cả nhà trọ";
+
     // ── Thống kê phòng ───────────────────────────────────────────────────────
     public int TongSoPhong       { get; set; }
     public int SoPhongDangThue   { get; set; }

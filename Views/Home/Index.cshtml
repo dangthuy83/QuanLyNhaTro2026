@@ -1,188 +1,208 @@
 @model QuanLyNhaTro.Models.DashboardViewModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "Tổng quan";
     ViewData["ActiveMenu"] = "dashboard";
+
+    var tyLeThu = Model.TongPhaiThu > 0
+        ? Math.Clamp((int)Math.Round(Model.TongDaThu / Model.TongPhaiThu * 100), 0, 100)
+        : 0;
+    var tyLeLapDay = Model.TongSoPhong > 0
+        ? Math.Clamp((int)Math.Round(Model.SoPhongDangThue * 100m / Model.TongSoPhong), 0, 100)
+        : 0;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="mb-0">Tổng quan — tháng @Model.Thang/@Model.Nam</h5>
-    <a asp-controller="HoaDon" asp-action="Index"
-       asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
-       class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-receipt me-1"></i>Xem hóa đơn kỳ này
-    </a>
-</div>
+<div class="dashboard-page">
+    <header class="dashboard-heading">
+        <div>
+            <p class="dashboard-eyeline">@Model.TenNhaTieuDe</p>
+            <h1>Tổng quan tháng @Model.Thang/@Model.Nam</h1>
+            <p class="dashboard-subtitle">Những việc cần chú ý và tình hình thu tiền trong kỳ hiện tại.</p>
+        </div>
+        <div class="dashboard-period">
+            <span>Kỳ theo dõi</span>
+            <a asp-controller="HoaDon" asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="dashboard-period-link">
+                Tháng @Model.Thang/@Model.Nam
+                <svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </a>
+        </div>
+    </header>
 
-<!-- KPI: Phòng -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-2 fw-bold text-primary">@Model.TongSoPhong</div>
-                <div class="text-muted small">Tổng số phòng</div>
-            </div>
+    <section aria-labelledby="quick-actions-title">
+        <div class="dashboard-section-heading">
+            <h2 id="quick-actions-title">Thao tác nhanh</h2>
+            <span>Các công việc thường dùng mỗi tháng</span>
         </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-2 fw-bold text-success">@Model.SoPhongDangThue</div>
-                <div class="text-muted small">Đang thuê</div>
-            </div>
+        <div class="dashboard-quick-actions">
+            <a asp-controller="ChiSo" asp-action="NhapHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="dashboard-quick-action">
+                <span class="dashboard-quick-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-meter"></use></svg></span>
+                <span><strong>Nhập chỉ số</strong><small>Điện, nước theo phòng</small></span>
+            </a>
+            <a asp-controller="HoaDon" asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="dashboard-quick-action">
+                <span class="dashboard-quick-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg></span>
+                <span><strong>Chốt hóa đơn</strong><small>Xem trước trước khi tạo</small></span>
+            </a>
+            <a asp-controller="HopDong" asp-action="Create" class="dashboard-quick-action">
+                <span class="dashboard-quick-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-edit"></use></svg></span>
+                <span><strong>Tạo hợp đồng</strong><small>Nhận phòng cho khách mới</small></span>
+            </a>
+            <a asp-controller="KiemTraDuLieu" asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="dashboard-quick-action">
+                <span class="dashboard-quick-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg></span>
+                <span><strong>Kiểm tra dữ liệu</strong><small>Sẵn sàng trước khi chốt</small></span>
+            </a>
         </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-2 fw-bold text-secondary">@Model.SoPhongTrong</div>
-                <div class="text-muted small">Đang trống</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-2 fw-bold text-warning">@Model.SoPhongDangSuaChua</div>
-                <div class="text-muted small">Đang sửa chữa</div>
-            </div>
-        </div>
-    </div>
-</div>
+    </section>
 
-<!-- KPI: Thu tiền -->
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body py-3">
-                <div class="text-muted small mb-1">Phải thu tháng này</div>
-                <div class="fs-5 fw-bold">@Model.TongPhaiThu.ToString("N0") đ</div>
+    <section class="dashboard-section" aria-labelledby="room-status-title">
+        <div class="dashboard-section-heading">
+            <h2 id="room-status-title">Tình trạng phòng</h2>
+            <span>Tổng cộng @Model.TongSoPhong phòng</span>
+        </div>
+        <div class="dashboard-status-strip">
+            <div class="dashboard-status-item">
+                <div class="dashboard-status-label"><svg class="app-icon" aria-hidden="true"><use href="#icon-building"></use></svg>Tổng số phòng</div>
+                <div class="dashboard-status-value">@Model.TongSoPhong</div>
+                <div class="dashboard-status-meta">@Model.TongSoNha nhà trọ</div>
+            </div>
+            <div class="dashboard-status-item">
+                <div class="dashboard-status-label"><svg class="app-icon" aria-hidden="true"><use href="#icon-users"></use></svg>Đang thuê</div>
+                <div class="dashboard-status-value">@Model.SoPhongDangThue</div>
+                <div class="dashboard-status-meta">Tỷ lệ lấp đầy @tyLeLapDay%</div>
+            </div>
+            <div class="dashboard-status-item">
+                <div class="dashboard-status-label"><svg class="app-icon" aria-hidden="true"><use href="#icon-door"></use></svg>Phòng trống</div>
+                <div class="dashboard-status-value">@Model.SoPhongTrong</div>
+                <div class="dashboard-status-meta">@(Model.TongSoPhong == 0 ? "Chưa có dữ liệu phòng" : Model.SoPhongTrong > 0 ? "Có thể tạo hợp đồng" : "Đã lấp đầy")</div>
+            </div>
+            <div class="dashboard-status-item">
+                <div class="dashboard-status-label"><svg class="app-icon" aria-hidden="true"><use href="#icon-tools"></use></svg>Đang sửa chữa</div>
+                <div class="dashboard-status-value">@Model.SoPhongDangSuaChua</div>
+                <div class="dashboard-status-meta">@(Model.SoPhongDangSuaChua > 0 ? "Cần theo dõi tiến độ" : "Không có phát sinh")</div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body py-3">
-                <div class="text-muted small mb-1">Đã thu</div>
-                <div class="fs-5 fw-bold text-success">@Model.TongDaThu.ToString("N0") đ</div>
-                @{
-                    var pct = Model.TongPhaiThu > 0
-                        ? (int)Math.Round(Model.TongDaThu / Model.TongPhaiThu * 100) : 0;
-                }
-                <div class="progress mt-1" style="height:4px">
-                    <div class="progress-bar bg-success" style="width:@pct%"></div>
+    </section>
+
+    <section class="dashboard-section" aria-labelledby="collection-title">
+        <div class="dashboard-section-heading">
+            <h2 id="collection-title">Thu tiền tháng này</h2>
+            <span>Cập nhật theo các khoản đã ghi nhận</span>
+        </div>
+        <div class="dashboard-collection">
+            <div>
+                <div class="dashboard-amount-label">Đã thu</div>
+                <div class="dashboard-amount">@Model.TongDaThu.ToString("N0") đ</div>
+                <div class="dashboard-status-meta">@tyLeThu% kế hoạch</div>
+            </div>
+            <div>
+                <div class="dashboard-progress" role="progressbar" aria-label="Tiến độ thu tiền" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@tyLeThu">
+                    <span style="--dashboard-progress: @tyLeThu%"></span>
                 </div>
+                <div class="dashboard-progress-labels"><span>0 đ</span><span>Mục tiêu @Model.TongPhaiThu.ToString("N0") đ</span></div>
+            </div>
+            <div class="dashboard-collection-summary">
+                <div><span>Phải thu</span><strong>@Model.TongPhaiThu.ToString("N0") đ</strong></div>
+                <div class="is-danger"><span>Còn lại</span><strong>@Model.TongConLai.ToString("N0") đ</strong></div>
+                <div><span>Hóa đơn chưa đủ</span><strong>@Model.SoHoaDonChuaThu hóa đơn</strong></div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body py-3">
-                <div class="text-muted small mb-1">Còn lại chưa thu</div>
-                <div class="fs-5 fw-bold @(Model.TongConLai > 0 ? "text-danger" : "text-success")">
-                    @Model.TongConLai.ToString("N0") đ
-                </div>
-                <div class="text-muted small">@Model.SoHoaDonChuaThu hóa đơn chưa đủ</div>
-            </div>
-        </div>
-    </div>
-</div>
+    </section>
 
-<!-- Chi tiết -->
-<div class="row g-3">
-    <!-- Hóa đơn chưa thu -->
-    <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                <span class="fw-semibold">Chưa thu / thu một phần</span>
-                <span class="badge bg-danger rounded-pill">@Model.HoaDonChuaThu.Count</span>
+    <section class="dashboard-section dashboard-attention-grid" aria-label="Các mục cần chú ý">
+        <article class="dashboard-data-panel">
+            <div class="dashboard-panel-head">
+                <div class="dashboard-panel-title"><h2>Hóa đơn cần xử lý</h2><span class="dashboard-count dashboard-count-danger">@Model.HoaDonChuaThu.Count</span></div>
+                <a asp-controller="HoaDon" asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="dashboard-text-link">Xem tất cả <span aria-hidden="true">→</span></a>
             </div>
-            <div class="list-group list-group-flush">
-                @if (Model.HoaDonChuaThu.Any())
-                {
-                    @foreach (var hd in Model.HoaDonChuaThu.Take(10))
+            @if (Model.HoaDonChuaThu.Any())
+            {
+                <ul class="dashboard-data-list">
+                    @foreach (var hoaDon in Model.HoaDonChuaThu.Take(5))
                     {
-                        var conLai = hd.TongCong - hd.SoTienDaThu;
-                        <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@hd.Id"
-                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2">
-                            <div>
-                                <span class="fw-semibold">@hd.HopDong?.Phong?.TenPhong</span>
-                                @if (hd.TrangThaiThanhToan == "ThuMotPhan")
-                                {
-                                    <span class="badge bg-warning text-dark ms-1 small">Một phần</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-danger ms-1 small">Chưa thu</span>
-                                }
-                            </div>
-                            <span class="text-danger fw-semibold small">@conLai.ToString("N0") đ</span>
-                        </a>
+                        var conLai = hoaDon.TongCong - hoaDon.SoTienDaThu;
+                        var tenPhong = !string.IsNullOrWhiteSpace(hoaDon.TenPhongSnapshot)
+                            ? hoaDon.TenPhongSnapshot
+                            : hoaDon.HopDong?.Phong?.TenPhong ?? "Chưa rõ phòng";
+                        var tieuDe = !string.IsNullOrWhiteSpace(hoaDon.TenKhachDaiDienSnapshot)
+                            ? $"{hoaDon.TenKhachDaiDienSnapshot} · {tenPhong}"
+                            : tenPhong;
+                        var quaHan = hoaDon.NgayDenHan.Date < DateTime.Today;
+                        var badgeClass = quaHan ? "is-danger" : "is-warning";
+                        var badgeText = quaHan
+                            ? "Quá hạn"
+                            : hoaDon.TrangThaiThanhToan == "ThuMotPhan" ? "Một phần" : "Chưa thu";
+                        <li>
+                            <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@hoaDon.Id" class="dashboard-data-row">
+                                <span class="dashboard-row-main">
+                                    <strong class="dashboard-row-title">@tieuDe</strong>
+                                    <span class="dashboard-row-meta">Hạn thanh toán @hoaDon.NgayDenHan.ToString("dd/MM/yyyy")</span>
+                                </span>
+                                <span class="dashboard-status-badge @badgeClass">@badgeText</span>
+                                <span class="dashboard-row-value">@conLai.ToString("N0") đ</span>
+                            </a>
+                        </li>
                     }
-                    @if (Model.HoaDonChuaThu.Count > 10)
-                    {
-                        <div class="list-group-item text-muted text-center small py-2">
-                            +@(Model.HoaDonChuaThu.Count - 10) hóa đơn khác
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="list-group-item text-muted text-center py-3">
-                        <i class="bi bi-check-circle text-success me-1"></i>Đã thu đủ tháng này
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
+                </ul>
+            }
+            else
+            {
+                <div class="dashboard-empty-state"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg><span>Đã thu đủ các hóa đơn trong kỳ.</span></div>
+            }
+        </article>
 
-    <!-- Phòng trống + Sắp hết hạn -->
-    <div class="col-md-6">
+        <article class="dashboard-data-panel">
+            <div class="dashboard-panel-head">
+                <div class="dashboard-panel-title"><h2>Phòng đang trống</h2><span class="dashboard-count dashboard-count-success">@Model.PhongTrong.Count</span></div>
+                <a asp-controller="Phong" asp-action="Index" class="dashboard-text-link">Xem tất cả <span aria-hidden="true">→</span></a>
+            </div>
+            @if (Model.PhongTrong.Any())
+            {
+                <ul class="dashboard-data-list">
+                    @foreach (var phong in Model.PhongTrong.Take(5))
+                    {
+                        <li>
+                            <a asp-controller="HopDong" asp-action="Create" asp-route-phongId="@phong.Id" class="dashboard-data-row dashboard-room-row">
+                                <span class="dashboard-row-main">
+                                    <strong class="dashboard-row-title">@phong.TenPhong</strong>
+                                    <span class="dashboard-row-meta">
+                                        @if (phong.DienTich.HasValue)
+                                        {
+                                            <text>@phong.DienTich.Value.ToString("N0") m² · </text>
+                                        }
+                                        @phong.GiaThueMacDinh.ToString("N0") đ/tháng
+                                    </span>
+                                </span>
+                                <span class="dashboard-status-badge is-success">Sẵn sàng</span>
+                                <span class="dashboard-row-value">Tạo HĐ</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="dashboard-empty-state"><svg class="app-icon" aria-hidden="true"><use href="#icon-door"></use></svg><span>Hiện không có phòng trống.</span></div>
+            }
+        </article>
+
         @if (Model.HopDongSapHetHan.Any())
         {
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                    <span class="fw-semibold">Hợp đồng sắp hết hạn</span>
-                    <span class="badge bg-warning text-dark rounded-pill">@Model.HopDongSapHetHan.Count</span>
+            <article class="dashboard-data-panel dashboard-contract-panel">
+                <div class="dashboard-panel-head">
+                    <div class="dashboard-panel-title"><h2>Hợp đồng sắp hết hạn</h2><span class="dashboard-count dashboard-count-warning">@Model.HopDongSapHetHan.Count</span></div>
+                    <a asp-controller="HopDong" asp-action="Index" class="dashboard-text-link">Xem hợp đồng <span aria-hidden="true">→</span></a>
                 </div>
-                <div class="list-group list-group-flush">
-                    @foreach (var hopDong in Model.HopDongSapHetHan)
+                <ul class="dashboard-data-list dashboard-contract-list">
+                    @foreach (var hopDong in Model.HopDongSapHetHan.Take(6))
                     {
-                        var soNgay = (hopDong.NgayKetThuc!.Value - DateTime.Today).Days;
-                        <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong.Id"
-                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2">
-                            <span class="fw-semibold">@hopDong.Phong?.TenPhong</span>
-                            <span class="text-warning small">còn @soNgay ngày (@hopDong.NgayKetThuc.Value.ToString("dd/MM"))</span>
-                        </a>
+                        var soNgay = Math.Max(0, (hopDong.NgayKetThuc!.Value.Date - DateTime.Today).Days);
+                        <li>
+                            <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong.Id" class="dashboard-contract-row">
+                                <strong>@hopDong.Phong?.TenPhong</strong>
+                                <span>Còn @soNgay ngày · @hopDong.NgayKetThuc.Value.ToString("dd/MM/yyyy")</span>
+                            </a>
+                        </li>
                     }
-                </div>
-            </div>
+                </ul>
+            </article>
         }
-
-        <div class="card shadow-sm">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                <span class="fw-semibold">Phòng đang trống</span>
-                <span class="badge bg-secondary rounded-pill">@Model.PhongTrong.Count</span>
-            </div>
-            <div class="list-group list-group-flush">
-                @if (Model.PhongTrong.Any())
-                {
-                    @foreach (var p in Model.PhongTrong)
-                    {
-                        <a asp-controller="HopDong" asp-action="Create" asp-route-phongId="@p.Id"
-                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2">
-                            <span>@p.TenPhong</span>
-                            <span class="text-muted small">
-                                @p.GiaThueMacDinh.ToString("N0") đ
-                                <i class="bi bi-plus-circle ms-1 text-primary"></i>
-                            </span>
-                        </a>
-                    }
-                }
-                else
-                {
-                    <div class="list-group-item text-muted text-center py-3">Không có phòng trống</div>
-                }
-            </div>
-        </div>
-    </div>
+    </section>
 </div>

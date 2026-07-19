@@ -1,119 +1,111 @@
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString()?.ToLowerInvariant() ?? "home";
+    var activeMenu = ViewData["ActiveMenu"]?.ToString() ?? currentController;
+    var accountName = User.Identity?.Name?.Trim();
+    accountName = string.IsNullOrWhiteSpace(accountName) ? "Quản trị" : accountName;
+    var accountInitial = accountName.Substring(0, 1).ToUpperInvariant();
+}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B5F59" />
     <title>@ViewData["Title"] — Quản lý nhà trọ</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
+    <partial name="_IconSprite" />
+    <a class="skip-link" href="#main-content">Bỏ qua điều hướng</a>
 
-<!-- Sidebar + main layout -->
-<div class="d-flex" id="wrapper">
+    <div class="app-shell">
+        <button class="app-drawer-backdrop" id="drawerBackdrop" type="button" tabindex="-1" aria-label="Đóng menu"></button>
 
-    <button id="sidebar-toggle" class="btn btn-dark d-md-none" type="button"
-            aria-controls="sidebar" aria-expanded="false" aria-label="Mở menu điều hướng">
-        <i class="bi bi-list"></i>
-    </button>
+        <aside class="app-sidebar" id="appSidebar" aria-label="Điều hướng chính">
+            <button class="app-icon-button app-drawer-close" id="drawerClose" type="button" aria-label="Đóng menu">
+                <svg class="app-icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
 
-    <!-- Sidebar -->
-    <nav id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 bg-dark text-white" style="width:240px; min-height:100vh;">
-        <button id="sidebar-close" class="btn btn-sm btn-outline-light d-md-none align-self-end mb-2"
-                type="button" aria-label="Đóng menu điều hướng">
-            <i class="bi bi-x-lg"></i>
-        </button>
-        <a href="/" class="d-flex align-items-center mb-3 text-white text-decoration-none">
-            <i class="bi bi-house-door-fill me-2 fs-5"></i>
-            <span class="fw-semibold">Quản lý nhà trọ</span>
-        </a>
-        <hr />
-        <ul class="nav nav-pills flex-column mb-auto">
-            <li class="nav-item">
-                <a asp-controller="Home" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "dashboard" ? "active" : "")">
-                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="Nha" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "nha" ? "active" : "")">
-                    <i class="bi bi-building me-2"></i>Nhà Trọ
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="Phong" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "phong" ? "active" : "")">
-                    <i class="bi bi-door-open me-2"></i>Phòng Trọ
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="KhachThue" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "khachthue" ? "active" : "")">
-                    <i class="bi bi-people me-2"></i>Khách Thuê
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="HopDong" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "hopdong" ? "active" : "")">
-                    <i class="bi bi-file-earmark-text me-2"></i>Hợp Đồng
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="ChiSo" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "chiso" ? "active" : "")">
-                    <i class="bi bi-lightning-charge me-2"></i>Chỉ Số Điện Nước
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="ChiSoNgoaiHopDong" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "chiso-ngoai" ? "active" : "")">
-                    <i class="bi bi-tools me-2"></i>Chỉ Số Ngoài HĐ
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="KiemTraDuLieu" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "kiemtra" ? "active" : "")">
-                    <i class="bi bi-clipboard-check me-2"></i>Sẵn sàng vận hành
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="HoaDon" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "hoadon" ? "active" : "")">
-                    <i class="bi bi-receipt me-2"></i>Hóa Đơn
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="ThuChi" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "thuchi" ? "active" : "")">
-                    <i class="bi bi-wallet2 me-2"></i>Thu Chi
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="NhacNo" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "nhacno" ? "active" : "")">
-                    <i class="bi bi-bell me-2"></i>Nhắc Nợ
-                </a>
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="DichVu" asp-action="Index" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "dichvu" ? "active" : "")">
-                    <i class="bi bi-gear me-2"></i>Dịch Vụ
-                </a>
-            </li>
-            <li class="nav-item mt-2">
-                <hr class="text-white opacity-25 my-1">
-            </li>
-            <li class="nav-item mt-1">
-                <a asp-controller="BaoCao" asp-action="CongNo" class="nav-link text-white @(ViewData["ActiveMenu"]?.ToString() == "baocao" ? "active" : "")">
-                    <i class="bi bi-graph-up-arrow me-2"></i> Công Nợ
-                </a>
-            </li>
-        </ul>
-        <form asp-controller="Account" asp-action="Logout" method="post" class="mt-3">
-            @Html.AntiForgeryToken()
-            <button class="btn btn-sm btn-outline-light w-100"><i class="bi bi-box-arrow-right"></i> Đăng xuất</button>
-        </form>
-    </nav>
+            <a class="app-brand" asp-controller="Home" asp-action="Index">
+                <span class="app-brand-mark"><svg class="app-icon" aria-hidden="true"><use href="#icon-home"></use></svg></span>
+                <span>Quản lý nhà trọ</span>
+            </a>
 
-    <!-- Page content -->
-    <div id="page-content" class="flex-grow-1 p-4">
-        @RenderBody()
+            <nav class="app-primary-nav" aria-label="Các phân hệ">
+                <p class="app-nav-label">Tổng quan</p>
+                <ul class="app-nav-list">
+                    <li><a asp-controller="Home" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "dashboard" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-dashboard"></use></svg><span>Tổng quan</span></a></li>
+                </ul>
+
+                <p class="app-nav-label">Quản lý</p>
+                <ul class="app-nav-list">
+                    <li><a asp-controller="Nha" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "nha" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-building"></use></svg><span>Nhà trọ</span></a></li>
+                    <li><a asp-controller="Phong" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "phong" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-door"></use></svg><span>Phòng trọ</span></a></li>
+                    <li><a asp-controller="KhachThue" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "khachthue" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-users"></use></svg><span>Khách thuê</span></a></li>
+                    <li><a asp-controller="HopDong" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "hopdong" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-contract"></use></svg><span>Hợp đồng</span></a></li>
+                </ul>
+
+                <p class="app-nav-label">Tài chính</p>
+                <ul class="app-nav-list">
+                    <li><a asp-controller="HoaDon" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "hoadon" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg><span>Hóa đơn</span></a></li>
+                    <li><a asp-controller="ThuChi" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "thuchi" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-wallet"></use></svg><span>Thu chi</span></a></li>
+                    <li><a asp-controller="NhacNo" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "nhacno" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-bell"></use></svg><span>Nhắc nợ</span></a></li>
+                    <li><a asp-controller="BaoCao" asp-action="CongNo" class="app-nav-link" aria-current="@(activeMenu == "baocao" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-report"></use></svg><span>Công nợ</span></a></li>
+                </ul>
+
+                <p class="app-nav-label">Vận hành</p>
+                <ul class="app-nav-list">
+                    <li><a asp-controller="ChiSo" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "chiso" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-meter"></use></svg><span>Chỉ số điện nước</span></a></li>
+                    <li><a asp-controller="ChiSoNgoaiHopDong" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "chiso-ngoai" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-tools"></use></svg><span>Chỉ số ngoài HĐ</span></a></li>
+                    <li><a asp-controller="KiemTraDuLieu" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "kiemtra" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg><span>Kiểm tra dữ liệu</span></a></li>
+                    <li><a asp-controller="DichVu" asp-action="Index" class="app-nav-link" aria-current="@(activeMenu == "dichvu" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-settings"></use></svg><span>Dịch vụ</span></a></li>
+                </ul>
+            </nav>
+
+            <div class="app-sidebar-footer">
+                <div class="app-account-summary">
+                    <span class="app-avatar" aria-hidden="true">@accountInitial</span>
+                    <span><strong>@accountName</strong><small>Tài khoản quản trị</small></span>
+                </div>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button class="app-nav-link app-logout" type="submit"><svg class="app-icon" aria-hidden="true"><use href="#icon-logout"></use></svg><span>Đăng xuất</span></button>
+                </form>
+            </div>
+        </aside>
+
+        <div class="app-workspace" id="appWorkspace">
+            <header class="app-topbar">
+                <span class="app-topbar-title">@ViewData["Title"]</span>
+                <div class="app-user-chip" aria-label="Tài khoản đang đăng nhập: @accountName">
+                    <span class="app-avatar" aria-hidden="true">@accountInitial</span><span>@accountName</span>
+                </div>
+            </header>
+
+            <header class="app-mobile-header">
+                <button class="app-icon-button" id="drawerOpen" type="button" aria-controls="appSidebar" aria-expanded="false" aria-label="Mở menu"><svg class="app-icon" aria-hidden="true"><use href="#icon-menu"></use></svg></button>
+                <a class="app-mobile-brand" asp-controller="Home" asp-action="Index">Quản lý nhà trọ</a>
+                <span class="app-avatar app-mobile-avatar" aria-label="Tài khoản @accountName">@accountInitial</span>
+            </header>
+
+            <main class="app-main" id="main-content" tabindex="-1">
+                @RenderBody()
+            </main>
+
+            <nav class="app-bottom-nav" aria-label="Điều hướng nhanh trên điện thoại">
+                <a asp-controller="Home" asp-action="Index" class="app-bottom-link" aria-current="@(activeMenu == "dashboard" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-dashboard"></use></svg><span>Tổng quan</span></a>
+                <a asp-controller="Phong" asp-action="Index" class="app-bottom-link" aria-current="@(activeMenu == "phong" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-door"></use></svg><span>Phòng</span></a>
+                <a asp-controller="HopDong" asp-action="Index" class="app-bottom-link" aria-current="@(activeMenu == "hopdong" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-contract"></use></svg><span>Hợp đồng</span></a>
+                <a asp-controller="HoaDon" asp-action="Index" class="app-bottom-link" aria-current="@(activeMenu == "hoadon" ? "page" : null)"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg><span>Hóa đơn</span></a>
+                <button class="app-bottom-link" id="bottomMore" type="button" aria-controls="appSidebar" aria-expanded="false"><svg class="app-icon" aria-hidden="true"><use href="#icon-more"></use></svg><span>Thêm</span></button>
+            </nav>
+        </div>
     </div>
 
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="~/js/site.js" asp-append-version="true"></script>
-@await RenderSectionAsync("Scripts", required: false)
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

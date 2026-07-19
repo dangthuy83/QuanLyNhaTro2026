@@ -49,6 +49,23 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   bind/mở firewall trong LAN tin cậy; tuyệt đối không port-forward port ứng dụng hoặc mở trực
   tiếp ra Internet.
 
+## Quyết định UI-001 ngày 19/07/2026
+
+- Dashboard dùng bố cục A, cụm thao tác nhanh B và palette xanh ngọc đã duyệt. Chỉ Dashboard
+  được redesign hoàn chỉnh trong UI-001; các module khác chỉ nhận app shell và design tokens
+  tương thích, chưa thay đổi cấu trúc/nội dung nghiệp vụ.
+- `site.css` là nền giao diện dùng chung: token màu, typography, spacing, focus, button, panel,
+  badge, form control và z-index. CSS riêng Dashboard luôn nằm dưới `.dashboard-page` để giảm
+  nguy cơ ảnh hưởng các view Bootstrap cũ.
+- Desktop dùng sidebar cố định; tablet/mobile dùng drawer có backdrop, `Escape`, `inert`, ARIA
+  và trả focus về nút mở. Bottom navigation chỉ hiện dưới 768px và giữ các đích Tổng quan,
+  Phòng, Hợp đồng, Hóa đơn cùng nút mở menu đầy đủ.
+- App shell và Dashboard dùng SVG sprite nội tuyến làm icon chính, không phụ thuộc Bootstrap
+  Icons CDN. CDN vẫn giữ lại để các module cũ chưa redesign tiếp tục hiển thị icon hiện có.
+- Dashboard chỉ hiển thị dữ liệu thật từ `DashboardViewModel`/controller. Điều khiển kỳ là link
+  thật tới danh sách hóa đơn của kỳ hiện tại, không tạo dropdown giả khi controller chưa hỗ trợ
+  đổi kỳ Dashboard.
+
 ## Quyết định chốt REVIEW-025 ngày 16/07/2026
 
 - Diễn tập kỳ hóa đơn đầu tiên chỉ ghi trên DB restore tạm; DB vận hành chỉ được đọc để lập

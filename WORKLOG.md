@@ -2539,6 +2539,52 @@ Ghi chú:
 
 ---
 
+### UI-001 - Dashboard Và Nền Giao Diện Dùng Chung
+
+Ngày: 19/07/2026
+
+Đã làm:
+
+- Chuyển mẫu Dashboard đã duyệt sang Razor thực tế, giữ dữ liệu từ `DashboardViewModel` và các
+  URL thao tác hiện có; bổ sung tên/tổng số nhà từ danh sách phòng đã truy vấn sẵn.
+- Thay `_Layout.cshtml` bằng app shell responsive gồm sidebar desktop, drawer tablet/mobile,
+  backdrop, mobile header và bottom navigation; giữ đủ menu, authentication và POST logout.
+- Xây design tokens và component foundation dùng chung trong `site.css`: màu, typography,
+  spacing, focus, button, card/panel, badge, form control và responsive breakpoints.
+- Giới hạn toàn bộ style nội dung Dashboard dưới `.dashboard-page`; không redesign nội dung
+  các module Phòng, Hợp đồng, Hóa đơn, Thu chi hoặc báo cáo.
+- Dùng `_IconSprite.cshtml` cho icon app shell/Dashboard để có fallback nội tuyến khi Bootstrap
+  Icons CDN không tải được; thêm `prefers-reduced-motion` và loại transition theo `width` sau
+  cảnh báo detector.
+- Drawer quản lý `aria-expanded`, `aria-hidden`, `inert`, backdrop, `Escape`, focus vào nút đóng
+  và trả focus về đúng nút đã mở.
+
+Kết quả kiểm tra:
+
+```text
+dotnet build --no-restore (intermediate/output riêng do obj mặc định bị từ chối ghi)
+Build succeeded.
+1 warning NU1900 (không lấy được vulnerability feed trong sandbox), 0 error.
+
+Impeccable detector: []
+Browser: 1440x1000, 768x1024, 390x844.
+Không tràn ngang; console 0 error/0 warning; không có framework overlay.
+Drawer pass với nút menu, backdrop và Escape; focus return pass.
+390px: toàn bộ control hiển thị >= 44px; bottom navigation cao 52px.
+Contrast: text/muted/primary đạt AA; semantic badge dùng biến *-ink đạt 5.81-6.96:1.
+```
+
+Ranh giới dữ liệu và phát hành:
+
+- Browser QA dùng database trống tạm dựng từ `Database/schema.sql`; không sao chép dữ liệu
+  người thuê và không ghi DB vận hành. Database/process/artifact QA được dọn sau kiểm tra.
+- Không migration, không publish, không NSSM và không deploy. Chủ hệ thống đã duyệt riêng
+  commit/push phạm vi UI-001 ngày 19/07/2026.
+- Hai file untracked `opening-balance.json` và
+  `tools/OpeningBalanceImporter/templates/opening-balance.sample.json` được giữ nguyên.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |
