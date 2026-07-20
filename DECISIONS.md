@@ -22,6 +22,33 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 
 ---
 
+## Quyết định UPGRADE-NET10 ngày 20/07/2026
+
+- Ứng dụng MVC và ba tool vận hành (`AdminPasswordHasher`, `MigrationRunner`,
+  `OpeningBalanceImporter`) cùng target `net10.0`. SDK phát triển được khóa chính xác bằng
+  `global.json` ở `10.0.302`, `rollForward=disable`, không cho prerelease.
+- Giữ nguyên `Dapper 2.1.35`, `MySqlConnector 2.3.7` và `SixLabors.ImageSharp 2.1.13` vì audit
+  direct/transitive không phát hiện package deprecated hoặc vulnerable. Chỉ nâng
+  `ClosedXML 0.102.3` lên `0.105.0` sau khi đối chiếu metadata/release tương thích, build sạch
+  và xác nhận runtime xuất `.xlsx` thành công.
+- Rà breaking changes .NET 8 -> 9 -> 10 không yêu cầu đổi `Program.cs`: app dùng MVC cookie
+  redirect, không gắn cookie auth cho API endpoint; không đăng ký `IExceptionHandler`; JSON
+  của tool không dùng polymorphism/reference metadata; upload vẫn dùng `IFormFile`; QA cục bộ
+  tiếp tục dùng Data Protection tạm thời, còn production giữ key ring cấu hình hiện hữu.
+- Việc cài .NET 10 Hosting Bundle, publish/deploy, sửa NSSM/service, migration production và
+  switch traffic là các gate production riêng. Không được suy ra quyền triển khai từ batch
+  nâng target/framework này.
+- Gate Hosting Bundle sau đó được duyệt riêng và đã cài trên máy này ở phiên bản `10.0.10`
+  (`Windows Server Hosting 10.0.10.26326`), installer Microsoft có SHA-512 khớp release metadata,
+  chữ ký số hợp lệ, exit code `0` và không yêu cầu restart. Gate này không cho phép publish,
+  đổi cấu hình NSSM/service hoặc switch release.
+- Rollback trước deploy là giữ artifact/source net8 đã vận hành và bản sao cấu hình/service;
+  nếu health/auth/route/export thất bại sau switch thì stop artifact net10, khôi phục artifact
+  net8 cùng cấu hình trước đó và start lại service. Batch này không thay schema nên không có
+  database rollback.
+
+---
+
 ## Quyết định chốt REVIEW-022/023/024 ngày 16/07/2026
 
 - `ThuChi` khóa sổ theo tháng và không có luồng mở khóa trên UI. Dòng thuộc tháng đã khóa

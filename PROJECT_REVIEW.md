@@ -6,6 +6,30 @@ Vai tro review: Solution Architect + Business Analyst cho ung dung quan ly nha t
 
 ---
 
+## UPGRADE-NET10 - 20/07/2026
+
+Phạm vi kỹ thuật đã hoàn tất ở workspace: app MVC và ba tool target `net10.0`, SDK khóa tại
+`10.0.302`. Soát breaking changes .NET 9/10 cho cookie auth, exception handling, System.Text.Json,
+upload `IFormFile`, Data Protection và tool console không tìm thấy thay đổi bắt buộc trong code
+hiện hữu. Cookie vẫn dùng redirect cho MVC; endpoint `/healthz` là anonymous, không bị nhận diện
+như API cần trả 401/403. App không đăng ký `IExceptionHandler` và JSON tool không dùng metadata
+polymorphism/reference có hành vi đổi ở runtime mới.
+
+Package giữ nguyên trừ `ClosedXML 0.102.3 -> 0.105.0`; audit direct/transitive không có package
+deprecated/vulnerable. Bốn project restore/build sạch với SDK 10.0.302 và `-warnaserror`. QA
+runtime chỉ ghi trên database tạm: MigrationRunner status, OpeningBalanceImporter validate/apply
+và replay guard, login/logout, auth redirect, route MVC đại diện, một POST tạo Nhà và xuất Excel
+đều pass. Database vận hành chỉ chạy status SELECT-only trước/sau và giữ nguyên journal 1..12.
+
+Đánh giá release: source/framework đã sẵn sàng và máy này đã cài .NET 10 Hosting Bundle
+`10.0.10.26326` thành công, không yêu cầu restart. Máy không cài IIS nên không có ANCM; mô hình
+Kestrel/NSSM không phụ thuộc module này. Gate còn lại vẫn phải tạo backup artifact/config,
+publish vào thư mục release mới, smoke test health/auth/export, rồi mới switch NSSM/service.
+Nếu smoke sau switch lỗi, rollback về artifact net8 và cấu hình service trước đó; batch này
+không đổi schema/database.
+
+---
+
 ## 0. Review toàn diện sẵn sàng vận hành - 12/07/2026
 
 Phạm vi: Nhà/Phòng, Khách thuê, Hợp đồng, Dịch vụ, Giá/Hình thức, Chỉ số, Hóa đơn,

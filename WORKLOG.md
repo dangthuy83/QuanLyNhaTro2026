@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | REVIEW-001 đến REVIEW-027 hoàn tất; REVIEW-028 đã chuẩn bị importer/release và áp migration 12 production; còn gate import thật và switch/start release |
-| Build | Phiên 71: Debug/Release/publish sạch 0 warning/0 error; Browser QA artifact publish pass trên desktop/mobile |
-| Restore | Đã restore NuGet thành công sau khi trỏ cache vào thư mục workspace |
-| Database | Phiên 72: migration 12 đã áp production qua MigrationRunner sau backup/restore verify; journal 1..12, tổng 78, bốn bảng mở sổ rỗng và dữ liệu nghiệp vụ không đổi. |
+| Giai đoạn | UPGRADE-NET10 hoàn tất; Hosting Bundle 10.0.10 đã cài trên máy này; còn gate riêng cho publish/deploy và NSSM/service switch |
+| Build | Phiên 73: app và ba tool `net10.0` build với SDK 10.0.302, `0 warning / 0 error` khi bật `-warnaserror` |
+| Restore | Phiên 73: restore đủ bốn project; audit direct/transitive không có package deprecated/vulnerable |
+| Database | Phiên 73: DB vận hành chỉ chạy `MigrationRunner status` trước/sau và giữ journal 1..12; mọi POST/import chạy trên DB tạm `qlnt_upgrade_net10_019f8032`, sau đó dọn bỏ. |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,29 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 73 - UPGRADE-NET10
+
+- Baseline trước sửa được xác nhận `HEAD=main=origin/main=1923a6a2f5a3fa9d128e44f288f4cd9aaa0ce52d`;
+  đầu phiên chỉ có hai file opening-balance local được bảo vệ và không hề sửa, xóa, stage hay commit.
+- Nâng ứng dụng và ba tool thật từ `net8.0` lên `net10.0`; thêm `global.json` khóa SDK
+  `10.0.302`. Giữ nguyên Dapper/MySqlConnector/ImageSharp; nâng riêng ClosedXML
+  `0.102.3 -> 0.105.0` dựa trên metadata/release và bằng chứng xuất Excel runtime.
+- Restore đủ bốn project. Build từng project bằng SDK 10.0.302 với `-warnaserror` đều
+  `0 warning / 0 error`; audit package direct/transitive trên target mới không có deprecated
+  hoặc vulnerable package.
+- Database vận hành chỉ được đọc bằng `MigrationRunner status` trước/sau; cùng cho kết quả
+  journal 1..10 `BootstrapEvidence`, 11..12 `Runner`, không chạy migration hay nghiệp vụ ghi.
+  Database tạm `qlnt_upgrade_net10_019f8032` được dựng từ `Database/schema.sql` để chạy
+  MigrationRunner status, OpeningBalanceImporter validate/apply/replay guard và Browser POST.
+- Runtime app net10 trên database tạm trả `/healthz` 200. Browser QA pass: anonymous redirect,
+  login/return URL, các route `/`, `/Nha`, `/KhachThue`, `/HopDong`, `/HoaDon`, `/ChiSo`,
+  `/BaoCao/CongNo`, POST tạo Nhà, export `CongNo_20260720.xlsx` 200 (6,838 byte), logout và
+  auth challenge lại; console không có warning/error.
+- Gate kế tiếp được duyệt riêng: đã cài Hosting Bundle `10.0.10.26326` từ installer Microsoft
+  có SHA-512/chữ ký hợp lệ; exit code `0`, không yêu cầu restart. Máy không có IIS nên ANCM không
+  được đăng ký, không ảnh hưởng mô hình Kestrel/NSSM. Không publish/deploy production, không sửa
+  NSSM/service và không migration production; commit Git chỉ thực hiện theo duyệt riêng sau đó.
 
 ### Phiên 72 - Áp migration 12 production trong downtime
 
