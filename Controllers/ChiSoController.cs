@@ -27,18 +27,60 @@ public class ChiSoController(
             .Where(hd => hd.TrangThai == "DangHieuLuc")
             .ToList();
 
-        var dsChiSo = new List<ChiSoDienNuoc>();
+        var rows = new List<MeterOverviewRowViewModel>();
         foreach (var hd in hopDongs)
         {
-            var chiSoKy = await chiSoRepo.GetByHopDongKyAsync(hd.Id, thang.Value, nam.Value);
-            dsChiSo.AddRange(chiSoKy);
+            var chiSoKy = (await chiSoRepo.GetByHopDongKyAsync(hd.Id, thang.Value, nam.Value))
+                .GroupBy(cs => cs.DichVuId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var dichVuTheoChiSo = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(hd.Id, thang.Value, nam.Value))
+                .Where(item => item.DichVu?.LoaiTinhPhi == DichVu.LoaiTheoChiSo)
+                .Select(item => item.DichVu!)
+                .GroupBy(dv => dv.Id)
+                .Select(group => group.First())
+                .ToList();
+            var services = dichVuTheoChiSo.Select(dv =>
+            {
+                chiSoKy.TryGetValue(dv.Id, out var cs);
+                return new MeterOverviewServiceViewModel
+                {
+                    TenDichVu = dv.TenDichVu,
+                    DonViTinh = dv.DonViTinh,
+                    DaNhap = cs != null,
+                    LaReset = cs?.LaReset == true,
+                    DaKhoa = cs?.DaDungTrenHoaDon == true,
+                    ChiSoDau = cs?.ChiSoDau,
+                    ChiSoCuoi = cs?.ChiSoCuoi,
+                    SanLuong = cs?.SoLuongTieuThu
+                };
+            }).ToList();
+            var soDaNhap = services.Count(item => item.DaNhap);
+
+            rows.Add(new MeterOverviewRowViewModel
+            {
+                HopDongId = hd.Id,
+                TenNha = hd.Phong?.Nha?.TenNha ?? "Chưa xác định nhà",
+                TenPhong = hd.Phong?.TenPhong ?? $"Phòng #{hd.PhongId}",
+                TenKhach = hd.KhachDaiDien?.HoTen ?? "Chưa có khách đại diện",
+                TrangThai = services.Count == 0 ? "CanKiemTra"
+                    : soDaNhap == 0 ? "ChuaNhap"
+                    : soDaNhap == services.Count ? "DaNhapDu"
+                    : "ThieuMotPhan",
+                SoDichVu = services.Count,
+                SoDaNhap = soDaNhap,
+                CoReset = services.Any(item => item.LaReset),
+                DaKhoa = services.Any(item => item.DaKhoa),
+                DichVus = services
+            });
         }
 
-        ViewBag.Thang = thang;
-        ViewBag.Nam = nam;
-        ViewBag.HopDongs = hopDongs;
-        ViewBag.DsChiSo = dsChiSo;
-        return View();
+        return View(new MeterOverviewViewModel
+        {
+            Thang = thang.Value,
+            Nam = nam.Value,
+            Rows = rows.OrderBy(row => row.TenNha).ThenBy(row => row.TenPhong).ToList(),
+            NhaOptions = rows.Select(row => row.TenNha).Distinct().OrderBy(name => name).ToList()
+        });
     }
 
     public async Task<IActionResult> NhapHangLoat(int? thang, int? nam)
@@ -64,15 +106,20 @@ public class ChiSoController(
 
         var formData = await LoadChiSoFormAsync(hopDong.PhongId, thang.Value, nam.Value, hopDong.Id, hopDong.NgayBatDau);
 
-        ViewBag.HopDong = hopDong;
-        ViewBag.Thang = thang;
-        ViewBag.Nam = nam;
-        ViewBag.DichVuTheoChiSo = formData.DichVuTheoChiSo;
-        ViewBag.ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId);
-        ViewBag.ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu;
-        ViewBag.ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu;
-        ViewBag.NguonChiSoDauTheoDichVu = formData.NguonChiSoDauTheoDichVu;
-        return View();
+        return View(new MeterEntryViewModel
+        {
+            Thang = thang.Value,
+            Nam = nam.Value,
+            PostAction = nameof(Nhap),
+            CancelUrl = Url.Action(nameof(Index), new { thang, nam }) ?? "/ChiSo",
+            HopDong = hopDong,
+            Phong = hopDong.Phong,
+            DichVuTheoChiSo = formData.DichVuTheoChiSo,
+            ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId),
+            ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu,
+            ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu,
+            NguonChiSoDauTheoDichVu = formData.NguonChiSoDauTheoDichVu
+        });
     }
 
     public async Task<IActionResult> NhapTheoPhong(int phongId, int? thang, int? nam, int? returnHopDongId)
@@ -87,16 +134,23 @@ public class ChiSoController(
 
         var formData = await LoadChiSoFormAsync(phongId, thang.Value, nam.Value, null, null);
 
-        ViewBag.Phong = phong;
-        ViewBag.Thang = thang;
-        ViewBag.Nam = nam;
-        ViewBag.ReturnHopDongId = returnHopDongId;
-        ViewBag.DichVuTheoChiSo = formData.DichVuTheoChiSo;
-        ViewBag.ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId);
-        ViewBag.ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu;
-        ViewBag.ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu;
-        ViewBag.NguonChiSoDauTheoDichVu = formData.NguonChiSoDauTheoDichVu;
-        return View();
+        var cancelUrl = returnHopDongId.HasValue
+            ? Url.Action("Create", "ChuyenPhong", new { hopDongId = returnHopDongId.Value })
+            : Url.Action(nameof(Index), new { thang, nam });
+        return View(new MeterEntryViewModel
+        {
+            Thang = thang.Value,
+            Nam = nam.Value,
+            PostAction = nameof(NhapTheoPhong),
+            CancelUrl = cancelUrl ?? "/ChiSo",
+            Phong = phong,
+            ReturnHopDongId = returnHopDongId,
+            DichVuTheoChiSo = formData.DichVuTheoChiSo,
+            ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId),
+            ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu,
+            ChoNhapChiSoDauTheoDichVu = formData.ChoNhapChiSoDauTheoDichVu,
+            NguonChiSoDauTheoDichVu = formData.NguonChiSoDauTheoDichVu
+        });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -333,6 +387,8 @@ public class ChiSoController(
                     HopDongId = hopDong.Id,
                     NgayBatDauHopDong = hopDong.NgayBatDau,
                     TenPhong = hopDong.Phong?.TenPhong ?? $"Phong #{hopDong.PhongId}",
+                    TenNha = hopDong.Phong?.Nha?.TenNha ?? "Chưa xác định nhà",
+                    TenKhach = hopDong.KhachDaiDien?.HoTen ?? "Chưa có khách đại diện",
                     DichVuId = dichVu.Id,
                     TenDichVu = dichVu.TenDichVu,
                     DonViTinh = dichVu.DonViTinh,
@@ -347,6 +403,7 @@ public class ChiSoController(
                     ChiSoSauReset = current?.ChiSoSauReset,
                     LyDoDieuChinh = current?.LyDoDieuChinh,
                     DaNhap = current != null,
+                    DaKhoa = current?.DaDungTrenHoaDon == true,
                     SanLuongHienTai = current?.SoLuongTieuThu
                 });
             }

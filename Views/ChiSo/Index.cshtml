@@ -1,95 +1,72 @@
+@model QuanLyNhaTro.Models.MeterOverviewViewModel
 @{
     ViewData["Title"] = "Chỉ số điện nước";
     ViewData["ActiveMenu"] = "chiso";
-    var thang    = (int)ViewBag.Thang;
-    var nam      = (int)ViewBag.Nam;
-    var hopDongs = ViewBag.HopDongs as IEnumerable<QuanLyNhaTro.Models.HopDong> ?? [];
-    var dsChiSo  = ViewBag.DsChiSo  as IEnumerable<QuanLyNhaTro.Models.ChiSoDienNuoc> ?? [];
+    var complete = Model.Rows.Count(x => x.TrangThai == "DaNhapDu");
+    var partial = Model.Rows.Count(x => x.TrangThai == "ThieuMotPhan");
+    var missing = Model.Rows.Count(x => x.TrangThai == "ChuaNhap");
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h5 class="mb-0">Chỉ số điện nước - @thang/@nam</h5>
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-        <a asp-controller="ChiSoNgoaiHopDong" asp-action="Index"
-           class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-tools me-1"></i>Ngoài hợp đồng
-        </a>
-        <a asp-action="NhapHangLoat" asp-route-thang="@thang" asp-route-nam="@nam"
-           class="btn btn-sm btn-primary">
-            <i class="bi bi-table me-1"></i>Nhập hàng loạt
-        </a>
-        <form method="get" class="d-flex gap-2 align-items-center">
-            <select name="thang" class="form-select form-select-sm" style="width:90px">
-                @for (int m = 1; m <= 12; m++)
-                {
-                    <option value="@m" selected="@(m == thang)">Tháng @m</option>
-                }
-            </select>
-            <input name="nam" type="number" class="form-control form-control-sm" style="width:90px"
-                   value="@nam" min="2020" max="2099" />
-            <button class="btn btn-sm btn-outline-primary">Xem</button>
-        </form>
-    </div>
+<div class="meters-page meters-overview-page" data-meter-overview>
+    <header class="app-page-header">
+        <div class="app-page-heading"><h1>Chỉ số điện nước</h1><p class="app-page-subtitle">Theo dõi đủ từng dịch vụ, đúng đoạn hợp đồng và đúng kỳ trước khi lập hóa đơn.</p></div>
+        <div class="app-page-actions">
+            <a asp-controller="ChiSoNgoaiHopDong" asp-action="Index" class="btn btn-outline-secondary"><svg class="app-icon" aria-hidden="true"><use href="#icon-tools"></use></svg>Ngoài hợp đồng</a>
+            <a asp-action="NhapHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="btn btn-primary"><svg class="app-icon" aria-hidden="true"><use href="#icon-service"></use></svg>Nhập hàng loạt</a>
+        </div>
+    </header>
+
+    @if (TempData["Success"] != null) { <div class="app-notice is-success" role="status"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg><div><strong>Đã cập nhật</strong><p>@TempData["Success"]</p></div></div> }
+    @if (TempData["Error"] != null) { <div class="app-notice is-danger" role="alert"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Không thể hoàn tất</strong><p>@TempData["Error"]</p></div></div> }
+
+    <section class="app-panel meters-filter-panel" aria-labelledby="meter-period-heading">
+        <div class="app-panel-header">
+            <div><h2 id="meter-period-heading">Kỳ ghi chỉ số</h2><p>Đổi kỳ tải lại dữ liệu từ server; bộ lọc chỉ thu gọn danh sách đang xem.</p></div>
+            <div class="meters-period-summary" aria-label="Tóm tắt kỳ"><span><strong>@Model.Rows.Count</strong> hợp đồng</span><span class="is-success"><strong>@complete</strong> đủ</span><span class="is-warning"><strong>@partial</strong> thiếu</span><span class="is-danger"><strong>@missing</strong> chưa nhập</span></div>
+        </div>
+        <div class="app-panel-body">
+            <form method="get" class="meters-period-form">
+                <div class="app-field"><label for="meter-month">Tháng</label><select id="meter-month" name="thang" class="form-select">@for (var m = 1; m <= 12; m++) { <option value="@m" selected="@(m == Model.Thang)">Tháng @m</option> }</select></div>
+                <div class="app-field"><label for="meter-year">Năm</label><input id="meter-year" name="nam" type="number" class="form-control" value="@Model.Nam" min="2020" max="2099" /></div>
+                <button class="btn btn-outline-primary" type="submit">Xem kỳ</button>
+            </form>
+            <div class="meters-quick-filters" aria-label="Lọc nhanh danh sách">
+                <div class="app-field"><label for="meter-house-filter">Nhà</label><select id="meter-house-filter" class="form-select" data-meter-filter="house"><option value="">Tất cả nhà</option>@foreach (var house in Model.NhaOptions) { <option value="@house">@house</option> }</select></div>
+                <div class="app-field meters-search-field"><label for="meter-search">Tìm phòng hoặc khách</label><div class="app-input-with-icon"><svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><input id="meter-search" type="search" class="form-control" placeholder="Ví dụ: A101, Nguyễn Văn…" data-meter-filter="search" /></div></div>
+                <div class="app-field"><label for="meter-status-filter">Trạng thái</label><select id="meter-status-filter" class="form-select" data-meter-filter="status"><option value="">Tất cả trạng thái</option><option value="DaNhapDu">Đã nhập đủ</option><option value="ThieuMotPhan">Thiếu một phần</option><option value="ChuaNhap">Chưa nhập</option><option value="CanKiemTra">Cần kiểm tra</option></select></div>
+                <button type="button" class="btn btn-outline-secondary meters-reset-filter" data-meter-reset-filter><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>Làm mới</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="app-panel meters-list-panel" aria-labelledby="meter-list-heading">
+        <div class="app-panel-header"><div><h2 id="meter-list-heading">Tiến độ theo đoạn hợp đồng</h2><p>Một phòng có thể có nhiều đoạn; trạng thái được tính theo từng dịch vụ gắn với đúng hợp đồng.</p></div><span class="meters-result-count" data-meter-result-count>@Model.Rows.Count dòng</span></div>
+        @if (!Model.Rows.Any())
+        { <div class="app-empty-state"><svg class="app-icon" aria-hidden="true"><use href="#icon-meter"></use></svg><h3>Không có hợp đồng đang hiệu lực</h3><p>Đổi kỳ hoặc kiểm tra vòng đời hợp đồng trước khi nhập chỉ số.</p></div> }
+        else
+        {
+            <div class="meters-table-wrap">
+                <table class="meters-table">
+                    <thead><tr><th>Nhà / phòng</th><th>Khách đại diện</th><th>Dịch vụ trong kỳ</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+                    <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        var label = row.TrangThai switch { "DaNhapDu" => "Đã nhập đủ", "ThieuMotPhan" => "Thiếu một phần", "CanKiemTra" => "Cần kiểm tra", _ => "Chưa nhập" };
+                        var badge = row.TrangThai switch { "DaNhapDu" => "is-success", "ThieuMotPhan" => "is-warning", "CanKiemTra" => "is-neutral", _ => "is-danger" };
+                        <tr data-meter-overview-row data-house="@row.TenNha" data-status="@row.TrangThai" data-search="@($"{row.TenNha} {row.TenPhong} {row.TenKhach}".ToLowerInvariant())">
+                            <td data-label="Nhà / phòng"><strong>@row.TenPhong</strong><span>@row.TenNha</span><small>Hợp đồng #@row.HopDongId</small></td>
+                            <td data-label="Khách đại diện"><strong>@row.TenKhach</strong></td>
+                            <td data-label="Dịch vụ">@if (!row.DichVus.Any()) { <span class="meters-service-empty">Không có dịch vụ Theo chỉ số</span> } else foreach (var service in row.DichVus) { <div class="meters-service-line"><span><strong>@service.TenDichVu</strong><small>@service.DonViTinh</small></span>@if (service.DaNhap) { <span class="meters-reading">@service.ChiSoDau?.ToString("N2") → @service.ChiSoCuoi?.ToString("N2")<small>@service.SanLuong?.ToString("N2") @service.DonViTinh</small></span>@if (service.LaReset) { <span class="app-status-badge is-warning">Reset</span> } @if (service.DaKhoa) { <span class="app-status-badge is-neutral">Đã khóa</span> } } else { <span class="app-status-badge is-danger">Thiếu</span> }</div> }</td>
+                            <td data-label="Trạng thái"><span class="app-status-badge @badge"><span class="app-status-dot" aria-hidden="true"></span>@label</span><small>@row.SoDaNhap/@row.SoDichVu dịch vụ</small>@if (row.DaKhoa) { <small class="meters-lock-note">Có dữ liệu đã lên hóa đơn</small> }</td>
+                            <td class="meters-row-action"><a asp-action="Nhap" asp-route-hopDongId="@row.HopDongId" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="btn @(row.TrangThai == "ChuaNhap" ? "btn-primary" : "btn-outline-primary")">@(row.TrangThai == "ChuaNhap" ? "Nhập chỉ số" : "Mở chi tiết")<svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+                <div class="app-empty-state meters-filter-empty d-none" data-meter-filter-empty><svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><h3>Không có kết quả phù hợp</h3><p>Thử bỏ bớt bộ lọc hoặc tìm bằng tên phòng, nhà hay khách thuê.</p></div>
+            </div>
+        }
+    </section>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Phòng</th>
-                    <th>Đã nhập chỉ số</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var hd in hopDongs)
-                {
-                    var coChiSo = dsChiSo.Any(cs => cs.PhongId == hd.PhongId);
-                    <tr>
-                        <td class="fw-semibold">@hd.Phong?.TenPhong</td>
-                        <td>
-                            @if (coChiSo)
-                            {
-                                <span class="badge bg-success">Đã nhập</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-light text-muted border">Chưa nhập</span>
-                            }
-                        </td>
-                        <td class="text-end">
-                            <a asp-action="Nhap"
-                               asp-route-hopDongId="@hd.Id"
-                               asp-route-thang="@thang"
-                               asp-route-nam="@nam"
-                               class="btn btn-sm @(coChiSo ? "btn-outline-secondary" : "btn-primary")">
-                                @(coChiSo ? "Sửa chỉ số" : "Nhập chỉ số")
-                            </a>
-                        </td>
-                    </tr>
-                }
-                @if (!hopDongs.Any())
-                {
-                    <tr><td colspan="3" class="text-center text-muted py-4">Không có hợp đồng đang hiệu lực.</td></tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+@section Scripts { <script src="~/js/meters.js" asp-append-version="true"></script> }

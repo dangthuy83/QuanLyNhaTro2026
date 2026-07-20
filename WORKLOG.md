@@ -2723,6 +2723,27 @@ POST QA: thu nhanh 10 đ thành công trên schema MySQL tạm; schema đã tự
 
 ---
 
+## Phiên 20/07/2026 - UI-005 module Chỉ số điện nước
+
+- Redesign năm màn chỉ số trên app shell/token UI-001: tổng quan theo kỳ, nhập theo hợp đồng, nhập
+  theo phòng, nhập hàng loạt và lịch sử ngoài hợp đồng. Giữ nguyên route/action/field, validation,
+  antiforgery, auth, service tính sản lượng, quy tắc nối mốc và đồng hồ reset.
+- Bổ sung ViewModel trình bày, trạng thái đủ/thiếu/cần kiểm tra theo đúng đoạn hợp đồng và dịch vụ,
+  thông tin Nhà/khách, nguồn mốc, khóa đã dùng trên hóa đơn và chuỗi ngoài hợp đồng. Các truy vấn bổ
+  sung đều read-only; không đổi schema hay service nghiệp vụ.
+- CSS riêng được scope `.meters-page`; hành vi filter, disclosure reset, preview trình bày, chọn
+  hàng loạt và xác nhận xóa nằm tại `wwwroot/js/meters.js`; các view chỉ số không còn inline handler.
+- `dotnet build QuanLyNhaTro.csproj --no-restore` pass 0 warning/0 error. Impeccable detector sạch.
+  Browser QA đủ 5 route tại 1440/768/390: không tràn ngang, focus rõ, target mobile tối thiểu 44px,
+  filter/reset/khóa hóa đơn/chọn hàng loạt pass và console không có warning/error.
+- POST QA chỉ chạy trên schema MySQL tạm: lưu một đoạn hợp đồng có reset và một đoạn ngoài hợp đồng
+  thành công; schema được restore lại để kiểm tra rồi xóa. Database vận hành chỉ được SELECT để xác
+  nhận migration 12, 0 hợp đồng và 0 chỉ số; không nhận POST.
+- Không migration, import, stage, commit, push, publish, deploy hay tác động NSSM. Hai file
+  opening-balance untracked được giữ nguyên; artifact QA nằm ngoài repository.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |

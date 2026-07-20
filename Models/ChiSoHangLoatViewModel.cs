@@ -14,6 +14,8 @@ public class ChiSoHangLoatRowViewModel
     public int HopDongId { get; set; }
     public DateTime? NgayBatDauHopDong { get; set; }
     public string TenPhong { get; set; } = "";
+    public string TenNha { get; set; } = "";
+    public string TenKhach { get; set; } = "";
     public int DichVuId { get; set; }
     public string TenDichVu { get; set; } = "";
     public string? DonViTinh { get; set; }
@@ -28,5 +30,6 @@ public class ChiSoHangLoatRowViewModel
     public decimal? ChiSoSauReset { get; set; }
     public string? LyDoDieuChinh { get; set; }
     public bool DaNhap { get; set; }
+    public bool DaKhoa { get; set; }
     public decimal? SanLuongHienTai { get; set; }
 }

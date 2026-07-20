@@ -30,6 +30,7 @@ public class ChiSoDienNuoc
         : 0;
     public DateTime? NgayDoc { get; set; }
     public string? GhiChu { get; set; }
+    public bool DaDungTrenHoaDon { get; set; }
 
     public DichVu? DichVu { get; set; }
     public HopDong? HopDong { get; set; }

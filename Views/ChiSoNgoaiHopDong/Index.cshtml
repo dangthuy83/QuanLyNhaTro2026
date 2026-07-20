@@ -2,227 +2,60 @@
 @{
     ViewData["Title"] = "Chỉ số ngoài hợp đồng";
     ViewData["ActiveMenu"] = "chiso-ngoai";
-    var phongId = ViewBag.PhongId as int?;
-    var dichVuId = ViewBag.DichVuId as int?;
-    var danhSachPhong = ViewBag.DanhSachPhong as List<QuanLyNhaTro.Models.Phong> ?? [];
-    var dichVuTheoChiSo = ViewBag.DichVuTheoChiSo as List<QuanLyNhaTro.Models.DichVu> ?? [];
-    decimal? goiYTuChiSo = ViewBag.GoiYTuChiSo as decimal?;
-    var nguonGoiYTuChiSo = ViewBag.NguonGoiYTuChiSo as string;
+    var rooms = ViewBag.DanhSachPhong as IEnumerable<QuanLyNhaTro.Models.Phong> ?? [];
+    var services = ViewBag.DichVuTheoChiSo as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? [];
+    int? selectedRoom = ViewBag.PhongId as int?;
+    int? selectedService = ViewBag.DichVuId as int?;
+    decimal? suggestedStart = ViewBag.GoiYTuChiSo as decimal?;
+    string? suggestedSource = ViewBag.NguonGoiYTuChiSo as string;
+    var rows = Model.ToList();
     var inv = System.Globalization.CultureInfo.InvariantCulture;
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-    <div>
-        <h5 class="mb-1">Chỉ số ngoài hợp đồng</h5>
-        <div class="text-muted small">Ghi nhận điện/nước phát sinh khi phòng trống, sửa phòng hoặc chủ nhà sử dụng, không tính vào hóa đơn khách thuê.</div>
+<div class="meters-page meters-offcontract-page" data-meter-offcontract>
+    <header class="app-page-header">
+        <div class="app-page-heading"><h1>Chỉ số ngoài hợp đồng</h1><p class="app-page-subtitle">Ghi nhận mốc điện nước khi phòng trống, sửa chữa hoặc chủ nhà sử dụng mà không tính vào hóa đơn khách thuê.</p></div>
+        <div class="app-page-actions"><a asp-controller="ChiSo" asp-action="Index" class="btn btn-outline-secondary"><svg class="app-icon" aria-hidden="true"><use href="#icon-meter"></use></svg>Chỉ số theo kỳ</a></div>
+    </header>
+
+    @if (TempData["Success"] != null) { <div class="app-notice is-success" role="status"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg><div><strong>Đã cập nhật chuỗi</strong><p>@TempData["Success"]</p></div></div> }
+    @if (TempData["Error"] != null) { <div class="app-notice is-danger" role="alert"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Không thể thay đổi</strong><p>@TempData["Error"]</p></div></div> }
+
+    <div class="meters-offcontract-layout">
+        <section class="app-panel meters-offcontract-create" aria-labelledby="offcontract-create-heading">
+            <div class="app-panel-header"><div><h2 id="offcontract-create-heading">Ghi một mốc mới</h2><p>Mốc cuối có thể trở thành mốc đầu của hợp đồng hoặc kỳ sau.</p></div></div>
+            <div class="app-panel-body">
+                <form asp-action="Create" method="post" data-meter-row>
+                    @Html.AntiForgeryToken()
+                    <div class="meters-offcontract-fields">
+                        <div class="app-field"><label for="off-room">Phòng <span aria-hidden="true">*</span></label><select id="off-room" name="PhongId" class="form-select" required><option value="">Chọn phòng</option>@foreach (var room in rooms) { <option value="@room.Id" selected="@(selectedRoom == room.Id)">@room.Nha?.TenNha · @room.TenPhong</option> }</select></div>
+                        <div class="app-field"><label for="off-service">Dịch vụ <span aria-hidden="true">*</span></label><select id="off-service" name="DichVuId" class="form-select" required><option value="">Chọn dịch vụ</option>@foreach (var service in services) { <option value="@service.Id" selected="@(selectedService == service.Id)">@service.TenDichVu</option> }</select></div>
+                        <div class="app-field"><label for="off-type">Loại ghi nhận</label><select id="off-type" name="LoaiGhiNhan" class="form-select" data-meter-type><option value="BinhThuong">Bình thường</option><option value="Reset">Reset / thay đồng hồ</option></select></div>
+                        <div class="app-field"><label for="off-date">Ngày ghi nhận</label><input id="off-date" name="NgayGhiNhan" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+                        <div class="app-field"><label for="off-start">Từ số</label><input id="off-start" name="TuChiSo" type="number" step="0.01" min="0" class="form-control meters-reading-input" value="@suggestedStart?.ToString(inv)" data-start-input required />@if (!string.IsNullOrWhiteSpace(suggestedSource)) { <small>Nguồn gợi ý: @suggestedSource</small> }</div>
+                        <div class="app-field"><label for="off-end">Đến số</label><input id="off-end" name="DenChiSo" type="number" step="0.01" min="0" class="form-control meters-reading-input" data-meter-end-input required /></div>
+                        <div class="meters-reset-panel d-none" data-reset-fields><div class="meters-reset-heading"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg><div><strong>Thông tin reset</strong><p>Hai mốc trước/sau reset là bắt buộc để nối đúng chuỗi.</p></div></div><div class="meters-reset-fields"><div class="app-field"><label>Chỉ số trước reset</label><input name="ChiSoTruocReset" type="number" step="0.01" min="0" class="form-control" /></div><div class="app-field"><label>Chỉ số sau reset</label><input name="ChiSoSauReset" type="number" step="0.01" min="0" class="form-control" placeholder="0" /></div><div class="app-field meters-reason-field"><label>Lý do điều chỉnh</label><input name="LyDoDieuChinh" maxlength="255" class="form-control" placeholder="Ví dụ: thay đồng hồ hỏng" /></div></div></div>
+                        <div class="app-field meters-reason-field"><label for="off-reason">Lý do sử dụng ngoài hợp đồng <span aria-hidden="true">*</span></label><input id="off-reason" name="LyDo" maxlength="255" class="form-control" placeholder="Sửa phòng, phòng trống…" required /></div>
+                        <div class="app-field meters-reason-field"><label for="off-note">Ghi chú</label><textarea id="off-note" name="GhiChu" maxlength="1000" class="form-control" rows="3" placeholder="Thông tin bổ sung nếu cần"></textarea></div>
+                    </div>
+                    <div class="meters-consumption-preview" aria-live="polite"><span>Sản lượng dự kiến</span><strong data-meter-consumption>0,00</strong><small>server sẽ kiểm tra chuỗi và tính lại</small></div>
+                    <button type="submit" class="btn btn-primary meters-create-submit"><svg class="app-icon" aria-hidden="true"><use href="#icon-save"></use></svg>Lưu mốc ngoài hợp đồng</button>
+                </form>
+            </div>
+        </section>
+
+        <aside class="app-notice is-warning meters-chain-notice"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Đây là một mắt xích của chuỗi đồng hồ</strong><p>Mỗi dòng phải nối đúng mốc gần nhất và không trùng ngày của cùng phòng/dịch vụ. Xóa một mốc đã được dữ liệu sau tham chiếu sẽ bị server chặn.</p></div></aside>
     </div>
-    <a asp-controller="ChiSo" asp-action="Index" class="btn btn-sm btn-outline-secondary">Chỉ số theo kỳ</a>
+
+    <section class="app-panel meters-history-panel" aria-labelledby="offcontract-history-heading">
+        <div class="app-panel-header"><div><h2 id="offcontract-history-heading">Lịch sử mốc ngoài hợp đồng</h2><p>Rà theo nhà, phòng, dịch vụ và thứ tự ngày trước khi xóa.</p></div><span class="meters-result-count">@rows.Count mốc</span></div>
+        <div class="app-panel-body meters-history-filters"><form method="get"><div class="app-field"><label for="history-room">Phòng</label><select id="history-room" name="phongId" class="form-select"><option value="">Tất cả phòng</option>@foreach (var room in rooms) { <option value="@room.Id" selected="@(selectedRoom == room.Id)">@room.Nha?.TenNha · @room.TenPhong</option> }</select></div><div class="app-field"><label for="history-service">Dịch vụ</label><select id="history-service" name="dichVuId" class="form-select"><option value="">Tất cả dịch vụ</option>@foreach (var service in services) { <option value="@service.Id" selected="@(selectedService == service.Id)">@service.TenDichVu</option> }</select></div><button class="btn btn-outline-primary">Lọc lịch sử</button><a asp-action="Index" class="btn btn-outline-secondary">Xóa lọc</a></form></div>
+        @if (!rows.Any()) { <div class="app-empty-state"><svg class="app-icon" aria-hidden="true"><use href="#icon-tools"></use></svg><h3>Chưa có mốc ngoài hợp đồng</h3><p>Dùng biểu mẫu phía trên khi phát sinh tiêu thụ không thuộc hợp đồng.</p></div> }
+        else
+        {
+            <div class="meters-table-wrap"><table class="meters-table meters-history-table"><thead><tr><th>Nhà / phòng</th><th>Dịch vụ</th><th>Chuỗi chỉ số</th><th>Ghi nhận</th><th>Lý do</th><th><span class="visually-hidden">Xóa</span></th></tr></thead><tbody>@foreach (var row in rows) { <tr><td data-label="Nhà / phòng"><strong>@row.Phong?.TenPhong</strong><span>@row.TenNha</span></td><td data-label="Dịch vụ"><strong>@row.DichVu?.TenDichVu</strong><small>@row.DichVu?.DonViTinh</small></td><td data-label="Chuỗi chỉ số"><span class="meters-chain-reading"><strong>@row.TuChiSo.ToString("N2")</strong><svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg><strong>@row.DenChiSo.ToString("N2")</strong></span><small>Sản lượng @row.SanLuong.ToString("N2")</small>@if (row.LaReset) { <span class="app-status-badge is-warning">Reset @row.ChiSoTruocReset?.ToString("N2") → @row.ChiSoSauReset?.ToString("N2")</span> }</td><td data-label="Ghi nhận"><strong>@row.NgayGhiNhan.ToString("dd/MM/yyyy")</strong><small>@(row.LaReset ? row.LyDoDieuChinh : "Bình thường")</small></td><td data-label="Lý do"><strong>@row.LyDo</strong>@if (!string.IsNullOrWhiteSpace(row.GhiChu)) { <small>@row.GhiChu</small> }</td><td class="meters-row-action"><form asp-action="Delete" method="post" data-meter-delete-form data-meter-delete-label="@row.Phong?.TenPhong · @row.DichVu?.TenDichVu · @row.NgayGhiNhan.ToString("dd/MM/yyyy")">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@row.Id" /><button class="btn btn-outline-danger" type="submit" aria-label="Xóa mốc @row.Id"><svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>Xóa</button></form></td></tr> }</tbody></table></div>
+        }
+    </section>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-<form asp-action="Create" method="post" class="border rounded p-3 mb-3">
-    @Html.AntiForgeryToken()
-    <div class="row g-2 align-items-end">
-        <div class="col-md-3">
-            <label class="form-label small text-muted mb-1">Phòng <span class="text-danger">*</span></label>
-            <select name="PhongId" class="form-select form-select-sm" required>
-                <option value="">Chọn phòng</option>
-                @foreach (var phong in danhSachPhong)
-                {
-                    <option value="@phong.Id" selected="@(phongId == phong.Id)">
-                        @(phong.Nha?.TenNha != null ? $"{phong.Nha.TenNha} - " : "")@phong.TenPhong
-                    </option>
-                }
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted mb-1">Dịch vụ <span class="text-danger">*</span></label>
-            <select name="DichVuId" class="form-select form-select-sm" required>
-                <option value="">Chọn dịch vụ</option>
-                @foreach (var dichVu in dichVuTheoChiSo)
-                {
-                    <option value="@dichVu.Id" selected="@(dichVuId == dichVu.Id)">@dichVu.TenDichVu</option>
-                }
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted mb-1">Loại ghi nhận</label>
-            <select name="LoaiGhiNhan" id="loaiGhiNhan" class="form-select form-select-sm">
-                <option value="BinhThuong">Bình thường</option>
-                <option value="Reset">Reset / thay đồng hồ</option>
-            </select>
-        </div>
-        <div class="col-6 col-md-1">
-            <label class="form-label small text-muted mb-1">Từ số</label>
-            <input name="TuChiSo" id="tuChiSo" type="number" step="0.01" min="0" class="form-control form-control-sm"
-                   value="@(goiYTuChiSo?.ToString(inv) ?? "")" readonly="@(goiYTuChiSo.HasValue)" required />
-            @if (goiYTuChiSo.HasValue)
-            {
-                <div class="form-text">Bắt buộc nối từ @nguonGoiYTuChiSo.</div>
-            }
-        </div>
-        <div class="col-6 col-md-1">
-            <label class="form-label small text-muted mb-1">Đến số</label>
-            <input name="DenChiSo" type="number" step="0.01" min="0" class="form-control form-control-sm" required />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted mb-1">Ngày ghi nhận</label>
-            <input name="NgayGhiNhan" type="date" class="form-control form-control-sm"
-                   value="@DateTime.Today.ToString("yyyy-MM-dd", inv)" required />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted mb-1">Lý do <span class="text-danger">*</span></label>
-            <input name="LyDo" class="form-control form-control-sm" maxlength="255"
-                   placeholder="Sửa phòng, phòng trống..." required />
-        </div>
-        <div class="col-md-1">
-            <button class="btn btn-sm btn-primary w-100">Lưu</button>
-        </div>
-        <div class="col-12">
-            <input name="GhiChu" class="form-control form-control-sm" maxlength="255"
-                   placeholder="Ghi chú thêm nếu cần" />
-        </div>
-        <div id="resetFields" class="col-12 d-none">
-            <div class="alert alert-warning py-2 mb-2 small">
-                Reset dùng cho đồng hồ về 0, hỏng, thay mới hoặc quay vòng. Không nhập gap ngầm; sản lượng = phần trước reset + phần sau reset.
-            </div>
-            <div class="row g-2">
-                <div class="col-md-3">
-                    <label class="form-label small text-muted mb-1">Chỉ số trước reset <span class="text-danger">*</span></label>
-                    <input name="ChiSoTruocReset" id="chiSoTruocReset" type="number" step="0.01" min="0" class="form-control form-control-sm" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted mb-1">Chỉ số sau reset (mặc định 0)</label>
-                    <input name="ChiSoSauReset" id="chiSoSauReset" type="number" step="0.01" min="0" class="form-control form-control-sm" />
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label small text-muted mb-1">Lý do điều chỉnh <span class="text-danger">*</span></label>
-                    <input name="LyDoDieuChinh" id="lyDoDieuChinh" maxlength="255" class="form-control form-control-sm"
-                           placeholder="Ví dụ: Thay đồng hồ hỏng, số cuối đồng hồ cũ là..." />
-                </div>
-            </div>
-        </div>
-        <div class="col-12 small text-muted">
-            Mỗi dòng phải nối đúng mốc gần nhất và không được trùng ngày với một mốc điện/nước khác của cùng phòng. Dòng đã làm mốc cho dữ liệu sau sẽ không thể xóa.
-        </div>
-    </div>
-</form>
-
-<form method="get" class="d-flex gap-2 align-items-center mb-2 flex-wrap">
-    <select name="phongId" class="form-select form-select-sm" style="max-width:260px">
-        <option value="">Tất cả phòng</option>
-        @foreach (var phong in danhSachPhong)
-        {
-            <option value="@phong.Id" selected="@(phongId == phong.Id)">
-                @(phong.Nha?.TenNha != null ? $"{phong.Nha.TenNha} - " : "")@phong.TenPhong
-            </option>
-        }
-    </select>
-    <select name="dichVuId" class="form-select form-select-sm" style="max-width:180px">
-        <option value="">Tất cả dịch vụ</option>
-        @foreach (var dichVu in dichVuTheoChiSo)
-        {
-            <option value="@dichVu.Id" selected="@(dichVuId == dichVu.Id)">@dichVu.TenDichVu</option>
-        }
-    </select>
-    <button class="btn btn-sm btn-outline-primary">Lọc</button>
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Xóa lọc</a>
-</form>
-
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Phòng</th>
-                    <th>Dịch vụ</th>
-                    <th class="text-end">Từ số</th>
-                    <th class="text-end">Đến số</th>
-                    <th class="text-end">Sản lượng</th>
-                    <th>Loại</th>
-                    <th>Ngày</th>
-                    <th>Lý do</th>
-                    <th>Ghi chú</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr>
-                        <td class="fw-semibold">@item.Phong?.TenPhong</td>
-                        <td>@item.DichVu?.TenDichVu</td>
-                        <td class="text-end">@item.TuChiSo.ToString("N2")</td>
-                        <td class="text-end">@item.DenChiSo.ToString("N2")</td>
-                        <td class="text-end fw-semibold">@item.SanLuong.ToString("N2")</td>
-                        <td>
-                            @if (item.LaReset)
-                            {
-                                <span class="badge text-bg-warning">Reset</span>
-                                <div class="small text-muted mt-1">@item.ChiSoTruocReset?.ToString("N2") → @item.ChiSoSauReset?.ToString("N2")</div>
-                                <div class="small">@item.LyDoDieuChinh</div>
-                            }
-                            else
-                            {
-                                <span class="badge text-bg-light">Bình thường</span>
-                            }
-                        </td>
-                        <td class="text-nowrap">@item.NgayGhiNhan.ToString("dd/MM/yyyy")</td>
-                        <td>@item.LyDo</td>
-                        <td class="small text-muted">@item.GhiChu</td>
-                        <td class="text-end">
-                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('Xóa dòng chỉ số ngoài hợp đồng này?')">
-                                @Html.AntiForgeryToken()
-                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                }
-                @if (!Model.Any())
-                {
-                    <tr>
-                        <td colspan="10" class="text-center text-muted py-4">Chưa có chỉ số ngoài hợp đồng.</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        (() => {
-            const type = document.getElementById('loaiGhiNhan');
-            const resetFields = document.getElementById('resetFields');
-            const requiredResetInputs = [
-                document.getElementById('chiSoTruocReset'),
-                document.getElementById('lyDoDieuChinh')
-            ];
-
-            const refresh = () => {
-                const isReset = type.value === 'Reset';
-                resetFields.classList.toggle('d-none', !isReset);
-                requiredResetInputs.forEach(input => input.required = isReset);
-            };
-
-            type.addEventListener('change', refresh);
-            refresh();
-        })();
-    </script>
-}
+@section Scripts { <script src="~/js/meters.js" asp-append-version="true"></script> }

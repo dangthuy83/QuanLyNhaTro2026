@@ -1274,6 +1274,23 @@ Tien coc | Tong no | Tru no vao coc | Hoan lai | Khach con no
 - Chu he thong da duyet stage/commit UI-004 sau QA. Khong migration, import, push, publish,
   deploy hay tac dong NSSM; hai file opening-balance untracked duoc giu nguyen.
 
+### 5.9. UI-005 - Module Chi so dien nuoc - DA TRIEN KHAI 20/07/2026
+
+- Nam man Chi so da duoc redesign tren app shell/token UI-001: tong quan theo ky, nhap theo hop
+  dong, nhap theo phong, nhap hang loat va chuoi moc ngoai hop dong. Route, action, field,
+  validation, auth va nghiep vu duoc giu nguyen.
+- Tong quan phan loai trang thai theo dung doan hop dong va dich vu `TheoChiSo`; man nhap lam ro
+  nguon moc, reset, san luong xem truoc va khoa hoa don. Client chi ho tro trinh bay; server tiep
+  tuc noi moc, validate reset va tinh san luong.
+- Bang hang loat co filter, vung chon bam theo viewport va card responsive. Ngoai hop dong tiep tuc
+  la audit khi phong trong/sua phong, khong tham gia hoa don. Style scope `.meters-page`, hanh vi o
+  `meters.js`, khong them thu vien UI.
+- Build pass 0 warning/0 error; Impeccable detector sach. Browser QA 5 route tai 1440/768/390
+  khong tran ngang, focus/target mobile/filter/reset/lock/bulk pass va console sach. POST chi chay
+  tren database tam, sau do schema QA duoc xoa; database van hanh chi duoc SELECT.
+- Khong migration, import, stage, commit, push, publish, deploy hay tac dong NSSM; hai file
+  opening-balance untracked duoc giu nguyen.
+
 ## 6. Huong mo rong sau nay
 
 Nen chuan bi som cho multi-user/multi-tenant:

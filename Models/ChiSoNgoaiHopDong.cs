@@ -22,6 +22,7 @@ public class ChiSoNgoaiHopDong
     public string LyDo { get; set; } = string.Empty;
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
+    public string? TenNha { get; set; }
 
     public Phong? Phong { get; set; }
     public DichVu? DichVu { get; set; }

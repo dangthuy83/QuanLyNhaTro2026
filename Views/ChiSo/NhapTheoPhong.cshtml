@@ -1,188 +1,78 @@
+@model QuanLyNhaTro.Models.MeterEntryViewModel
 @{
-    ViewData["Title"] = "Nhập chỉ số theo phòng";
+    ViewData["Title"] = Model.NgoaiHopDong ? "Nhập chỉ số theo phòng" : "Nhập chỉ số";
     ViewData["ActiveMenu"] = "chiso";
-    var phong = ViewBag.Phong as QuanLyNhaTro.Models.Phong;
-    var thang = (int)ViewBag.Thang;
-    var nam = (int)ViewBag.Nam;
-    int? returnHopDongId = ViewBag.ReturnHopDongId is int id ? id : null;
-    var dichVuList = ViewBag.DichVuTheoChiSo as IEnumerable<QuanLyNhaTro.Models.DichVu> ?? [];
-    var chiSoHienTai = ViewBag.ChiSoHienTai as Dictionary<int, QuanLyNhaTro.Models.ChiSoDienNuoc> ?? [];
-    var chiSoDauTheoDichVu = ViewBag.ChiSoDauTheoDichVu as Dictionary<int, decimal> ?? [];
-    var choNhapChiSoDauTheoDichVu = ViewBag.ChoNhapChiSoDauTheoDichVu as Dictionary<int, bool> ?? [];
-    var nguonChiSoDauTheoDichVu = ViewBag.NguonChiSoDauTheoDichVu as Dictionary<int, string> ?? [];
     var inv = System.Globalization.CultureInfo.InvariantCulture;
-    var ngayDocMacDinh = new DateTime(nam, thang, DateTime.DaysInMonth(nam, thang));
-    var cancelUrl = returnHopDongId.HasValue
-        ? Url.Action("Create", "ChuyenPhong", new { hopDongId = returnHopDongId.Value })
-        : Url.Action("Index", "ChiSo", new { thang, nam });
+    var room = Model.Phong;
+    var defaultDate = new DateTime(Model.Nam, Model.Thang, DateTime.DaysInMonth(Model.Nam, Model.Thang));
+    if (Model.HopDong?.NgayKetThuc is DateTime end && end.Date < defaultDate) defaultDate = end.Date;
+    if (Model.HopDong != null && Model.HopDong.NgayBatDau.Date > defaultDate) defaultDate = Model.HopDong.NgayBatDau.Date;
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a href="@cancelUrl" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Nhập chỉ số - @phong?.TenPhong - @thang/@nam</h5>
+<div class="meters-page meters-entry-page" data-meter-entry-page>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <a href="@Model.CancelUrl" class="app-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Quay lại danh sách</a>
+            <h1>Nhập chỉ số · @room?.TenPhong</h1>
+            <p class="app-page-subtitle">Kỳ @Model.Thang/@Model.Nam · @(Model.NgoaiHopDong ? "Phạm vi phòng, không gắn hợp đồng" : $"Hợp đồng #{Model.HopDong!.Id}")</p>
+        </div>
+        <span class="app-status-badge @(Model.NgoaiHopDong ? "is-warning" : "is-neutral")"><span class="app-status-dot" aria-hidden="true"></span>@(Model.NgoaiHopDong ? "Ngoài hợp đồng" : "Theo hợp đồng")</span>
+    </header>
+
+    @if (TempData["Error"] != null) { <div class="app-notice is-danger" role="alert"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Chưa thể lưu</strong><p>@TempData["Error"]</p></div></div> }
+    @if (TempData["Success"] != null) { <div class="app-notice is-success" role="status"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg><div><strong>Đã cập nhật</strong><p>@TempData["Success"]</p></div></div> }
+    @if (Model.NgoaiHopDong) { <div class="app-notice is-warning"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><div><strong>Phạm vi không hợp đồng</strong><p>Dữ liệu sẽ mang <code>HopDongId = NULL</code>. Mốc cuối có thể được dùng làm mốc mở cho đoạn hợp đồng hoặc kỳ tiếp theo.</p></div></div> }
+    @if (Model.CoDuLieuDaKhoa) { <div class="app-notice is-danger"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Dữ liệu kỳ này đã lên hóa đơn</strong><p>Biểu mẫu được khóa để không tạo một lần lưu chắc chắn bị server từ chối. Xử lý hóa đơn liên quan trước khi sửa chỉ số.</p></div></div> }
+
+    @if (!Model.DichVuTheoChiSo.Any())
+    {
+        <div class="app-empty-state"><svg class="app-icon" aria-hidden="true"><use href="#icon-meter"></use></svg><h3>Chưa có dịch vụ Theo chỉ số</h3><p>Kiểm tra cấu hình dịch vụ của đúng đoạn hợp đồng hoặc phòng trước khi nhập.</p><a href="@Model.CancelUrl" class="btn btn-outline-secondary">Quay lại</a></div>
+    }
+    else
+    {
+        <form asp-action="@Model.PostAction" method="post" class="meters-entry-form">
+            @Html.AntiForgeryToken()
+            @if (Model.NgoaiHopDong) { <input type="hidden" name="phongId" value="@room?.Id" /><input type="hidden" name="returnHopDongId" value="@Model.ReturnHopDongId" /> }
+            else { <input type="hidden" name="hopDongId" value="@Model.HopDong?.Id" /> }
+            <input type="hidden" name="thang" value="@Model.Thang" /><input type="hidden" name="nam" value="@Model.Nam" />
+
+            <fieldset disabled="@Model.CoDuLieuDaKhoa">
+            @foreach (var service in Model.DichVuTheoChiSo)
+            {
+                Model.ChiSoHienTai.TryGetValue(service.Id, out var current);
+                var start = Model.ChiSoDauTheoDichVu.TryGetValue(service.Id, out var startValue) ? startValue : 0;
+                var editableStart = Model.ChoNhapChiSoDauTheoDichVu.TryGetValue(service.Id, out var canEditStart) && canEditStart;
+                var source = Model.NguonChiSoDauTheoDichVu.TryGetValue(service.Id, out var sourceValue) ? sourceValue : "Chưa xác định";
+                var type = current?.LoaiGhiNhan ?? QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong;
+                var isReset = type == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiReset;
+                var readDate = current?.NgayDoc ?? defaultDate;
+                <section class="app-panel meters-entry-panel" data-meter-row data-chi-so-dau="@start.ToString(inv)">
+                    <div class="app-panel-header"><div><h2>@service.TenDichVu <span>@service.DonViTinh</span></h2><p>@(current == null ? "Chưa có chỉ số trong kỳ" : $"Đã ghi ngày {readDate:dd/MM/yyyy}")</p></div>@if (current?.DaDungTrenHoaDon == true) { <span class="app-status-badge is-neutral">Đã khóa</span> } else if (current != null) { <span class="app-status-badge is-success">Đã nhập</span> } else { <span class="app-status-badge is-danger">Chưa nhập</span> }</div>
+                    <div class="app-panel-body meters-entry-grid">
+                        <div class="meters-anchor-card">
+                            <span>Mốc đầu</span>
+                            @if (editableStart) { <input type="number" name="chiSoDaus" step="0.01" min="0" class="form-control meters-reading-input" value="@start.ToString(inv)" data-start-input required /> }
+                            else { <input type="hidden" name="chiSoDaus" value="@start.ToString(inv)" /><strong>@start.ToString("N2")</strong> }
+                            <small>@source</small>
+                        </div>
+                        <div class="meters-core-fields">
+                            <input type="hidden" name="dichVuIds" value="@service.Id" /><input type="hidden" name="chiSoIds" value="@(current?.Id ?? 0)" />
+                            <div class="app-field"><label>Chỉ số cuối <span aria-hidden="true">*</span></label><input type="number" name="chiSoCuois" step="0.01" min="@start.ToString(inv)" class="form-control meters-reading-input" value="@(current?.ChiSoCuoi.ToString(inv) ?? start.ToString(inv))" data-meter-end-input required /></div>
+                            <div class="app-field"><label>Ngày đọc</label><input type="date" name="ngayDocs" class="form-control" value="@readDate.ToString("yyyy-MM-dd")" required /></div>
+                            <div class="app-field meters-type-field"><label>Loại ghi nhận</label><select name="loaiGhiNhans" class="form-select" data-meter-type><option value="BinhThuong" selected="@(type == "BinhThuong")">Bình thường</option><option value="Reset" selected="@isReset">Reset / thay đồng hồ</option></select></div>
+                        </div>
+                        <div class="meters-reset-panel @(isReset ? "" : "d-none")" data-reset-fields>
+                            <div class="meters-reset-heading"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg><div><strong>Thông tin reset</strong><p>Ghi đủ hai mốc của đồng hồ cũ/mới và lý do điều chỉnh.</p></div></div>
+                            <div class="meters-reset-fields"><div class="app-field"><label>Chỉ số trước reset</label><input type="number" name="chiSoTruocResets" step="0.01" min="@start.ToString(inv)" class="form-control" value="@(current?.ChiSoTruocReset?.ToString(inv) ?? "")" /></div><div class="app-field"><label>Chỉ số sau reset</label><input type="number" name="chiSoSauResets" step="0.01" min="0" class="form-control" value="@(current?.ChiSoSauReset?.ToString(inv) ?? "")" placeholder="0" /></div><div class="app-field meters-reason-field"><label>Lý do điều chỉnh</label><input type="text" name="lyDoDieuChinhs" maxlength="255" class="form-control" value="@current?.LyDoDieuChinh" placeholder="Ví dụ: thay đồng hồ hỏng" /></div></div>
+                        </div>
+                        <div class="meters-consumption-preview" aria-live="polite"><span>Sản lượng dự kiến</span><strong data-meter-consumption>@(current?.SoLuongTieuThu.ToString("N2") ?? "0,00")</strong><small>@service.DonViTinh · server sẽ tính lại khi lưu</small></div>
+                    </div>
+                </section>
+            }
+            </fieldset>
+            <div class="meters-form-actions"><a href="@Model.CancelUrl" class="btn btn-outline-secondary">Hủy</a><button type="submit" class="btn btn-primary" disabled="@Model.CoDuLieuDaKhoa"><svg class="app-icon" aria-hidden="true"><use href="#icon-save"></use></svg>Lưu chỉ số</button></div>
+        </form>
+    }
 </div>
 
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2">
-        @TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
-@if (!dichVuList.Any())
-{
-    <div class="alert alert-warning">
-        Phòng này chưa gắn dịch vụ nào loại <strong>Theo chỉ số</strong>. Hãy gán dịch vụ cho phòng trước khi nhập chỉ số.
-    </div>
-    <a href="@cancelUrl" class="btn btn-outline-secondary">Quay lại</a>
-}
-else
-{
-    <div class="card shadow-sm" style="max-width:760px">
-        <div class="card-body">
-            <form asp-action="NhapTheoPhong" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="phongId" value="@phong?.Id" />
-                <input type="hidden" name="thang" value="@thang" />
-                <input type="hidden" name="nam" value="@nam" />
-                <input type="hidden" name="returnHopDongId" value="@returnHopDongId" />
-
-                @foreach (var dv in dichVuList)
-                {
-                    chiSoHienTai.TryGetValue(dv.Id, out var cs);
-                    var chiSoDau = chiSoDauTheoDichVu.TryGetValue(dv.Id, out var dau) ? dau : 0;
-                    var choNhapChiSoDau = choNhapChiSoDauTheoDichVu.TryGetValue(dv.Id, out var choNhapDau) && choNhapDau;
-                    var nguonChiSoDau = nguonChiSoDauTheoDichVu.TryGetValue(dv.Id, out var nguon) ? nguon : "";
-                    var loaiGhiNhan = cs?.LoaiGhiNhan ?? QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong;
-                    var isReset = loaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiReset;
-                    var ngayDoc = cs?.NgayDoc ?? ngayDocMacDinh;
-                    <input type="hidden" name="dichVuIds" value="@dv.Id" />
-                    <input type="hidden" name="chiSoIds" value="@(cs?.Id ?? 0)" />
-
-                    <div class="mb-4 border-bottom pb-3" data-meter-row data-chi-so-dau="@chiSoDau.ToString(inv)">
-                        <p class="fw-semibold mb-2">@dv.TenDichVu (@dv.DonViTinh)</p>
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Chỉ số đầu</label>
-                                @if (choNhapChiSoDau)
-                                {
-                                    <input type="number" name="chiSoDaus" step="0.01" min="0"
-                                           class="form-control form-control-sm"
-                                           value="@chiSoDau.ToString(inv)"
-                                           data-start-input required />
-                                    <div class="form-text">Kỳ đầu chưa có dữ liệu cũ, nhập số hiện có trên đồng hồ.</div>
-                                }
-                                else
-                                {
-                                    <input type="hidden" name="chiSoDaus" value="@chiSoDau.ToString(inv)" />
-                                    <input type="text" class="form-control form-control-sm"
-                                           value="@chiSoDau.ToString("N2")" disabled />
-                                }
-                                @if (!string.IsNullOrWhiteSpace(nguonChiSoDau))
-                                {
-                                    <div class="form-text">Nguồn: @nguonChiSoDau</div>
-                                }
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Chỉ số cuối <span class="text-danger">*</span></label>
-                                <input type="number" name="chiSoCuois" step="0.01" min="@chiSoDau.ToString(inv)"
-                                       class="form-control form-control-sm"
-                                       value="@(cs?.ChiSoCuoi.ToString(inv) ?? chiSoDau.ToString(inv))"
-                                       required />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Loại ghi nhận</label>
-                                <select name="loaiGhiNhans" class="form-select form-select-sm" data-loai>
-                                    <option value="BinhThuong" selected="@(loaiGhiNhan == QuanLyNhaTro.Models.ChiSoDienNuoc.LoaiBinhThuong)">Bình thường</option>
-                                    <option value="Reset" selected="@isReset">Reset / thay đồng hồ</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row g-2 mt-2">
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Ngày đọc</label>
-                                <input type="date" name="ngayDocs"
-                                       class="form-control form-control-sm"
-                                       value="@ngayDoc.ToString("yyyy-MM-dd")" required />
-                            </div>
-                        </div>
-
-                        <div class="row g-2 mt-2 @(isReset ? "" : "d-none")" data-reset-fields>
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Chỉ số trước reset</label>
-                                <input type="number" name="chiSoTruocResets" step="0.01" min="@chiSoDau.ToString(inv)"
-                                       class="form-control form-control-sm"
-                                       value="@(cs?.ChiSoTruocReset.HasValue == true ? cs.ChiSoTruocReset.Value.ToString(inv) : "")" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Chỉ số sau reset</label>
-                                <input type="number" name="chiSoSauResets" step="0.01" min="0"
-                                       class="form-control form-control-sm"
-                                       value="@(cs?.ChiSoSauReset.HasValue == true ? cs.ChiSoSauReset.Value.ToString(inv) : "")"
-                                       placeholder="0" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small text-muted">Lý do</label>
-                                <input type="text" name="lyDoDieuChinhs" maxlength="255"
-                                       class="form-control form-control-sm"
-                                       value="@(cs?.LyDoDieuChinh ?? "")"
-                                       placeholder="Reset, hỏng, thay đồng hồ..." />
-                            </div>
-                        </div>
-                        <small class="text-muted">
-                            Bình thường: sản lượng = chỉ số cuối - chỉ số đầu.
-                            Reset: sản lượng = (chỉ số trước reset - chỉ số đầu) + (chỉ số cuối - chỉ số sau reset).
-                        </small>
-                        @if (cs != null)
-                        {
-                            <div class="small text-muted mt-1">Sản lượng hiện tại: @cs.SoLuongTieuThu.ToString("N2")</div>
-                        }
-                    </div>
-                }
-
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Lưu chỉ số</button>
-                    <a href="@cancelUrl" class="btn btn-outline-secondary">Hủy</a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        document.querySelectorAll("[data-meter-row]").forEach(row => {
-            const select = row.querySelector("[data-loai]");
-            const resetFields = row.querySelector("[data-reset-fields]");
-            const chiSoCuoi = row.querySelector("input[name='chiSoCuois']");
-            const chiSoDau = row.querySelector("[data-start-input]");
-            const chiSoTruocReset = row.querySelector("input[name='chiSoTruocResets']");
-
-            const syncStartValue = () => {
-                if (chiSoDau) {
-                    row.dataset.chiSoDau = chiSoDau.value || "0";
-                }
-                chiSoTruocReset.min = row.dataset.chiSoDau;
-            };
-
-            const syncResetFields = () => {
-                syncStartValue();
-                const isReset = select.value === "Reset";
-                resetFields.classList.toggle("d-none", !isReset);
-                chiSoCuoi.min = isReset ? "0" : row.dataset.chiSoDau;
-            };
-
-            select.addEventListener("change", syncResetFields);
-            chiSoDau?.addEventListener("input", syncResetFields);
-            syncResetFields();
-        });
-    </script>
-}
+@section Scripts { <script src="~/js/meters.js" asp-append-version="true"></script> }

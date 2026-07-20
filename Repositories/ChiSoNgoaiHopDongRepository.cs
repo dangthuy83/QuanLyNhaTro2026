@@ -9,10 +9,11 @@ public class ChiSoNgoaiHopDongRepository(IDbConnection db) : BaseRepository(db)
     public async Task<IEnumerable<ChiSoNgoaiHopDong>> GetAllAsync(int? phongId = null, int? dichVuId = null)
     {
         const string sql = """
-            SELECT cs.*, p.Id AS PhongSplitId, p.Id, p.NhaId, p.TenPhong, p.TrangThai,
+            SELECT cs.*, n.TenNha, p.Id AS PhongSplitId, p.Id, p.NhaId, p.TenPhong, p.TrangThai,
                    dv.Id AS DichVuSplitId, dv.Id, dv.TenDichVu, dv.LoaiTinhPhi, dv.CachTinhCoDinh, dv.DonViTinh
             FROM ChiSoNgoaiHopDong cs
             INNER JOIN Phong p ON p.Id = cs.PhongId
+            INNER JOIN Nha n ON n.Id = p.NhaId
             INNER JOIN DichVu dv ON dv.Id = cs.DichVuId
             WHERE (@PhongId IS NULL OR cs.PhongId = @PhongId)
               AND (@DichVuId IS NULL OR cs.DichVuId = @DichVuId)

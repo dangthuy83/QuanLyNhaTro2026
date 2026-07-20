@@ -649,3 +649,20 @@ Cập nhật lần cuối: Phiên 68 - 16/07/2026. REVIEW-025 đã diễn tập 
   thị lý do bị khóa. View không tự suy đoán guard từ trạng thái hiển thị.
 - Năm route `HoaDon/Index`, `Details`, `Create`, `ChotHangLoat`, `InPhieuThu` dùng component
   UI-001 và style module scope `.invoices-page`; hành vi riêng nằm trong `wwwroot/js/invoices.js`.
+
+---
+
+## UI-005 - Quy ước giao diện chỉ số điện nước (20/07/2026)
+
+- Trạng thái nhập đủ/thiếu/chưa nhập/cần kiểm tra được xác định theo đúng đoạn hợp đồng và từng
+  dịch vụ `TheoChiSo`; không suy diễn từ một dòng bất kỳ của cả phòng.
+- Màn nhập chỉ hiển thị mốc nguồn, đoạn hợp đồng hoặc ngoài hợp đồng, loại ghi nhận thường/reset,
+  sản lượng xem trước và trạng thái khóa hóa đơn. Server tiếp tục là nguồn quyết định cho nối mốc,
+  validate reset và sản lượng; JavaScript không thay thế kiểm tra nghiệp vụ.
+- Cờ `DaDungTrenHoaDon` là dữ liệu hiển thị read-only từ quan hệ `ChiTietHoaDon`; UI giải thích và
+  khóa dòng đã dùng, không tạo thêm quy tắc xóa/sửa cạnh tranh với service hiện hữu.
+- Năm route `ChiSo/Index`, `ChiSo/Nhap`, `ChiSo/NhapTheoPhong`, `ChiSo/NhapHangLoat` và
+  `ChiSoNgoaiHopDong/Index` dùng component UI-001, style scope `.meters-page` và hành vi chung tại
+  `wwwroot/js/meters.js`; giữ nguyên route/action/field, antiforgery, auth và nghiệp vụ hiện hữu.
+- Dữ liệu ngoài hợp đồng tiếp tục chỉ là chuỗi mốc audit khi phòng trống/sửa phòng, không được tính
+  vào hóa đơn khách thuê.
