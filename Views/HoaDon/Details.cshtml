@@ -3,45 +3,58 @@
     ViewData["Title"] = $"Hóa đơn {Model.Thang}/{Model.Nam}";
     ViewData["ActiveMenu"] = "hoadon";
     bool chuaDaThu = Model.TrangThaiThanhToan != "DaThu";
-    decimal conLai = Model.TongCong - Model.SoTienDaThu;
+    decimal conLai = Model.SoTienConLai;
     bool coButToanPhiTienMat = Model.DanhSachThanhToan.Any(tt => IsButToanPhiTienMat(tt.HinhThuc));
+    var tienThucThu = Model.TienThucThu;
+    var butToanPhiTienMat = Model.ButToanPhiTienMat;
+    var deletion = ViewBag.DeleteAssessment as QuanLyNhaTro.Services.HoaDonDeletionAssessment
+        ?? new QuanLyNhaTro.Services.HoaDonDeletionAssessment(false, "không xác định được điều kiện xóa");
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
-       class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <a asp-action="InPhieuThu" asp-route-id="@Model.Id"
-       class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-printer"></i> In phiếu thu
-    </a>
-    <a asp-action="XuatPhieuThu" asp-route-id="@Model.Id"
-       class="btn btn-sm btn-outline-success ms-2">
-        <i class="bi bi-file-earmark-excel"></i> Xuất phiếu thu
-    </a>
-    <h5 class="mb-0">Hóa đơn @Model.Thang/@Model.Nam — @Model.TenPhongSnapshot</h5>
-</div>
+<div class="invoices-page invoices-details-page">
+    <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="invoices-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách hóa đơn</a>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <div class="invoices-heading-status">
+                @if (Model.TrangThaiThanhToan == "DaThu") { <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Đã thu đủ</span> }
+                else if (Model.TrangThaiThanhToan == "ThuMotPhan") { <span class="app-status-badge is-warning"><span class="app-status-dot" aria-hidden="true"></span>Thu một phần</span> }
+                else { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Chưa thu</span> }
+                <span>Hóa đơn #@Model.Id</span>
+            </div>
+            <h1>@Model.TenPhongSnapshot · @Model.Thang/@Model.Nam</h1>
+            <p class="app-page-subtitle">@Model.TenNhaSnapshot · @Model.TenKhachDaiDienSnapshot · Hợp đồng #@Model.HopDongId</p>
+        </div>
+        <div class="app-page-actions">
+            <a asp-action="InPhieuThu" asp-route-id="@Model.Id" class="btn btn-outline-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg>In phiếu thu</span></a>
+            <a asp-action="XuatPhieuThu" asp-route-id="@Model.Id" class="btn btn-outline-success">Xuất Excel</a>
+        </div>
+    </header>
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show" role="status">@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger alert-dismissible fade show py-2">@TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
 }
 
-<div class="row g-3">
+    <section class="invoices-summary-strip invoices-details-summary" aria-label="Tổng quan hóa đơn">
+        <div><span>Tổng hóa đơn</span><strong>@Model.TongCong.ToString("N0") đ</strong><small>Chốt ngày @Model.NgayLap.ToString("dd/MM/yyyy")</small></div>
+        <div><span>Tiền thực thu</span><strong class="is-success">@tienThucThu.ToString("N0") đ</strong><small>Tiền mặt + chuyển khoản</small></div>
+        <div><span>Bút toán công nợ</span><strong>@butToanPhiTienMat.ToString("N0") đ</strong><small>Kết chuyển nợ + trừ cọc</small></div>
+        <div><span>Còn phải thu</span><strong class="@(conLai > 0 ? "is-danger" : "is-success")">@Math.Max(0, conLai).ToString("N0") đ</strong><small>Hạn @Model.NgayDenHan.ToString("dd/MM/yyyy")</small></div>
+    </section>
+
+<div class="invoices-details-grid">
     <!-- Cột trái: nội dung hóa đơn -->
-    <div class="col-md-7">
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Chi tiết hóa đơn</h6>
-                <div class="alert alert-light border py-2 mb-3">
-                    <span class="text-muted">Ngày đến hạn:</span>
-                    <strong>@Model.NgayDenHan.ToString("dd/MM/yyyy")</strong>
-                </div>
+    <div class="invoices-details-main">
+        <section class="app-panel invoices-charge-panel" aria-labelledby="invoice-charge-heading">
+            <div class="app-panel-header"><div><h2 id="invoice-charge-heading">Các khoản tính</h2><p>Snapshot đã chốt, không đọc lại từ giá hoặc hồ sơ hiện tại.</p></div></div>
+            <div class="app-panel-body">
+                <div class="app-notice is-info invoices-due-notice"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><div><span>Ngày đến hạn</span><strong>@Model.NgayDenHan.ToString("dd/MM/yyyy")</strong></div></div>
                 <table class="table table-sm mb-0">
                     <tbody>
                         <tr>
@@ -94,7 +107,7 @@
                             <td class="text-end fs-6">@Model.TongCong.ToString("N0") đ</td>
                         </tr>
                         <tr>
-                            <td>Đã thu</td>
+                            <td>Đã ghi nhận</td>
                             <td class="text-end text-success">@Model.SoTienDaThu.ToString("N0") đ</td>
                         </tr>
                         @if (conLai > 0)
@@ -107,21 +120,17 @@
                     </tfoot>
                 </table>
             </div>
-        </div>
+        </section>
 
         <!-- Lịch sử thu tiền -->
         @if (Model.DanhSachThanhToan.Any())
         {
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title text-muted mb-2">Lịch sử thu tiền</h6>
+            <section class="app-panel invoices-payment-history" aria-labelledby="invoice-payment-heading">
+                <div class="app-panel-header"><div><h2 id="invoice-payment-heading">Thanh toán và bút toán</h2><p>Tiền thực thu và bút toán xử lý công nợ được phân loại riêng.</p></div></div>
+                <div class="app-panel-body">
                     @if (coButToanPhiTienMat)
                     {
-                        <div class="alert alert-info py-2 small mb-3">
-                            <i class="bi bi-info-circle"></i>
-                            Các dòng <strong>Kết chuyển nợ</strong> và <strong>Trừ cọc</strong>
-                            là bút toán xử lý công nợ, không phải tiền mặt/chuyển khoản mới thu.
-                        </div>
+                        <div class="app-notice is-info invoices-ledger-notice"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><div><strong>Không phải tiền mới thu</strong><p>Các dòng <b>Kết chuyển nợ</b> và <b>Trừ cọc</b> chỉ xử lý số dư công nợ.</p></div></div>
                     }
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
@@ -140,68 +149,77 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
+        }
+        else
+        {
+            <section class="app-panel app-empty-state" aria-labelledby="invoice-payment-empty"><div><svg class="app-icon" aria-hidden="true"><use href="#icon-wallet"></use></svg><h2 id="invoice-payment-empty">Chưa có thanh toán</h2><p>Hóa đơn chưa ghi nhận tiền thực thu hoặc bút toán xử lý công nợ.</p></div></section>
         }
     </div>
 
-    <!-- Cột phải: thu tiền -->
-    <div class="col-md-5">
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-2">Trạng thái</h6>
-                @Html.Raw(Model.TrangThaiThanhToan switch {
-                    "DaThu"      => "<span class='badge bg-success fs-6 px-3 py-2'>Đã thu đủ</span>",
-                    "ThuMotPhan" => "<span class='badge bg-warning text-dark fs-6 px-3 py-2'>Thu một phần</span>",
-                    _            => "<span class='badge bg-danger fs-6 px-3 py-2'>Chưa thu</span>"
-                })
-            </div>
-        </div>
-
+    <aside class="invoices-details-aside" aria-label="Thao tác hóa đơn">
         @if (chuaDaThu)
         {
-            <div class="card shadow-sm border-success">
-                <div class="card-body">
-                    <h6 class="card-title text-muted mb-3">Thu tiền</h6>
+            <section class="app-panel invoices-collect-panel" aria-labelledby="invoice-collect-heading">
+                <div class="app-panel-header"><div><h2 id="invoice-collect-heading">Ghi nhận tiền thực thu</h2><p>Chỉ nhập tiền mặt hoặc chuyển khoản vừa nhận.</p></div></div>
+                <div class="app-panel-body">
+                    @if (coButToanPhiTienMat)
+                    {
+                        <div class="app-notice is-warning invoices-ledger-notice"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Đã có bút toán phi tiền mặt</strong><p>Không nhập lại kết chuyển nợ hoặc trừ cọc vào form này.</p></div></div>
+                    }
                     <form asp-action="ThuTien" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="hoaDonId" value="@Model.Id" />
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Số tiền (đ)</label>
-                            <input name="soTien" type="number" min="1" max="@FormatInputAmount(conLai)" step="1" class="form-control"
-                                   value="@FormatInputAmount(conLai)" />
+                        <div class="invoices-form-field">
+                            <label for="invoice-payment-amount">Số tiền <span aria-hidden="true">*</span></label>
+                            <div class="input-group"><input id="invoice-payment-amount" name="soTien" type="number" min="1" max="@FormatInputAmount(conLai)" step="1" class="form-control" value="@FormatInputAmount(conLai)" required /><button type="button" class="btn btn-outline-secondary" data-quick-fill data-amount="@FormatInputAmount(conLai)">Thu đủ</button></div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Hình thức</label>
-                            <select name="hinhThuc" class="form-select">
+                        <div class="invoices-form-field">
+                            <label for="invoice-payment-method">Hình thức <span aria-hidden="true">*</span></label>
+                            <select id="invoice-payment-method" name="hinhThuc" class="form-select" required>
                                 <option value="TienMat">Tiền mặt</option>
                                 <option value="ChuyenKhoan">Chuyển khoản</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Ghi chú</label>
-                            <input name="ghiChu" class="form-control" />
+                        <div class="invoices-form-field">
+                            <label for="invoice-payment-note">Ghi chú</label>
+                            <input id="invoice-payment-note" name="ghiChu" class="form-control" autocomplete="off" />
                         </div>
                         <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-cash me-1"></i>Xác nhận thu tiền
+                            Xác nhận thu tiền
                         </button>
                     </form>
                 </div>
-            </div>
+            </section>
+        }
+        else
+        {
+            <div class="app-notice is-success"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg><div><strong>Hóa đơn đã thu đủ</strong><p>Không còn số tiền cần ghi nhận thêm.</p></div></div>
         }
 
-        @if (Model.SoTienDaThu == 0 && Model.TienNoKyTruoc <= 0)
+        <section class="app-panel invoices-delete-panel" aria-labelledby="invoice-delete-heading">
+            <div class="app-panel-header"><div><h2 id="invoice-delete-heading">Xóa và lập lại</h2><p>Hệ thống kiểm tra thanh toán, nợ kết chuyển và giao dịch cọc trước khi xóa.</p></div></div>
+            <div class="app-panel-body">
+        @if (deletion.CanDelete)
         {
-            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="mt-2"
-                  onsubmit="return confirm('Xoá hóa đơn này? Khoản phát sinh chưa xử lý sẽ được trả lại và liên kết hóa đơn ghép sẽ được tháo.')">
+            <div class="app-notice is-warning"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Có thể xóa hóa đơn</strong><p>Khoản phát sinh chưa xử lý sẽ được trả lại và liên kết hóa đơn ghép sẽ được tháo.</p></div></div>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-invoice-delete-form data-confirm-message="Xóa hóa đơn này? Khoản phát sinh chưa xử lý sẽ được trả lại và liên kết hóa đơn ghép sẽ được tháo.">
                 @Html.AntiForgeryToken()
-                <button class="btn btn-outline-danger btn-sm w-100">
-                    <i class="bi bi-trash me-1"></i>Xoá hóa đơn
-                </button>
+                <button class="btn btn-outline-danger w-100"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>Xóa hóa đơn</span></button>
             </form>
         }
-    </div>
+        else
+        {
+            <div class="app-notice is-danger"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Không thể xóa hoặc lập lại</strong><p>Hóa đơn bị khóa vì @deletion.BlockReason.</p></div></div>
+        }
+            </div>
+        </section>
+    </aside>
 </div>
+</div>
+
+@section Scripts { <script src="~/js/invoices.js" asp-append-version="true"></script> }
 
 @functions {
     static bool IsButToanPhiTienMat(string? hinhThuc)
@@ -209,12 +227,12 @@
 
     static string HinhThucBadge(string? hinhThuc) => hinhThuc switch
     {
-        "TienMat" => "<span class='badge bg-success'>Tiền mặt</span>",
-        "ChuyenKhoan" => "<span class='badge bg-primary'>Chuyển khoản</span>",
-        "KetChuyenNo" => "<span class='badge bg-info text-dark'>Kết chuyển nợ</span>",
-        "TruCoc" => "<span class='badge bg-warning text-dark'>Trừ cọc</span>",
-        null or "" => "<span class='badge bg-light text-dark border'>Không rõ</span>",
-        _ => $"<span class='badge bg-light text-dark border'>{hinhThuc}</span>"
+        "TienMat" => "<span class='app-status-badge is-success'><span class='app-status-dot' aria-hidden='true'></span>Tiền mặt</span>",
+        "ChuyenKhoan" => "<span class='app-status-badge is-success'><span class='app-status-dot' aria-hidden='true'></span>Chuyển khoản</span>",
+        "KetChuyenNo" => "<span class='app-status-badge is-info'><span class='app-status-dot' aria-hidden='true'></span>Kết chuyển nợ</span>",
+        "TruCoc" => "<span class='app-status-badge is-warning'><span class='app-status-dot' aria-hidden='true'></span>Trừ cọc</span>",
+        null or "" => "<span class='app-status-badge is-neutral'><span class='app-status-dot' aria-hidden='true'></span>Không rõ</span>",
+        _ => $"<span class='app-status-badge is-neutral'><span class='app-status-dot' aria-hidden='true'></span>{hinhThuc}</span>"
     };
 
     static string FormatInputAmount(decimal amount)

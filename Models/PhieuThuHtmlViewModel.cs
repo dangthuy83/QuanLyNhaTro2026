@@ -7,7 +7,9 @@ public class PhieuThuHtmlViewModel
     public List<KhoanPhatSinhHopDong> KhoanPhatSinh { get; set; } = [];
     public List<ThanhToan> LichSuThanhToan { get; set; } = [];
 
-    public decimal ConLai => HoaDon.TongCong - HoaDon.SoTienDaThu;
-    public bool CoButToanPhiTienMat => LichSuThanhToan.Any(tt => tt.HinhThuc is "KetChuyenNo" or "TruCoc");
+    public decimal ConLai => HoaDon.SoTienConLai;
+    public decimal TienThucThu => HoaDon.TienThucThu;
+    public decimal ButToanPhiTienMat => HoaDon.ButToanPhiTienMat;
+    public bool CoButToanPhiTienMat => HoaDon.ButToanPhiTienMat > 0;
     public string TenKhach => HoaDon.TenKhachDaiDienSnapshot;
 }

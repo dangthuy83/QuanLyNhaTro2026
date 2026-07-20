@@ -4,52 +4,92 @@
     var hopDong = ViewBag.HopDong as QuanLyNhaTro.Models.HopDong;
     var thang   = (int)ViewBag.Thang;
     var nam     = (int)ViewBag.Nam;
+    var duKien = ViewBag.DuKien as QuanLyNhaTro.Models.HoaDonDuKien;
+    var canCreate = duKien?.SanSangChot == true;
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong?.Id"
-       class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Lập hóa đơn — @hopDong?.Phong?.TenPhong</h5>
-</div>
+<div class="invoices-page invoices-create-page">
+    <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong?.Id" class="invoices-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Chi tiết hợp đồng</a>
+    <header class="app-page-header">
+        <div class="app-page-heading"><h1>Lập hóa đơn @hopDong?.Phong?.TenPhong</h1><p class="app-page-subtitle">Xem trước dữ liệu server sẽ dùng để chốt. Mọi phép tính tiền vẫn nằm trong dịch vụ hóa đơn dùng chung.</p></div>
+    </header>
 
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger">@TempData["Error"]</div>
+    <div class="alert alert-danger" role="alert">@TempData["Error"]</div>
 }
 
-<div class="card shadow-sm" style="max-width:420px">
-    <div class="card-body">
-        <p class="text-muted small mb-3">
-            Hệ thống sẽ tự tính tiền phòng, dịch vụ và nợ kỳ trước dựa trên chỉ số điện nước đã nhập.
-        </p>
+    <div class="invoices-create-grid">
+        <div class="invoices-create-main">
+            <section class="app-panel invoices-context-panel" aria-labelledby="invoice-context-heading">
+                <div class="app-panel-header"><div><h2 id="invoice-context-heading">Hợp đồng và kỳ lập</h2><p>Xác nhận đúng phòng, khách đại diện và kỳ trước khi tạo.</p></div></div>
+                <div class="app-panel-body">
+                    <dl class="invoices-definition-list">
+                        <div><dt>Nhà / phòng</dt><dd>@hopDong?.Phong?.Nha?.TenNha / <strong>@hopDong?.Phong?.TenPhong</strong></dd></div>
+                        <div><dt>Hợp đồng</dt><dd>#@hopDong?.Id · Từ @hopDong?.NgayBatDau.ToString("dd/MM/yyyy")</dd></div>
+                        <div><dt>Khách đại diện</dt><dd>@(hopDong?.KhachDaiDien?.HoTen ?? "Chưa có khách đại diện")</dd></div>
+                        <div><dt>Tiền thuê thỏa thuận</dt><dd>@hopDong?.TienThueThoaThuan.ToString("N0") đ / tháng</dd></div>
+                    </dl>
+                </div>
+            </section>
+
+            <section class="app-panel invoices-preview-panel" aria-labelledby="invoice-preview-heading">
+                <div class="app-panel-header"><div><h2 id="invoice-preview-heading">Preview kỳ @thang/@nam</h2><p>Dữ liệu được tính lại từ `HoaDonService.TinhHoaDonDuKienAsync`.</p></div>@if (canCreate) { <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Sẵn sàng tạo</span> } else { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Đang bị chặn</span> }</div>
+                <div class="app-panel-body">
+                    @if (duKien != null)
+                    {
+                        @if (duKien.CoHoaDonDaCo)
+                        {
+                            <div class="app-notice is-danger"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Kỳ này đã có hóa đơn</strong><p>Mở hóa đơn #@duKien.HoaDonDaCo!.Id thay vì tạo trùng.</p></div></div>
+                        }
+                        @foreach (var error in duKien.Loi)
+                        {
+                            <div class="app-notice is-danger"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Dữ liệu chưa sẵn sàng</strong><p>@error</p></div></div>
+                        }
+                        @if (duKien.ThieuKhach && !duKien.Loi.Any(x => x.Contains("khach", StringComparison.OrdinalIgnoreCase) || x.Contains("khách", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <div class="app-notice is-danger"><svg class="app-icon" aria-hidden="true"><use href="#icon-users"></use></svg><div><strong>Thiếu khách đại diện</strong><p>Cần gắn khách đại diện đúng kỳ để chốt snapshot hóa đơn.</p></div></div>
+                        }
+                        @foreach (var warning in duKien.CanhBao)
+                        {
+                            <div class="app-notice is-warning"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><div><strong>Cần lưu ý</strong><p>@warning</p></div></div>
+                        }
+                        <div class="invoices-preview-lines">
+                            <div><span>Tiền phòng @if (duKien.SoNgayO.HasValue) { <small>(@duKien.SoNgayO/@duKien.SoNgayTrongThang ngày)</small> }</span><strong>@duKien.TienPhong.ToString("N0") đ</strong></div>
+                            @foreach (var item in duKien.ChiTiet) { <div><span>@item.TenDichVu <small>@item.SoLuong.ToString("N2") × @item.DonGia.ToString("N0")</small></span><strong>@item.ThanhTien.ToString("N0") đ</strong></div> }
+                            @foreach (var item in duKien.KhoanPhatSinh) { <div><span>@item.MoTa <small>Khoản phát sinh</small></span><strong>@item.SoTienConLai.ToString("N0") đ</strong></div> }
+                            @if (duKien.TienNoKyTruoc > 0) { <div class="is-danger"><span>Nợ kỳ trước</span><strong>@duKien.TienNoKyTruoc.ToString("N0") đ</strong></div> }
+                            <div class="invoices-preview-total"><span>Tổng dự kiến</span><strong>@duKien.TongCong.ToString("N0") đ</strong></div>
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <aside class="invoices-create-aside">
+            <section class="app-panel invoices-create-action-panel" aria-labelledby="invoice-create-action-heading">
+                <div class="app-panel-header"><div><h2 id="invoice-create-action-heading">Chọn kỳ</h2><p>Tải lại preview trước khi xác nhận.</p></div></div>
+                <div class="app-panel-body">
+        <form asp-action="Create" method="get" class="invoices-period-form invoices-create-period-form">
+            <input type="hidden" name="hopDongId" value="@hopDong?.Id" />
+            <div><label for="create-month">Tháng</label><select id="create-month" name="thang" class="form-select">@for (int m = 1; m <= 12; m++) { <option value="@m" selected="@(m == thang)">Tháng @m</option> }</select></div>
+            <div><label for="create-year">Năm</label><input id="create-year" name="nam" type="number" class="form-control" value="@nam" min="2020" max="2099" /></div>
+            <button class="btn btn-outline-primary" type="submit">Cập nhật preview</button>
+        </form>
+
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" name="hopDongId" value="@hopDong?.Id" />
 
-            <div class="row g-3 mb-3">
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Kỳ tháng <span class="text-danger">*</span></label>
-                    <select name="thang" class="form-select">
-                        @for (int m = 1; m <= 12; m++)
-                        {
-                            <option value="@m" selected="@(m == thang)">Tháng @m</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-6">
-                    <label class="form-label fw-semibold">Năm <span class="text-danger">*</span></label>
-                    <input name="nam" type="number" class="form-control"
-                           value="@nam" min="2020" max="2099" />
-                </div>
-            </div>
-
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-receipt me-1"></i>Tạo hóa đơn
-                </button>
-                <a asp-controller="HopDong" asp-action="Details" asp-route-id="@hopDong?.Id"
-                   class="btn btn-outline-secondary">Huỷ</a>
-            </div>
+            <input type="hidden" name="thang" value="@thang" />
+            <input type="hidden" name="nam" value="@nam" />
+            <div class="app-notice @(canCreate ? "is-success" : "is-danger")"><svg class="app-icon" aria-hidden="true"><use href="@(canCreate ? "#icon-check" : "#icon-alert")"></use></svg><div><strong>@(canCreate ? "Đủ điều kiện tạo" : "Chưa thể tạo hóa đơn")</strong><p>@(canCreate ? "Server vẫn tính lại và kiểm tra toàn bộ guard khi submit." : "Xử lý các blocker trong preview rồi tải lại trang.")</p></div></div>
+            <button type="submit" class="btn btn-success w-100" disabled="@(!canCreate)"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg>Tạo hóa đơn @thang/@nam</span></button>
         </form>
+                </div>
+            </section>
+        </aside>
     </div>
 </div>
+
+@section Scripts { <script src="~/js/invoices.js" asp-append-version="true"></script> }

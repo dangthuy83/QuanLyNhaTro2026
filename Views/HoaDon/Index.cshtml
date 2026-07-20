@@ -4,123 +4,169 @@
     ViewData["ActiveMenu"] = "hoadon";
     var thang = (int)ViewBag.Thang;
     var nam   = (int)ViewBag.Nam;
+    var invoices = Model.ToList();
+    var today = DateTime.Today;
+    var houses = invoices
+        .GroupBy(x => new { x.NhaIdSnapshot, x.TenNhaSnapshot })
+        .Select(x => x.Key)
+        .OrderBy(x => x.TenNhaSnapshot)
+        .ToList();
+    var tongCong = invoices.Sum(x => x.TongCong);
+    var daGhiNhan = invoices.Sum(x => x.SoTienDaThu);
+    var thucThu = invoices.Sum(x => x.TienThucThu);
+    var conNo = invoices.Sum(x => x.SoTienConLai);
+    var noKyTruoc = invoices.Sum(x => x.TienNoKyTruoc);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h5 class="mb-0">Hóa đơn — @thang/@nam</h5>
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-    <a asp-action="ChotHangLoat" asp-route-thang="@thang" asp-route-nam="@nam"
-       class="btn btn-sm btn-primary">
-        Xem trước chốt hàng loạt
-    </a>
-    <form method="get" class="d-flex gap-2 align-items-center">
-        <select name="thang" class="form-select form-select-sm" style="width:90px">
-            @for (int m = 1; m <= 12; m++)
-            {
-                <option value="@m" selected="@(m == thang)">Tháng @m</option>
-            }
-        </select>
-        <input name="nam" type="number" class="form-control form-control-sm" style="width:90px"
-               value="@nam" min="2020" max="2099" />
-        <button class="btn btn-sm btn-outline-primary">Xem</button>
-    </form>
-    </div>
-</div>
+<div class="invoices-page invoices-index-page" data-invoice-list>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Hóa đơn tháng @thang/@nam</h1>
+            <p class="app-page-subtitle">Theo dõi số phải thu, tiền đã nhận và công nợ theo từng phòng. Kết chuyển nợ và trừ cọc luôn được tách khỏi tiền thực thu.</p>
+        </div>
+        <div class="app-page-actions" aria-label="Thao tác module Hóa đơn">
+            <a asp-action="ChotHangLoat" asp-route-thang="@thang" asp-route-nam="@nam" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg>Chốt hàng loạt</span></a>
+        </div>
+    </header>
+
+    <section class="app-panel invoices-period-panel" aria-labelledby="invoice-period-heading">
+        <div>
+            <h2 id="invoice-period-heading">Kỳ hóa đơn</h2>
+            <p>Đổi kỳ để xem đúng snapshot hóa đơn đã chốt.</p>
+        </div>
+        <form method="get" class="invoices-period-form">
+            <div><label for="invoice-month">Tháng</label><select id="invoice-month" name="thang" class="form-select">@for (int m = 1; m <= 12; m++) { <option value="@m" selected="@(m == thang)">Tháng @m</option> }</select></div>
+            <div><label for="invoice-year">Năm</label><input id="invoice-year" name="nam" type="number" class="form-control" value="@nam" min="2020" max="2099" /></div>
+            <button class="btn btn-outline-primary" type="submit"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>Xem kỳ</span></button>
+        </form>
+    </section>
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show" role="status">@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger alert-dismissible fade show py-2">@TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
 }
 
-<div class="card shadow-sm">
+@if (invoices.Any())
+{
+    <section class="invoices-summary-strip" aria-label="Tổng hợp kỳ hóa đơn">
+        <div><span>Tổng hóa đơn</span><strong>@tongCong.ToString("N0") đ</strong><small>@invoices.Count hóa đơn</small></div>
+        <div><span>Tiền thực thu</span><strong class="is-success">@thucThu.ToString("N0") đ</strong><small>Tiền mặt + chuyển khoản</small></div>
+        <div><span>Đã ghi nhận</span><strong>@daGhiNhan.ToString("N0") đ</strong><small>Gồm bút toán phi tiền mặt</small></div>
+        <div><span>Còn nợ</span><strong class="is-danger">@conNo.ToString("N0") đ</strong><small>Sau mọi thanh toán</small></div>
+        <div><span>Nợ kỳ trước</span><strong class="@(noKyTruoc > 0 ? "is-warning" : "")">@noKyTruoc.ToString("N0") đ</strong><small>Snapshot khi chốt kỳ</small></div>
+    </section>
+
+    <section class="app-panel invoices-filter-panel" aria-labelledby="invoice-filter-heading">
+        <h2 id="invoice-filter-heading" class="visually-hidden">Tìm và lọc hóa đơn</h2>
+        <div class="invoices-filter-grid">
+            <div class="invoices-filter-field invoices-filter-search"><label for="invoice-search">Tìm hóa đơn</label><div class="invoices-search-control"><svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><input id="invoice-search" class="form-control" type="search" placeholder="Nhà, phòng hoặc khách thuê" autocomplete="off" data-invoice-filter-search /></div></div>
+            <div class="invoices-filter-field"><label for="invoice-house-filter">Nhà</label><select id="invoice-house-filter" class="form-select" data-invoice-filter-house><option value="">Tất cả nhà</option>@foreach (var house in houses) { <option value="@house.NhaIdSnapshot">@house.TenNhaSnapshot</option> }</select></div>
+            <div class="invoices-filter-field"><label for="invoice-status-filter">Trạng thái</label><select id="invoice-status-filter" class="form-select" data-invoice-filter-status><option value="">Tất cả trạng thái</option><option value="ChuaThu">Chưa thu</option><option value="ThuMotPhan">Thu một phần</option><option value="DaThu">Đã thu</option><option value="QuaHan">Quá hạn</option></select></div>
+            <button class="btn btn-outline-secondary invoices-filter-reset" type="button" data-invoice-filter-reset><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>Đặt lại</span></button>
+        </div>
+        <div class="invoices-filter-meta"><span>Kết quả cập nhật ngay, không đổi kỳ đang xem.</span><output data-invoice-result-count aria-live="polite">@invoices.Count hóa đơn</output></div>
+    </section>
+}
+
+<section class="app-panel invoices-list-panel" aria-labelledby="invoice-list-heading">
+    <h2 id="invoice-list-heading" class="visually-hidden">Danh sách hóa đơn</h2>
     <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
+        <table class="table mb-0 align-middle invoices-table">
+            <thead>
                 <tr>
-                    <th>Phòng</th>
+                    <th>Nhà / phòng / khách</th>
                     <th class="text-end">Tiền phòng</th>
                     <th class="text-end">Dịch vụ</th>
-                    <th class="text-end">Nợ KT</th>
+                    <th class="text-end">Nợ kỳ trước</th>
                     <th class="text-end">Tổng cộng</th>
-                    <th class="text-end">Đã thu</th>
-                    <th>Trạng thái</th>
-                    <th></th>
+                    <th class="text-end">Đã ghi nhận</th>
+                    <th>Hạn thu / trạng thái</th>
+                    <th class="text-end">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var hd in Model)
+                @foreach (var hd in invoices)
                 {
-                    var conLai = Math.Max(0, hd.TongCong - hd.SoTienDaThu);
+                    var conLai = hd.SoTienConLai;
                     var chuaThuDu = conLai > 0 && hd.TrangThaiThanhToan != "DaThu";
+                    var quaHan = chuaThuDu && hd.NgayDenHan.Date < today;
+                    var tienThucThu = hd.TienThucThu;
                     var coKetChuyenNo = hd.DanhSachThanhToan.Any(tt => tt.HinhThuc == "KetChuyenNo");
                     var coTruCoc = hd.DanhSachThanhToan.Any(tt => tt.HinhThuc == "TruCoc");
                     var modalId = $"thuNhanhModal{hd.Id}";
-                    <tr>
-                        <td><a asp-action="Details" asp-route-id="@hd.Id" class="fw-semibold text-decoration-none">
-                            @hd.TenPhongSnapshot
-                        </a></td>
-                        <td class="text-end">@hd.TienPhong.ToString("N0")</td>
-                        <td class="text-end">@hd.TongTienDichVu.ToString("N0")</td>
-                        <td class="text-end @(hd.TienNoKyTruoc > 0 ? "text-danger" : "")">
-                            <div>@hd.TienNoKyTruoc.ToString("N0")</div>
+                    <tr data-invoice-row data-search="@hd.TenNhaSnapshot @hd.TenPhongSnapshot @hd.TenKhachDaiDienSnapshot" data-house="@hd.NhaIdSnapshot" data-status="@hd.TrangThaiThanhToan" data-overdue="@quaHan.ToString().ToLowerInvariant()">
+                        <td data-label="Nhà / phòng / khách">
+                            <a asp-action="Details" asp-route-id="@hd.Id" class="invoices-room-name">@hd.TenPhongSnapshot</a>
+                            <span class="invoices-cell-meta">@hd.TenNhaSnapshot · @hd.TenKhachDaiDienSnapshot</span>
+                            <span class="invoices-cell-meta">Hóa đơn #@hd.Id · Kỳ @hd.Thang/@hd.Nam</span>
+                        </td>
+                        <td class="text-end" data-label="Tiền phòng"><strong>@hd.TienPhong.ToString("N0") đ</strong></td>
+                        <td class="text-end" data-label="Dịch vụ"><strong>@hd.TongTienDichVu.ToString("N0") đ</strong>@if (hd.TongTienPhatSinh > 0) { <span class="invoices-cell-meta">+ @hd.TongTienPhatSinh.ToString("N0") đ phát sinh</span> }</td>
+                        <td class="text-end @(hd.TienNoKyTruoc > 0 ? "text-danger" : "")" data-label="Nợ kỳ trước">
+                            <div>@hd.TienNoKyTruoc.ToString("N0") đ</div>
                             @if (hd.TienNoKyTruoc > 0)
                             {
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Nợ kỳ trước</span>
+                                <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Nợ mang sang</span>
                             }
                         </td>
-                        <td class="text-end fw-semibold">@hd.TongCong.ToString("N0")</td>
-                        <td class="text-end">
-                            <div>@hd.SoTienDaThu.ToString("N0")</div>
+                        <td class="text-end" data-label="Tổng cộng"><strong class="invoices-total-amount">@hd.TongCong.ToString("N0") đ</strong></td>
+                        <td class="text-end" data-label="Đã ghi nhận">
+                            <strong>@hd.SoTienDaThu.ToString("N0") đ</strong>
+                            <span class="invoices-cell-meta">Thực thu @tienThucThu.ToString("N0") đ</span>
                             @if (coKetChuyenNo || coTruCoc)
                             {
                                 <div class="d-flex gap-1 justify-content-end flex-wrap mt-1">
                                     @if (coKetChuyenNo)
                                     {
-                                        <span class="badge bg-info text-dark">Kết chuyển nợ</span>
+                                        <span class="app-status-badge is-info"><span class="app-status-dot" aria-hidden="true"></span>Kết chuyển nợ</span>
                                     }
                                     @if (coTruCoc)
                                     {
-                                        <span class="badge bg-warning text-dark">Trừ cọc</span>
+                                        <span class="app-status-badge is-warning"><span class="app-status-dot" aria-hidden="true"></span>Trừ cọc</span>
                                     }
                                 </div>
                             }
                         </td>
-                        <td>
+                        <td data-label="Hạn thu / trạng thái">
                             @Html.Raw(TrangThaiBadge(hd.TrangThaiThanhToan))
+                            @if (quaHan)
+                            {
+                                <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Quá hạn</span>
+                            }
+                            <span class="invoices-cell-meta">Hạn @hd.NgayDenHan.ToString("dd/MM/yyyy")</span>
                             @if (chuaThuDu)
                             {
                                 <div class="small text-muted mt-1">Còn @conLai.ToString("N0") đ</div>
                             }
                         </td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm" role="group">
+                        <td class="text-end" data-label="Thao tác">
+                            <div class="invoices-row-actions">
                                 @if (chuaThuDu)
                                 {
                                     <button type="button"
                                             class="btn btn-outline-success"
                                             data-bs-toggle="modal"
                                             data-bs-target="#@modalId"
-                                            title="Thu tiền nhanh">
-                                        <i class="bi bi-cash-coin"></i>
+                                            data-invoice-modal-trigger>
+                                        <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-wallet"></use></svg>Thu nhanh</span>
                                     </button>
                                 }
                                 <a asp-action="Details" asp-route-id="@hd.Id"
-                                   class="btn btn-outline-secondary"
-                                   title="Xem chi tiết">
-                                <i class="bi bi-eye"></i>
+                                   class="btn btn-outline-primary">
+                                <span class="app-button-content">Chi tiết<svg class="app-icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></span>
                                 </a>
                             </div>
 
                             @if (chuaThuDu)
                             {
-                                <div class="modal fade text-start" id="@modalId" tabindex="-1" aria-labelledby="@($"{modalId}Label")" aria-hidden="true">
-                                    <div class="modal-dialog">
+                                <div class="modal fade text-start invoices-payment-modal" id="@modalId" tabindex="-1" aria-labelledby="@($"{modalId}Label")" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
                                         <form asp-action="ThuTien" method="post" class="modal-content">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="hoaDonId" value="@hd.Id" />
@@ -129,20 +175,18 @@
                                             <input type="hidden" name="nam" value="@nam" />
 
                                             <div class="modal-header">
-                                                <h6 class="modal-title" id="@($"{modalId}Label")">
-                                                    Thu tiền @hd.TenPhongSnapshot - @hd.Thang/@hd.Nam
-                                                </h6>
+                                                <div><span class="invoices-modal-context">@hd.TenNhaSnapshot / @hd.TenPhongSnapshot</span><h2 class="modal-title" id="@($"{modalId}Label")">Ghi nhận tiền thực thu</h2></div>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <div class="d-flex justify-content-between border-bottom pb-2 mb-3">
-                                                    <span class="text-muted">Còn phải thu</span>
-                                                    <strong class="text-danger">@conLai.ToString("N0") đ</strong>
+                                                <div class="invoices-payment-balance">
+                                                    <span>Còn phải thu</span>
+                                                    <strong>@conLai.ToString("N0") đ</strong>
                                                 </div>
 
                                                 @if (hd.TienNoKyTruoc > 0 || coKetChuyenNo || coTruCoc)
                                                 {
-                                                    <div class="alert alert-info py-2 small">
+                                                    <div class="app-notice is-info invoices-ledger-notice"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><div>
                                                         @if (hd.TienNoKyTruoc > 0)
                                                         {
                                                             <div>Hóa đơn này có nợ kỳ trước: <strong>@hd.TienNoKyTruoc.ToString("N0") đ</strong>.</div>
@@ -151,13 +195,13 @@
                                                         {
                                                             <div>Các badge Kết chuyển nợ/Trừ cọc là bút toán xử lý công nợ, không phải tiền mới thu.</div>
                                                         }
-                                                    </div>
+                                                    </div></div>
                                                 }
 
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-semibold">Số tiền (đ)</label>
+                                                <div class="invoices-form-field">
+                                                    <label for="@($"quick-amount-{hd.Id}")">Số tiền <span aria-hidden="true">*</span></label>
                                                     <div class="input-group">
-                                                        <input name="soTien"
+                                                        <input id="@($"quick-amount-{hd.Id}")" name="soTien"
                                                                type="number"
                                                                min="1"
                                                                max="@FormatInputAmount(conLai)"
@@ -166,28 +210,29 @@
                                                                value="@FormatInputAmount(conLai)"
                                                                required />
                                                         <button type="button"
-                                                                class="btn btn-outline-secondary quick-fill-full"
+                                                                class="btn btn-outline-secondary"
+                                                                data-quick-fill
                                                                 data-amount="@FormatInputAmount(conLai)">
                                                             Thu đủ
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-semibold">Hình thức</label>
-                                                    <select name="hinhThuc" class="form-select">
+                                                <div class="invoices-form-field">
+                                                    <label for="@($"quick-method-{hd.Id}")">Hình thức <span aria-hidden="true">*</span></label>
+                                                    <select id="@($"quick-method-{hd.Id}")" name="hinhThuc" class="form-select" required>
                                                         <option value="TienMat">Tiền mặt</option>
                                                         <option value="ChuyenKhoan">Chuyển khoản</option>
                                                     </select>
                                                 </div>
-                                                <div>
-                                                    <label class="form-label fw-semibold">Ghi chú</label>
-                                                    <input name="ghiChu" class="form-control" />
+                                                <div class="invoices-form-field">
+                                                    <label for="@($"quick-note-{hd.Id}")">Ghi chú</label>
+                                                    <input id="@($"quick-note-{hd.Id}")" name="ghiChu" class="form-control" autocomplete="off" />
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                                                 <button type="submit" class="btn btn-success">
-                                                    <i class="bi bi-cash me-1"></i>Xác nhận thu
+                                                    Xác nhận thu
                                                 </button>
                                             </div>
                                         </form>
@@ -197,49 +242,44 @@
                         </td>
                     </tr>
                 }
-                @if (!Model.Any())
+                @if (!invoices.Any())
                 {
-                    <tr><td colspan="8" class="text-center text-muted py-4">Không có hóa đơn nào trong kỳ này.</td></tr>
+                    <tr><td colspan="8"><div class="app-empty-state"><div><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg><h3>Chưa có hóa đơn trong kỳ này</h3><p>Kiểm tra dữ liệu hợp đồng, dịch vụ và chỉ số trước khi chốt.</p></div></div></td></tr>
                 }
             </tbody>
-            @if (Model.Any())
+            @if (invoices.Any())
             {
                 <tfoot class="table-light fw-semibold">
                     <tr>
                         <td>Tổng</td>
-                        <td class="text-end">@Model.Sum(h => h.TienPhong).ToString("N0")</td>
-                        <td class="text-end">@Model.Sum(h => h.TongTienDichVu).ToString("N0")</td>
-                        <td class="text-end">@Model.Sum(h => h.TienNoKyTruoc).ToString("N0")</td>
-                        <td class="text-end">@Model.Sum(h => h.TongCong).ToString("N0")</td>
-                        <td class="text-end">@Model.Sum(h => h.SoTienDaThu).ToString("N0")</td>
+                        <td class="text-end">@invoices.Sum(h => h.TienPhong).ToString("N0")</td>
+                        <td class="text-end">@invoices.Sum(h => h.TongTienDichVu).ToString("N0")</td>
+                        <td class="text-end">@invoices.Sum(h => h.TienNoKyTruoc).ToString("N0")</td>
+                        <td class="text-end">@invoices.Sum(h => h.TongCong).ToString("N0")</td>
+                        <td class="text-end">@invoices.Sum(h => h.SoTienDaThu).ToString("N0")</td>
                         <td colspan="2"></td>
                     </tr>
                 </tfoot>
             }
         </table>
     </div>
+</section>
+@if (invoices.Any())
+{
+    <div class="app-empty-state invoices-filter-empty" data-invoice-filter-empty hidden><div><svg class="app-icon" aria-hidden="true"><use href="#icon-search"></use></svg><h3>Không có hóa đơn phù hợp</h3><p>Thử đổi từ khóa, Nhà hoặc trạng thái để xem lại danh sách.</p></div></div>
+}
 </div>
 
 @section Scripts {
-    <script>
-        document.querySelectorAll('.quick-fill-full').forEach((button) => {
-            button.addEventListener('click', () => {
-                const input = button.closest('.input-group')?.querySelector('input[name="soTien"]');
-                if (input) {
-                    input.value = button.dataset.amount || '';
-                    input.focus();
-                }
-            });
-        });
-    </script>
+    <script src="~/js/invoices.js" asp-append-version="true"></script>
 }
 
 @functions {
     static string TrangThaiBadge(string tt) => tt switch
     {
-        "DaThu"      => "<span class='badge bg-success'>Đã thu</span>",
-        "ThuMotPhan" => "<span class='badge bg-warning text-dark'>Thu một phần</span>",
-        _            => "<span class='badge bg-danger'>Chưa thu</span>"
+        "DaThu"      => "<span class='app-status-badge is-success'><span class='app-status-dot' aria-hidden='true'></span>Đã thu</span>",
+        "ThuMotPhan" => "<span class='app-status-badge is-warning'><span class='app-status-dot' aria-hidden='true'></span>Thu một phần</span>",
+        _            => "<span class='app-status-badge is-danger'><span class='app-status-dot' aria-hidden='true'></span>Chưa thu</span>"
     };
 
     static string FormatInputAmount(decimal amount)

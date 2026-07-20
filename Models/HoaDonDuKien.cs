@@ -22,13 +22,16 @@ public class HoaDonDuKien
 
     public bool CoHoaDonDaCo => HoaDonDaCo != null;
     public bool CoNoKyTruoc => TienNoKyTruoc > 0;
+    public bool ThieuKhach => HopDong?.KhachDaiDien == null || Loi.Any(x =>
+        x.Contains("khach", StringComparison.OrdinalIgnoreCase)
+        || x.Contains("khách", StringComparison.OrdinalIgnoreCase));
     public bool ThieuDichVu => CanhBao.Any(x =>
         x.Contains("dịch vụ", StringComparison.OrdinalIgnoreCase)
         || x.Contains("dich vu", StringComparison.OrdinalIgnoreCase));
     public bool ThieuChiSo => Loi.Any(x =>
         x.Contains("chỉ số", StringComparison.OrdinalIgnoreCase)
         || x.Contains("chi so", StringComparison.OrdinalIgnoreCase));
-    public bool SanSangChot => !CoHoaDonDaCo && Loi.Count == 0;
+    public bool SanSangChot => !CoHoaDonDaCo && !ThieuKhach && Loi.Count == 0;
 }
 
 public class HoaDonDuKienKhoanPhatSinh

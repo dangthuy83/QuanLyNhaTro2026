@@ -126,19 +126,21 @@ public class HoaDonController(
         hd.ChiTiet       = (await chiTietRepo.GetByHoaDonAsync(id)).ToList();
         hd.KhoanPhatSinh = (await khoanPhatSinhRepo.GetByHoaDonAsync(id)).ToList();
         hd.DanhSachThanhToan = (await thanhToanRepo.GetByHoaDonAsync(id)).ToList();
+        ViewBag.DeleteAssessment = await hoaDonService.DanhGiaXoaHoaDonAsync(id);
 
         return View(hd);
     }
 
     // GET /HoaDon/Create?hopDongId=1
-    public async Task<IActionResult> Create(int hopDongId)
+    public async Task<IActionResult> Create(int hopDongId, int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "hoadon";
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
         if (hopDong == null) return NotFound();
 
+        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
         ViewBag.HopDong = hopDong;
-        var ky = DefaultBillingPeriodResolver.Resolve();
+        ViewBag.DuKien = await hoaDonService.TinhHoaDonDuKienAsync(hopDongId, ky.Thang, ky.Nam);
         ViewBag.Thang = ky.Thang;
         ViewBag.Nam = ky.Nam;
         return View();
@@ -248,13 +250,15 @@ public class HoaDonController(
         ViewData["ActiveMenu"] = "hoadon";
         var hd = await hoaDonRepo.GetByIdAsync(id);
         if (hd == null) return NotFound();
+        var lichSuThanhToan = (await thanhToanRepo.GetByHoaDonAsync(id)).ToList();
+        hd.DanhSachThanhToan = lichSuThanhToan;
 
         var model = new PhieuThuHtmlViewModel
         {
             HoaDon = hd,
             ChiTiet = (await chiTietRepo.GetByHoaDonAsync(id)).ToList(),
             KhoanPhatSinh = (await khoanPhatSinhRepo.GetByHoaDonAsync(id)).ToList(),
-            LichSuThanhToan = (await thanhToanRepo.GetByHoaDonAsync(id)).ToList()
+            LichSuThanhToan = lichSuThanhToan
         };
 
         return View(model);
@@ -305,7 +309,7 @@ public class HoaDonController(
     }
 
     private static string NormalizeTrangThaiDong(string? trangThaiDong)
-        => trangThaiDong is "SanSang" or "CanKiemTra" or "ThieuChiSo" or "DaCoHoaDon" or "ThieuDichVu"
+        => trangThaiDong is "SanSang" or "CanKiemTra" or "ThieuChiSo" or "DaCoHoaDon" or "ThieuDichVu" or "ThieuKhach"
             ? trangThaiDong
             : "TatCa";
 
@@ -317,6 +321,7 @@ public class HoaDonController(
             "ThieuChiSo" => row.ThieuChiSo,
             "DaCoHoaDon" => row.CoHoaDonDaCo,
             "ThieuDichVu" => row.ThieuDichVu,
+            "ThieuKhach" => row.ThieuKhach,
             _ => true
         };
 

@@ -43,4 +43,13 @@ public class HoaDon
     public List<ChiTietHoaDon> ChiTiet { get; set; } = [];
     public List<KhoanPhatSinhHopDong> KhoanPhatSinh { get; set; } = [];
     public List<ThanhToan> DanhSachThanhToan { get; set; } = [];
+
+    // Phân loại sổ thu dùng chung cho UI/báo cáo: bút toán công nợ không phải tiền mới nhận.
+    public decimal TienThucThu => DanhSachThanhToan
+        .Where(tt => tt.HinhThuc is "TienMat" or "ChuyenKhoan")
+        .Sum(tt => tt.SoTien);
+    public decimal ButToanPhiTienMat => DanhSachThanhToan
+        .Where(tt => tt.HinhThuc is "KetChuyenNo" or "TruCoc")
+        .Sum(tt => tt.SoTien);
+    public decimal SoTienConLai => Math.Max(0, TongCong - SoTienDaThu);
 }

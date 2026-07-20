@@ -4,31 +4,28 @@
     ViewData["ActiveMenu"] = "hoadon";
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-    <div>
-        <h5 class="mb-1">Xem trước chốt hóa đơn - @Model.Thang/@Model.Nam</h5>
-        <div class="text-muted small">Kiểm tra dữ liệu trước khi tạo hóa đơn thật cho các hợp đồng đang hiệu lực.</div>
-    </div>
-    <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
-       class="btn btn-sm btn-outline-secondary">Danh sách hóa đơn</a>
-</div>
+<div class="invoices-page invoices-bulk-page" data-invoice-bulk>
+    <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="invoices-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách hóa đơn</a>
+    <header class="app-page-header"><div class="app-page-heading"><h1>Chốt hóa đơn @Model.Thang/@Model.Nam</h1><p class="app-page-subtitle">Bắt đầu từ kỳ, rà từng blocker rồi chỉ chọn các dòng server xác định là sẵn sàng.</p></div></header>
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show" role="status">@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger alert-dismissible fade show py-2">@TempData["Error"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng thông báo"></button></div>
 }
 
-<form method="get" class="border rounded p-3 mb-3 bg-light">
+<section class="app-panel invoices-bulk-filter-panel" aria-labelledby="bulk-filter-heading">
+    <div class="app-panel-header"><div><h2 id="bulk-filter-heading">Kỳ và bộ lọc</h2><p>Kết quả, tổng tiền và lựa chọn đều theo bộ lọc hiện tại.</p></div></div>
+<form method="get" class="invoices-bulk-filter-form">
     <div class="row g-2 align-items-end">
         <div class="col-6 col-md-2 col-lg-1">
-            <label class="form-label small text-muted mb-1">Tháng</label>
-            <select name="thang" class="form-select form-select-sm">
+            <label class="form-label" for="bulk-month">Tháng</label>
+            <select id="bulk-month" name="thang" class="form-select">
                 @for (int m = 1; m <= 12; m++)
                 {
                     <option value="@m" selected="@(m == Model.Thang)">Tháng @m</option>
@@ -36,13 +33,13 @@
             </select>
         </div>
         <div class="col-6 col-md-2 col-lg-1">
-            <label class="form-label small text-muted mb-1">Năm</label>
-            <input name="nam" type="number" class="form-control form-control-sm"
+            <label class="form-label" for="bulk-year">Năm</label>
+            <input id="bulk-year" name="nam" type="number" class="form-control"
                    value="@Model.Nam" min="2020" max="2099" />
         </div>
         <div class="col-md-3 col-lg-2">
-            <label class="form-label small text-muted mb-1">Nhà</label>
-            <select name="nhaId" class="form-select form-select-sm">
+            <label class="form-label" for="bulk-house">Nhà</label>
+            <select id="bulk-house" name="nhaId" class="form-select">
                 <option value="">Tất cả nhà</option>
                 @foreach (var nha in Model.DanhSachNha)
                 {
@@ -51,55 +48,49 @@
             </select>
         </div>
         <div class="col-md-3 col-lg-2">
-            <label class="form-label small text-muted mb-1">Trạng thái dòng</label>
-            <select name="trangThaiDong" class="form-select form-select-sm">
+            <label class="form-label" for="bulk-status">Trạng thái dòng</label>
+            <select id="bulk-status" name="trangThaiDong" class="form-select">
                 <option value="TatCa" selected="@(Model.TrangThaiDong == "TatCa")">Tất cả</option>
                 <option value="SanSang" selected="@(Model.TrangThaiDong == "SanSang")">Sẵn sàng chốt</option>
                 <option value="CanKiemTra" selected="@(Model.TrangThaiDong == "CanKiemTra")">Cần kiểm tra</option>
                 <option value="ThieuChiSo" selected="@(Model.TrangThaiDong == "ThieuChiSo")">Thiếu chỉ số</option>
                 <option value="DaCoHoaDon" selected="@(Model.TrangThaiDong == "DaCoHoaDon")">Đã có hóa đơn</option>
                 <option value="ThieuDichVu" selected="@(Model.TrangThaiDong == "ThieuDichVu")">Thiếu dịch vụ</option>
+                <option value="ThieuKhach" selected="@(Model.TrangThaiDong == "ThieuKhach")">Thiếu khách</option>
             </select>
         </div>
         <div class="col-md-4 col-lg-4">
-            <label class="form-label small text-muted mb-1">Tìm phòng/khách</label>
-            <input name="tuKhoa" class="form-control form-control-sm"
+            <label class="form-label" for="bulk-search">Tìm phòng/khách</label>
+            <input id="bulk-search" name="tuKhoa" class="form-control"
                    value="@Model.TuKhoa" placeholder="Tên phòng, mã HĐ, khách thuê, SĐT" />
         </div>
         <div class="col-md-12 col-lg-2 d-flex gap-2">
-            <button class="btn btn-sm btn-primary flex-fill">Lọc</button>
+            <button class="btn btn-primary flex-fill">Lọc</button>
             <a asp-action="ChotHangLoat" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam"
-               class="btn btn-sm btn-outline-secondary flex-fill">Xóa lọc</a>
+               class="btn btn-outline-secondary flex-fill">Xóa lọc</a>
         </div>
     </div>
 </form>
+</section>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-3">
-        <div class="border rounded p-3 h-100">
+<section class="invoices-summary-strip invoices-bulk-summary" aria-label="Tổng hợp dòng theo bộ lọc">
+    <div>
             <div class="text-muted small">Dòng theo bộ lọc</div>
             <div class="fs-5 fw-semibold">@Model.Rows.Count</div>
-        </div>
     </div>
-    <div class="col-md-3">
-        <div class="border rounded p-3 h-100">
+    <div>
             <div class="text-muted small">Sẵn sàng chốt</div>
             <div class="fs-5 fw-semibold text-success">@Model.SoDongSanSang</div>
-        </div>
     </div>
-    <div class="col-md-3">
-        <div class="border rounded p-3 h-100">
+    <div>
             <div class="text-muted small">Cần kiểm tra</div>
             <div class="fs-5 fw-semibold text-warning">@Model.SoDongCanKiemTra</div>
-        </div>
     </div>
-    <div class="col-md-3">
-        <div class="border rounded p-3 h-100">
+    <div>
             <div class="text-muted small">Tổng dự kiến hợp lệ</div>
             <div class="fs-5 fw-semibold">@Model.TongDuKien.ToString("N0") đ</div>
-        </div>
     </div>
-</div>
+</section>
 
 <form asp-action="ChotHangLoat" method="post">
     @Html.AntiForgeryToken()
@@ -109,14 +100,14 @@
     <input type="hidden" name="tuKhoa" value="@Model.TuKhoa" />
     <input type="hidden" name="trangThaiDong" value="@Model.TrangThaiDong" />
 
-    <div class="card shadow-sm">
+    <section class="app-panel invoices-bulk-list-panel" aria-labelledby="bulk-list-heading">
+        <h2 id="bulk-list-heading" class="visually-hidden">Các hợp đồng trong kỳ</h2>
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
+            <table class="table mb-0 align-middle invoices-bulk-table">
+                <thead>
                     <tr>
-                        <th style="width:48px">
-                            <input class="form-check-input" type="checkbox" id="checkAllReady"
-                                   title="Chọn tất cả dòng sẵn sàng theo bộ lọc" />
+                        <th class="invoices-select-column">
+                            <input class="form-check-input" type="checkbox" id="checkAllReady" aria-label="Chọn tất cả dòng sẵn sàng theo bộ lọc" data-bulk-check-all />
                         </th>
                         <th>Nhà / phòng / hợp đồng</th>
                         <th>Dịch vụ và chỉ số</th>
@@ -131,15 +122,15 @@
                     @foreach (var row in Model.Rows)
                     {
                         var tenNha = Model.DanhSachNha.FirstOrDefault(n => n.Id == row.HopDong?.Phong?.NhaId)?.TenNha;
-                        <tr class="@(!row.SanSangChot ? "table-warning" : "")">
-                            <td>
-                                <input class="form-check-input ready-check"
+                        <tr class="@(!row.SanSangChot ? "is-blocked" : "")" data-bulk-row data-ready="@row.SanSangChot.ToString().ToLowerInvariant()">
+                            <td data-label="Chọn">
+                                <input class="form-check-input ready-check" aria-label="Chọn hợp đồng #@row.HopDongId phòng @row.HopDong?.Phong?.TenPhong"
                                        type="checkbox"
                                        name="hopDongIds"
                                        value="@row.HopDongId"
                                        disabled="@(!row.SanSangChot)" />
                             </td>
-                            <td>
+                            <td data-label="Nhà / phòng / hợp đồng">
                                 <div class="text-muted small">@(tenNha ?? $"Nhà #{row.HopDong?.Phong?.NhaId}")</div>
                                 <div class="fw-semibold">@row.HopDong?.Phong?.TenPhong</div>
                                 <div class="text-muted small">
@@ -157,7 +148,7 @@
                                     Từ @row.HopDong?.NgayBatDau.ToString("dd/MM/yyyy")
                                 </div>
                             </td>
-                            <td>
+                            <td data-label="Dịch vụ và chỉ số">
                                 @if (row.ChiTiet.Any() || row.KhoanPhatSinh.Any())
                                 {
                                     <div class="d-flex flex-column gap-1">
@@ -170,7 +161,7 @@
                                                 </span>
                                                 @if (ct.CanChiSo)
                                                 {
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Đã có chỉ số</span>
+                                                    <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Đã có chỉ số</span>
                                                 }
                                             </div>
                                         }
@@ -188,38 +179,42 @@
                                     <span class="text-muted small">Chưa có dòng dịch vụ phát sinh.</span>
                                 }
                             </td>
-                            <td class="text-end">@row.TienPhong.ToString("N0")</td>
-                            <td class="text-end">
+                            <td class="text-end" data-label="Tiền phòng">@row.TienPhong.ToString("N0") đ</td>
+                            <td class="text-end" data-label="Dịch vụ">
                                 @row.TongTienDichVu.ToString("N0")
                                 @if (row.TongTienPhatSinh > 0)
                                 {
                                     <div class="small text-danger">+ @row.TongTienPhatSinh.ToString("N0") phát sinh</div>
                                 }
                             </td>
-                            <td class="text-end @(row.TienNoKyTruoc > 0 ? "text-danger fw-semibold" : "")">@row.TienNoKyTruoc.ToString("N0")</td>
-                            <td class="text-end fw-semibold">@row.TongCong.ToString("N0")</td>
-                            <td>
+                            <td class="text-end @(row.TienNoKyTruoc > 0 ? "text-danger fw-semibold" : "")" data-label="Nợ kỳ trước">@row.TienNoKyTruoc.ToString("N0") đ</td>
+                            <td class="text-end fw-semibold" data-label="Tổng dự kiến">@row.TongCong.ToString("N0") đ</td>
+                            <td data-label="Trạng thái">
                                 <div class="d-flex flex-wrap gap-1 mb-1">
                                     @if (row.CoHoaDonDaCo)
                                     {
                                         <a asp-action="Details" asp-route-id="@row.HoaDonDaCo!.Id"
-                                           class="badge bg-secondary text-decoration-none">Đã có hóa đơn #@row.HoaDonDaCo!.Id</a>
+                                           class="app-status-badge is-neutral text-decoration-none"><span class="app-status-dot" aria-hidden="true"></span>Đã có hóa đơn #@row.HoaDonDaCo!.Id</a>
                                     }
                                     @if (row.ThieuChiSo)
                                     {
-                                        <span class="badge bg-danger">Thiếu chỉ số</span>
+                                        <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Thiếu chỉ số</span>
                                     }
                                     @if (row.ThieuDichVu)
                                     {
-                                        <span class="badge bg-warning text-dark">Thiếu dịch vụ</span>
+                                        <span class="app-status-badge is-warning"><span class="app-status-dot" aria-hidden="true"></span>Thiếu dịch vụ</span>
+                                    }
+                                    @if (row.ThieuKhach)
+                                    {
+                                        <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Thiếu khách</span>
                                     }
                                     @if (row.CoNoKyTruoc)
                                     {
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Có nợ kỳ trước</span>
+                                        <span class="app-status-badge is-warning"><span class="app-status-dot" aria-hidden="true"></span>Có nợ kỳ trước</span>
                                     }
                                     @if (row.SanSangChot)
                                     {
-                                        <span class="badge bg-success">Sẵn sàng chốt</span>
+                                        <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Sẵn sàng chốt</span>
                                     }
                                 </div>
 
@@ -257,21 +252,15 @@
             </table>
         </div>
         <div class="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2">
-            <div class="small text-muted">@Model.SoDongCanKiemTra dòng cần kiểm tra sẽ không được chốt.</div>
+            <div><strong><output data-bulk-selected-count aria-live="polite">0 dòng đã chọn</output></strong><div class="small text-muted">@Model.SoDongCanKiemTra dòng cần kiểm tra sẽ không được chốt.</div></div>
             <button type="submit" class="btn btn-primary" disabled="@(Model.SoDongSanSang == 0)">
                 Chốt các dòng đã chọn
             </button>
         </div>
-    </div>
+    </section>
 </form>
 
 @section Scripts {
-    <script>
-        const checkAllReady = document.getElementById('checkAllReady');
-        checkAllReady?.addEventListener('change', () => {
-            document.querySelectorAll('.ready-check:not(:disabled)').forEach((checkbox) => {
-                checkbox.checked = checkAllReady.checked;
-            });
-        });
-    </script>
+    <script src="~/js/invoices.js" asp-append-version="true"></script>
 }
+</div>

@@ -635,3 +635,17 @@ Khi trả phòng, hệ thống dùng cọc trừ nợ bằng ledger `TruNo` và 
 ---
 
 Cập nhật lần cuối: Phiên 68 - 16/07/2026. REVIEW-025 đã diễn tập trên DB restore tạm; DB vận hành chỉ đọc và không phát sinh dữ liệu nghiệp vụ.
+
+---
+
+## UI-004 - Quy ước giao diện hóa đơn (20/07/2026)
+
+- Mọi màn hóa đơn phải phân biệt **tiền thực thu** (`TienMat`, `ChuyenKhoan`) với **bút toán phi
+  tiền mặt** (`KetChuyenNo`, `TruCoc`). Phân loại dùng thuộc tính dùng chung trên `HoaDon`, không
+  tự cộng lại trong controller, Razor hay JavaScript.
+- Màn lập/chốt chỉ hiển thị kết quả từ `HoaDonService.TinhHoaDonDuKienAsync`; POST vẫn tính và
+  kiểm tra lại trên server. Client chỉ lọc, chọn dòng, quản lý focus và điều khiển in.
+- Quyền xóa/lập lại hóa đơn phải lấy từ `HoaDonDeletionPolicy` qua service read-only và luôn hiển
+  thị lý do bị khóa. View không tự suy đoán guard từ trạng thái hiển thị.
+- Năm route `HoaDon/Index`, `Details`, `Create`, `ChotHangLoat`, `InPhieuThu` dùng component
+  UI-001 và style module scope `.invoices-page`; hành vi riêng nằm trong `wwwroot/js/invoices.js`.

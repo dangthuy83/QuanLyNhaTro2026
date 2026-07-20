@@ -404,6 +404,18 @@ public class HoaDonService(
         }
     }
 
+    public async Task<HoaDonDeletionAssessment> DanhGiaXoaHoaDonAsync(int hoaDonId)
+    {
+        var hoaDon = await hoaDonRepo.GetByIdAsync(hoaDonId)
+            ?? throw new KeyNotFoundException($"Khong tim thay hoa don #{hoaDonId}.");
+
+        var conn = (MySqlConnection)db;
+        if (conn.State != ConnectionState.Open)
+            await conn.OpenAsync();
+
+        return await HoaDonDeletionPolicy.EvaluateAsync(conn, null, hoaDon, lockRelatedRows: false);
+    }
+
     private static (int? SoNgayO, int? SoNgayTrongThang) ResolveSoNgayTinhTien(
         HopDong hopDong,
         int thang,

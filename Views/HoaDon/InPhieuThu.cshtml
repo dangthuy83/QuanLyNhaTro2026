@@ -3,95 +3,26 @@
     ViewData["Title"] = $"Phiếu thu #{Model.HoaDon.Id}";
     ViewData["ActiveMenu"] = "hoadon";
     var conLai = Model.ConLai;
+    var tienThucThu = Model.TienThucThu;
+    var butToanPhiTienMat = Model.ButToanPhiTienMat;
 }
 
-<style>
-    .receipt-page {
-        max-width: 860px;
-        margin: 0 auto;
-        background: #fff;
-        color: #111827;
-    }
-
-    .receipt-sheet {
-        border: 1px solid #dee2e6;
-        padding: 28px;
-    }
-
-    .receipt-title {
-        letter-spacing: .03em;
-    }
-
-    .receipt-meta td {
-        padding: 2px 0;
-    }
-
-    .signature-box {
-        min-height: 86px;
-    }
-
-    @@media print {
-        body {
-            background: #fff !important;
-            font-size: 12px;
-        }
-
-        #sidebar,
-        .receipt-toolbar {
-            display: none !important;
-        }
-
-        #wrapper {
-            display: block !important;
-        }
-
-        #page-content {
-            padding: 0 !important;
-        }
-
-        .receipt-page {
-            max-width: none;
-            margin: 0;
-        }
-
-        .receipt-sheet {
-            border: 0;
-            padding: 0;
-        }
-
-        .table th,
-        .table td {
-            padding: .35rem .45rem;
-        }
-
-        a {
-            color: inherit !important;
-            text-decoration: none !important;
-        }
-
-        @@page {
-            size: A4;
-            margin: 14mm;
-        }
-    }
-</style>
-
-<div class="receipt-page">
-    <div class="receipt-toolbar d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+<div class="invoices-page receipt-page" data-invoice-receipt>
+    <div class="receipt-toolbar">
         <div class="d-flex gap-2">
-            <a asp-action="Details" asp-route-id="@Model.HoaDon.Id" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i>
+            <a asp-action="Details" asp-route-id="@Model.HoaDon.Id" class="btn btn-outline-secondary">
+                <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Chi tiết</span>
             </a>
-            <a asp-action="XuatPhieuThu" asp-route-id="@Model.HoaDon.Id" class="btn btn-sm btn-outline-success">
-                <i class="bi bi-file-earmark-excel"></i> Excel
+            <a asp-action="XuatPhieuThu" asp-route-id="@Model.HoaDon.Id" class="btn btn-outline-success">
+                Xuất Excel
             </a>
         </div>
-        <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
-            <i class="bi bi-printer"></i> In phiếu thu
+        <button type="button" class="btn btn-primary" data-print-receipt>
+            <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg>In phiếu thu</span>
         </button>
     </div>
 
-    <div class="receipt-sheet shadow-sm">
+    <main class="receipt-sheet" aria-label="Phiếu thu tiền phòng">
         <div class="text-center mb-4">
             <div class="text-uppercase fw-semibold">@Model.HoaDon.TenNhaSnapshot</div>
             <h4 class="receipt-title fw-bold mt-2 mb-1">PHIẾU THU TIỀN PHÒNG</h4>
@@ -102,7 +33,7 @@
             <div class="col-md-7">
                 <table class="receipt-meta w-100">
                     <tr>
-                        <td class="text-muted" style="width:120px">Phòng</td>
+                        <td class="text-muted receipt-meta-label">Phòng</td>
                         <td class="fw-semibold">@Model.HoaDon.TenPhongSnapshot</td>
                     </tr>
                     <tr>
@@ -122,7 +53,7 @@
             <div class="col-md-5">
                 <table class="receipt-meta w-100">
                     <tr>
-                        <td class="text-muted" style="width:110px">Ngày lập</td>
+                        <td class="text-muted receipt-meta-label">Ngày lập</td>
                         <td>@Model.HoaDon.NgayLap.ToString("dd/MM/yyyy")</td>
                     </tr>
                     <tr>
@@ -145,15 +76,21 @@
             </div>
         }
 
+        <section class="receipt-payment-summary" aria-label="Tổng hợp thanh toán">
+            <div><span>Tiền thực thu</span><strong>@tienThucThu.ToString("N0") đ</strong><small>Tiền mặt + chuyển khoản</small></div>
+            <div><span>Bút toán phi tiền mặt</span><strong>@butToanPhiTienMat.ToString("N0") đ</strong><small>Kết chuyển nợ + trừ cọc</small></div>
+            <div><span>Còn lại</span><strong>@Math.Max(0, conLai).ToString("N0") đ</strong><small>Sau mọi khoản đã ghi nhận</small></div>
+        </section>
+
         <table class="table table-bordered align-middle">
             <thead class="table-light">
                 <tr>
-                    <th style="width:54px">STT</th>
+                    <th class="receipt-col-index">STT</th>
                     <th>Nội dung</th>
-                    <th style="width:96px">ĐVT</th>
-                    <th class="text-end" style="width:110px">Số lượng</th>
-                    <th class="text-end" style="width:130px">Đơn giá</th>
-                    <th class="text-end" style="width:140px">Thành tiền</th>
+                    <th class="receipt-col-unit">ĐVT</th>
+                    <th class="text-end receipt-col-quantity">Số lượng</th>
+                    <th class="text-end receipt-col-price">Đơn giá</th>
+                    <th class="text-end receipt-col-total">Thành tiền</th>
                 </tr>
             </thead>
             <tbody>
@@ -265,8 +202,12 @@
                 <div class="signature-box"></div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
+
+@section Scripts {
+    <script src="~/js/invoices.js" asp-append-version="true"></script>
+}
 
 @functions {
     static string HinhThucText(string? hinhThuc) => hinhThuc switch
@@ -281,8 +222,8 @@
 
     static string TrangThaiBadge(string? trangThai) => trangThai switch
     {
-        "DaThu" => "<span class='badge bg-success'>Đã thu đủ</span>",
-        "ThuMotPhan" => "<span class='badge bg-warning text-dark'>Thu một phần</span>",
-        _ => "<span class='badge bg-danger'>Chưa thu</span>"
+        "DaThu" => "<span class='app-status-badge is-success'><span class='app-status-dot' aria-hidden='true'></span>Đã thu đủ</span>",
+        "ThuMotPhan" => "<span class='app-status-badge is-warning'><span class='app-status-dot' aria-hidden='true'></span>Thu một phần</span>",
+        _ => "<span class='app-status-badge is-danger'><span class='app-status-dot' aria-hidden='true'></span>Chưa thu</span>"
     };
 }

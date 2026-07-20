@@ -2693,6 +2693,36 @@ Ranh giới dữ liệu và phát hành:
 
 ---
 
+## Phiên 20/07/2026 - UI-004 module Hóa đơn
+
+- Redesign 5 màn `HoaDon/Index`, `Details`, `Create`, `ChotHangLoat`, `InPhieuThu` trên app shell
+  UI-001; giữ route/action/field, antiforgery, auth, validation và service nghiệp vụ hiện hữu.
+- Index bổ sung KPI theo kỳ, filter client nhà/trạng thái/từ khóa, card responsive và modal thu
+  nhanh có ngữ cảnh. Details tách snapshot khoản tính, tiền thực thu, bút toán công nợ, lịch sử,
+  thu tiền và lý do xóa/lập lại bị chặn từ policy dùng chung.
+- Create và Chốt hàng loạt chỉ render preview do `HoaDonService.TinhHoaDonDuKienAsync` trả về;
+  thêm trạng thái thiếu khách và client chỉ cho chọn dòng server đánh dấu sẵn sàng.
+- Phiếu thu HTML dùng snapshot, bố cục A4, tách tiền mặt/chuyển khoản khỏi kết chuyển nợ/trừ cọc;
+  nút in không còn handler nội tuyến. CSS scope `.invoices-page`, JS riêng `invoices.js`, không thêm
+  thư viện UI hoặc công thức tiền vào JS/controller/view.
+
+Kiểm chứng:
+
+```text
+dotnet build QuanLyNhaTro.csproj --no-restore: PASS, 0 warning, 0 error.
+Impeccable detector: [].
+Browser QA: 5 route pass; 1440/768/390 không tràn ngang; filter/reset focus, modal thu nhanh,
+             deletion guard, server preview và bulk selection pass; console 0 warning/error.
+POST QA: thu nhanh 10 đ thành công trên schema MySQL tạm; schema đã tự xóa, cleanup còn 0.
+```
+
+- Ảnh QA thật lưu ngoài repository trong artifact Codex: Index 1440px, Details 768px, Chốt hàng
+  loạt 390px. Database vận hành không nhận POST; tiến trình production không bị dừng/chỉnh sửa.
+- Chủ hệ thống đã duyệt stage/commit UI-004 sau QA. Không migration, import, push, publish,
+  deploy hay tác động NSSM; hai file opening-balance untracked được giữ nguyên.
+
+---
+
 ## Lỗi Và Fix Đã Xử Lý
 
 | Phiên | Khu vực | Lỗi | Cách xử lý |

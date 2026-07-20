@@ -1259,6 +1259,21 @@ Tien coc | Tong no | Tru no vao coc | Hoan lai | Khach con no
 - QA dung database tam biet lap; database van hanh khong duoc truy cap. Khong migration, commit,
   push, publish, deploy hay tac dong NSSM. Hai file opening-balance untracked duoc giu nguyen.
 
+### 5.8. UI-004 - Module Hoa don - DA TRIEN KHAI 20/07/2026
+
+- Nam man Hoa don da duoc redesign tren app shell/token UI-001: danh sach, chi tiet, lap hoa don,
+  chot hang loat va phieu thu HTML. Route, action, field, validation, auth va nghiep vu duoc giu.
+- Danh sach co KPI, filter tai client va thu nhanh; chi tiet tach tien thuc thu voi but toan cong
+  no, hien ly do xoa/lap lai bi chan tu policy server. Create/bulk dung duy nhat preview cua
+  `HoaDonService.TinhHoaDonDuKienAsync`, khong co cong thuc tai JavaScript.
+- Phieu thu tiep tuc dung snapshot hoa don, co CSS print A4 va khong con style/handler noi tuyen.
+  Style module scope `.invoices-page`, hanh vi o `invoices.js`, khong them thu vien UI.
+- Build pass 0 warning/0 error; Impeccable detector `[]`. Browser QA 5 route tai 1440/768/390
+  khong tran ngang, filter/reset/modal/bulk/focus pass va console sach. POST thu nhanh chi chay
+  tren database tam va cleanup xac nhan khong con schema QA.
+- Chu he thong da duyet stage/commit UI-004 sau QA. Khong migration, import, push, publish,
+  deploy hay tac dong NSSM; hai file opening-balance untracked duoc giu nguyen.
+
 ## 6. Huong mo rong sau nay
 
 Nen chuan bi som cho multi-user/multi-tenant:
