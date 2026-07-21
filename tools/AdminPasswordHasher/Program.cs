@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Identity;
 var password = Environment.GetEnvironmentVariable("QLNT_ADMIN_PASSWORD_INPUT");
 if (password == null)
 {
-    Console.Write("New admin password: ");
+    Console.Error.Write("New admin password: ");
     password = ReadSecret();
-    Console.WriteLine();
+    Console.Error.WriteLine();
 }
-if (password.Length < 12)
+if (password.Length < 8)
 {
-    Console.Error.WriteLine("Password must contain at least 12 characters.");
+    Console.Error.WriteLine("Password must contain at least 8 characters.");
     return 1;
 }
 

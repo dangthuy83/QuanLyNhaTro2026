@@ -2961,3 +2961,16 @@ Khi kết thúc phiên:
   `C502A96A419E6F07DBA7FC2F14A2023AEE095D8D2E1184499CEFA2B75466422E`.
 - Đã dừng listener QA, đóng Browser, drop cả schema QA và schema compare, xóa snapshot/dump/log,
   baseline copy và `UiGapHarness`. Không còn schema hoặc artifact tạm của batch.
+
+## 21/07/2026 - AUTH Remember Me và mật khẩu local
+
+- Thêm `LoginViewModel` và checkbox `Ghi nhớ trên thiết bị này`; persistent cookie có hạn 365 ngày,
+  cho phép refresh/sliding, còn mặc định tiếp tục là cookie phiên với ticket 8 giờ. Invalid login
+  không render lại giá trị password; logout giữ nguyên `SignOutAsync`.
+- `AdminPasswordHasher` hạ guard tối thiểu từ 12 xuống 8 ký tự. Test: 7 ký tự exit 1; 8 ký tự exit
+  0 và sinh đúng hash ASP.NET Identity.
+- Thêm `UserSecretsId=QuanLyNhaTro-Local-Admin` để F5 Development đọc username/hash local mà không
+  đưa secret vào repo. Không đổi appsettings password, database hoặc cấu hình NSSM production.
+- HTTP QA: remember=false không có `Expires`; remember=true có expiry 365 ngày; logout phát cookie
+  xóa; route bảo vệ sau logout redirect về Login. Browser QA 1440/390 không overflow, label/target
+  61.875px, nút 48px, console sạch. Impeccable detector `[]`.

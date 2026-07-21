@@ -4243,6 +4243,10 @@ body.auth-page { min-height: 100vh; margin: 0; background: radial-gradient(circl
 .auth-card { width: 100%; padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: rgba(255, 255, 255, .94); box-shadow: var(--shadow-lg); }
 .auth-form { display: grid; gap: var(--space-md); margin-top: var(--space-xl); }
 .auth-form .form-control { min-height: 3rem; }
+.auth-remember-option { display: grid; grid-template-columns: auto 1fr; gap: .75rem; align-items: start; }
+.auth-remember-option .form-check-input { width: 1.25rem; height: 1.25rem; margin: .15rem 0 0; }
+.auth-remember-label { display: grid; gap: .2rem; cursor: pointer; color: var(--color-text); font-weight: 700; }
+.auth-remember-label small { color: var(--color-muted); font-size: .78rem; font-weight: 500; line-height: 1.45; }
 .auth-submit { min-height: 3rem; margin-top: var(--space-xs); }
 .auth-validation:empty { display: none; }
 .auth-validation:not(:empty) { padding: .75rem 1rem; border: 1px solid var(--color-danger); border-radius: var(--radius-sm); background: var(--color-danger-soft); color: var(--color-danger); }
@@ -4268,5 +4272,6 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px s
 }
 
 @media (pointer: coarse) {
-    .auth-page .btn, .auth-page .form-control, .auth-page .form-select { min-height: 2.75rem; }
+    .auth-page .btn, .auth-page .form-control, .auth-page .form-select, .auth-remember-option { min-height: 2.75rem; }
+    .auth-remember-option { align-items: center; }
 }

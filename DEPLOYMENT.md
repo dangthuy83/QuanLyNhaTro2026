@@ -13,8 +13,31 @@ khẩu một lần bằng công cụ cục bộ (ký tự nhập không hiện t
 dotnet run --project tools/AdminPasswordHasher/AdminPasswordHasher.csproj
 ```
 
+Mật khẩu quản trị phải có ít nhất 8 ký tự. Công cụ chỉ in hash ASP.NET Identity; không lưu mật khẩu
+và không tự cập nhật cấu hình của ứng dụng.
+
 Đặt kết quả vào secret/environment `AdminAuth__PasswordHash`; đặt tên đăng nhập trong
 `AdminAuth__Username`. Production sẽ từ chối khởi động nếu thiếu password hash.
+
+Màn đăng nhập có lựa chọn `Ghi nhớ trên thiết bị này`. Khi được chọn, cookie mã hóa tồn tại tối đa
+365 ngày và được gia hạn khi tiếp tục sử dụng; không chọn thì dùng phiên 8 giờ. Đăng xuất luôn xóa
+cookie của trình duyệt hiện tại.
+
+### Mật khẩu local khi chạy F5 trong VS Code
+
+Project có `UserSecretsId` riêng cho Development. Tạo hash và lưu vào user-secrets trên máy phát
+triển; không đưa hash vào `appsettings*.json` hoặc source control:
+
+```powershell
+dotnet build tools/AdminPasswordHasher/AdminPasswordHasher.csproj
+$localAdminHash = dotnet run --project tools/AdminPasswordHasher/AdminPasswordHasher.csproj --no-build
+dotnet user-secrets set "AdminAuth:Username" "admin" --project QuanLyNhaTro.csproj
+dotnet user-secrets set "AdminAuth:PasswordHash" $localAdminHash --project QuanLyNhaTro.csproj
+Remove-Variable localAdminHash
+```
+
+Sau đó dừng phiên debug cũ và bấm F5 lại. Các lệnh này chỉ đổi cấu hình local của VS Code/
+Development; không cập nhật environment của service NSSM.
 
 Ảnh CCCD mới được lưu dưới `private-data/tenant-photos`, ngoài `wwwroot`, và chỉ được đọc
 qua controller sau đăng nhập. Thư mục `private-data` phải được backup cùng database nhưng

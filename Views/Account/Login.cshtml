@@ -1,4 +1,4 @@
-@model string
+@model QuanLyNhaTro.Models.LoginViewModel
 @{ Layout = null; ViewData["Title"] = "Đăng nhập quản trị"; }
 <!doctype html>
 <html lang="vi">
@@ -27,15 +27,22 @@
             </div>
             <form method="post" class="auth-form">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="returnUrl" value="@Model" />
+                <input asp-for="ReturnUrl" type="hidden" />
                 <div asp-validation-summary="ModelOnly" class="auth-validation" role="alert"></div>
                 <div>
                     <label class="form-label" for="username">Tên đăng nhập</label>
-                    <input id="username" name="username" class="form-control" autocomplete="username" autofocus required />
+                    <input asp-for="Username" id="username" class="form-control" autocomplete="username" autofocus required />
                 </div>
                 <div>
                     <label class="form-label" for="password">Mật khẩu</label>
-                    <input id="password" name="password" type="password" class="form-control" autocomplete="current-password" required />
+                    <input asp-for="Password" id="password" type="password" class="form-control" autocomplete="current-password" required />
+                </div>
+                <div class="auth-remember-option">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="auth-remember-label">
+                        <span>Ghi nhớ trên thiết bị này</span>
+                        <small>Duy trì đăng nhập tối đa 365 ngày và tự gia hạn khi bạn tiếp tục sử dụng.</small>
+                    </label>
                 </div>
                 <button class="btn btn-primary auth-submit">Đăng nhập</button>
             </form>

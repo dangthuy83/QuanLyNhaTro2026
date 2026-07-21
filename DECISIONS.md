@@ -782,3 +782,13 @@ Cập nhật lần cuối: Phiên 68 - 16/07/2026. REVIEW-025 đã diễn tập 
 - Người dùng đã hoàn tất manual QA skip link trên trình duyệt thật: Tab đưa focus tới link, Enter
   chuyển URL tới `#main-content` và focus vào nội dung chính. Kết hợp với bằng chứng automation cho
   drawer, Escape, `inert`, focus return và focus-visible, acceptance UI-006 đến UI-013 đạt 100%.
+
+## AUTH - Ghi nhớ thiết bị gia đình (21/07/2026)
+
+- Giữ authentication và fallback policy thay vì mở toàn bộ dữ liệu nghiệp vụ cho mạng LAN.
+- Login có lựa chọn `Ghi nhớ trên thiết bị này`: không chọn dùng cookie phiên/ticket 8 giờ; chọn
+  dùng cookie persistent 365 ngày, `AllowRefresh = true` và sliding expiration hiện hữu. Logout
+  tiếp tục xóa cookie của trình duyệt hiện tại.
+- Mật khẩu quản trị tối thiểu 8 ký tự. `AdminPasswordHasher` chỉ sinh hash, không tự ghi cấu hình.
+- Development dùng .NET user-secrets qua `UserSecretsId`; không lưu hash trong appsettings/repo.
+  Cấu hình NSSM production là gate riêng và không thay đổi trong batch này.

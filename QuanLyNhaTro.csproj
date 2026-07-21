@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>QuanLyNhaTro</RootNamespace>
+    <UserSecretsId>QuanLyNhaTro-Local-Admin</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

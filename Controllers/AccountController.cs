@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QuanLyNhaTro.Models;
 using QuanLyNhaTro.Services;
 
 namespace QuanLyNhaTro.Controllers;
@@ -10,24 +11,38 @@ namespace QuanLyNhaTro.Controllers;
 public sealed class AccountController(AdminCredentialService credentials) : Controller
 {
     [AllowAnonymous, HttpGet]
-    public IActionResult Login(string? returnUrl = null) => View(model: returnUrl);
+    public IActionResult Login(string? returnUrl = null) => View(new LoginViewModel { ReturnUrl = returnUrl });
 
     [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(string username, string password, string? returnUrl = null)
+    public async Task<IActionResult> Login(LoginViewModel model)
     {
-        if (!credentials.Verify(username, password))
+        if (string.IsNullOrWhiteSpace(model.Username)
+            || string.IsNullOrEmpty(model.Password)
+            || !credentials.Verify(model.Username, model.Password))
         {
             ModelState.AddModelError(string.Empty, "Tên đăng nhập hoặc mật khẩu không đúng.");
-            return View(model: returnUrl);
+            model.Password = string.Empty;
+            ModelState.Remove(nameof(model.Password));
+            return View(model);
         }
         var identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.Name, username.Trim()), new Claim(ClaimTypes.Role, "Administrator")],
+            [new Claim(ClaimTypes.Name, model.Username.Trim()), new Claim(ClaimTypes.Role, "Administrator")],
             CookieAuthenticationDefaults.AuthenticationScheme);
+        var authenticationProperties = new AuthenticationProperties
+        {
+            IsPersistent = model.RememberMe,
+            AllowRefresh = true
+        };
+        if (model.RememberMe)
+            authenticationProperties.ExpiresUtc = DateTimeOffset.UtcNow.AddDays(365);
+
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
             new ClaimsPrincipal(identity),
-            new AuthenticationProperties { IsPersistent = false, AllowRefresh = true });
-        return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : Url.Action("Index", "Home")!);
+            authenticationProperties);
+        return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl)
+            ? model.ReturnUrl!
+            : Url.Action("Index", "Home")!);
     }
 
     [Authorize, HttpPost, ValidateAntiForgeryToken]

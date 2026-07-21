@@ -1438,3 +1438,10 @@ Validation cuối: SDK 10.0.302; restore/build app và ba tool net10.0 warning-a
 detector `[]`. Hậu kiểm DB vận hành khớp 25/25 row count và checksum với bản restore baseline.
 Toàn bộ listener, Browser session, hai schema QA/compare, snapshot, dump, log, cache và harness của
 batch đã được dọn.
+
+## AUTH - Remember Me cho thiết bị gia đình (21/07/2026)
+
+- Không bỏ authentication. Login cho phép người dùng chủ động lưu cookie 365 ngày và tự gia hạn;
+  mặc định vẫn là phiên 8 giờ, logout vẫn xóa cookie thiết bị hiện tại.
+- Password tối thiểu 8 ký tự; local VS Code dùng .NET user-secrets. Không có secret/hash mới trong
+  repository và chưa thay cấu hình NSSM production.
