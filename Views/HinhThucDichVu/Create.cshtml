@@ -1,6 +1,7 @@
 @model ThayDoiHinhThucDichVuViewModel
 @{ ViewData["Title"] = "Thay đổi hình thức dịch vụ"; }
-<div class="d-flex justify-content-between mb-3"><div><h4>Thay đổi hình thức theo kỳ</h4><div class="text-muted">@Model.DichVu?.TenDichVu</div></div><a asp-controller="DichVu" asp-action="Index" class="btn btn-outline-secondary">Quay lại</a></div>
+<div class="services-page services-method-page">
+<header class="app-page-header"><div class="app-page-heading"><h1>Thay đổi hình thức theo kỳ</h1><p class="app-page-subtitle">@Model.DichVu?.TenDichVu</p></div><div class="app-page-actions"><a asp-controller="DichVu" asp-action="Index" class="btn btn-outline-secondary">Quay lại</a></div></header>
 @if(TempData["Success"]!=null){<div class="alert alert-success">@TempData["Success"]</div>}
 <div asp-validation-summary="All" class="text-danger mb-3"></div>
 <form method="post" class="card mb-4"><input type="hidden" asp-for="DichVuId"/><div class="card-body row g-3">
@@ -12,4 +13,5 @@
 @for(var i=0;i<Model.PhongLienQuan.Count;i++){<input type="hidden" asp-for="PhongLienQuan[i].PhongId"/><input type="hidden" asp-for="PhongLienQuan[i].TenPhong"/><div class="col-md-4"><label class="form-label">@Model.PhongLienQuan[i].TenPhong</label><input asp-for="PhongLienQuan[i].ChiSoDau" type="number" min="0" step="0.01" class="form-control"/></div>}
 </div></div></div><div class="card-footer"><button class="btn btn-primary">Ghi nhận thay đổi</button></div></form>
 <div class="card"><div class="card-header">Lịch sử</div><table class="table mb-0"><thead><tr><th>Kỳ</th><th>Cũ</th><th>Mới</th><th>Lý do</th></tr></thead><tbody>@foreach(var x in Model.LichSu){<tr><td>@x.KyApDung.ToString("MM/yyyy")</td><td>@x.LoaiTinhPhiCu / @x.CachTinhCoDinhCu</td><td>@x.LoaiTinhPhiMoi / @x.CachTinhCoDinhMoi</td><td>@x.LyDo</td></tr>}</tbody></table></div>
-<script>function sync(){let m=document.getElementById('loaiMoi').value==='TheoChiSo';document.getElementById('cachMoi').disabled=m;document.getElementById('opening').style.display=m?'block':'none'}document.getElementById('loaiMoi').addEventListener('change',sync);sync();</script>
+</div>
+@section Scripts { <script src="~/js/services.js" asp-append-version="true"></script> }

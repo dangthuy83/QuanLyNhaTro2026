@@ -4,9 +4,10 @@
     ViewData["ActiveMenu"] = "kiemtra";
 }
 
+<div class="operations-page operations-readiness-page">
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
-        <h5 class="mb-1">Sẵn sàng vận hành - @Model.Thang/@Model.Nam</h5>
+        <h1 class="h5 mb-1">Sẵn sàng vận hành - @Model.Thang/@Model.Nam</h1>
         <div class="text-muted small">Kiểm tra dữ liệu phòng, hợp đồng, khách, dịch vụ, đơn giá và chỉ số trước khi chốt hóa đơn.</div>
     </div>
     <div class="d-flex gap-2">
@@ -146,7 +147,7 @@
                     <th>Chỉ số kỳ @Model.Thang/@Model.Nam</th>
                     <th class="text-end">Dự kiến</th>
                     <th>Trạng thái</th>
-                    <th style="width:220px">Thao tác</th>
+                    <th class="operations-actions-column">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -270,4 +271,5 @@
             </tbody>
         </table>
     </div>
+</div>
 </div>

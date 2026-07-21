@@ -4,11 +4,14 @@
     string FormatDelta(decimal value) => value >= 0 ? $"+{value:N0}" : value.ToString("N0");
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
+<div class="contract-finance-page">
+<header class="app-page-header"><div class="app-page-heading">
     <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDong.Id"
-       class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Ledger cọc - @Model.HopDong.Phong?.TenPhong</h5>
-</div>
+       class="contract-finance-back-link">← Hợp đồng #@Model.HopDong.Id</a>
+    <h1>Ledger cọc · @Model.HopDong.Phong?.TenPhong</h1><p class="app-page-subtitle">Số dư và mọi bút toán theo thứ tự ghi nhận trên server.</p>
+</div><div class="contract-finance-balance"><span>Số dư đang giữ</span><strong>@Model.SoDuCoc.ToString("N0") đ</strong></div></header>
+
+<div class="app-notice is-info"><div><strong>Phân biệt giao dịch tiền và bút toán phi tiền mặt</strong><p>Thu thêm cọc/hoàn cọc yêu cầu phương thức thu–hoàn. Trừ nợ là bút toán phi tiền mặt, bắt buộc liên kết hóa đơn và không yêu cầu phương thức.</p></div></div>
 
 @if (TempData["Success"] != null)
 {
@@ -89,7 +92,7 @@ else if (Model.LaHopDongChuyenPhong)
         <div class="card shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="card-title text-muted mb-0">Lịch sử giao dịch</h6>
+                    <h2 class="card-title text-muted mb-0">Lịch sử giao dịch</h2>
                     <span class="badge bg-primary fs-6">Số dư: @Model.SoDuCoc.ToString("N0") đ</span>
                 </div>
 
@@ -143,7 +146,7 @@ else if (Model.LaHopDongChuyenPhong)
     <div class="col-lg-4">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Ghi nhận giao dịch</h6>
+                <h2 class="card-title text-muted mb-3">Ghi nhận giao dịch</h2>
                 <form asp-action="Create" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="hopDongId" value="@Model.HopDong.Id" />
@@ -195,24 +198,8 @@ else if (Model.LaHopDongChuyenPhong)
     </div>
 </div>
 
-<script>
-    (() => {
-        const loai = document.getElementById('loaiGiaoDich');
-        const phuongThuc = document.getElementById('phuongThuc');
-        const hoaDon = document.getElementById('hoaDonId');
-        const sync = () => {
-            const truNo = loai.value === 'TruNo';
-            hoaDon.disabled = !truNo;
-            hoaDon.required = truNo;
-            if (!truNo) hoaDon.value = '';
-            phuongThuc.disabled = truNo;
-            phuongThuc.required = !truNo;
-            if (truNo) phuongThuc.value = '';
-        };
-        loai.addEventListener('change', sync);
-        sync();
-    })();
-</script>
+</div>
+@section Scripts { <script src="~/js/contract-finance.js" asp-append-version="true"></script> }
 
 @functions {
     private static string LoaiGiaoDichHienThi(string? loaiGiaoDich) => loaiGiaoDich switch

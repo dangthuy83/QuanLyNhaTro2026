@@ -13,9 +13,10 @@
     int soHoaDonQuaHan30 = ViewBag.SoHoaDonQuaHan30 as int? ?? 0;
 }
 
+<div class="operations-page operations-reminder-page">
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
-        <h4 class="mb-0">Nhắc nợ</h4>
+        <h1 class="h4 mb-0">Nhắc nợ</h1>
         <div class="text-muted small">Danh sách hóa đơn cần chủ nhà kiểm tra và nhắc thủ công.</div>
     </div>
     <a asp-controller="BaoCao" asp-action="CongNo"
@@ -143,7 +144,10 @@
                 @foreach (var x in Model)
                 {
                     <tr class="@(!x.DangOHienTai ? "text-muted" : "")">
-                        <td>@Html.Raw(UuTienBadge(x.SoNgayQuaHan))</td>
+                        <td>
+                            @{ var uuTien = UuTienBadge(x.SoNgayQuaHan); }
+                            <span class="badge @uuTien.Css">@uuTien.Text</span>
+                        </td>
                         <td class="small">@x.TenNha</td>
                         <td class="fw-semibold">@x.TenPhong</td>
                         <td>@x.TenKhachChinh</td>
@@ -168,7 +172,10 @@
                                 <span class="badge bg-light text-dark border">Chưa quá hạn</span>
                             }
                         </td>
-                        <td>@Html.Raw(TrangThaiBadge(x.TrangThaiHopDong))</td>
+                        <td>
+                            @{ var trangThai = TrangThaiBadge(x.TrangThaiHopDong); }
+                            <span class="badge @trangThai.Css">@trangThai.Text</span>
+                        </td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm">
                                 <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@x.HoaDonId"
@@ -185,21 +192,22 @@
         </table>
     </div>
 </div>
+</div>
 
 @functions {
-    static string UuTienBadge(int soNgayQuaHan) => soNgayQuaHan switch
+    static (string Css, string Text) UuTienBadge(int soNgayQuaHan) => soNgayQuaHan switch
     {
-        > 30 => "<span class='badge bg-danger'>Cao</span>",
-        > 0 => "<span class='badge bg-warning text-dark'>Nhắc</span>",
-        _ => "<span class='badge bg-light text-dark border'>Theo dõi</span>"
+        > 30 => ("bg-danger", "Cao"),
+        > 0 => ("bg-warning text-dark", "Nhắc"),
+        _ => ("bg-light text-dark border", "Theo dõi")
     };
 
-    static string TrangThaiBadge(string trangThai) => trangThai switch
+    static (string Css, string Text) TrangThaiBadge(string trangThai) => trangThai switch
     {
-        "DangHieuLuc" => "<span class='badge bg-success'>Đang ở</span>",
-        "DaKetThuc" => "<span class='badge bg-secondary'>Đã rời</span>",
-        "DaChuyenPhong" => "<span class='badge bg-info text-dark'>Đã chuyển</span>",
-        "DaHuy" => "<span class='badge bg-dark'>Đã hủy</span>",
-        _ => $"<span class='badge bg-light text-dark border'>{trangThai}</span>"
+        "DangHieuLuc" => ("bg-success", "Đang ở"),
+        "DaKetThuc" => ("bg-secondary", "Đã rời"),
+        "DaChuyenPhong" => ("bg-info text-dark", "Đã chuyển"),
+        "DaHuy" => ("bg-dark", "Đã hủy"),
+        _ => ("bg-light text-dark border", trangThai)
     };
 }

@@ -3,117 +3,36 @@
     ViewData["Title"] = "Chi tiết khách thuê";
     ViewData["ActiveMenu"] = "khachthue";
     var lichSuCuTru = ViewBag.LichSuCuTru as IEnumerable<QuanLyNhaTro.Models.HopDongKhachThue> ?? [];
+    var current = lichSuCuTru.FirstOrDefault(x => x.DangCuTru);
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">@Model.HoTen</h5>
-    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary ms-auto">
-        <i class="bi bi-pencil me-1"></i>Sửa
-    </a>
-    <form asp-action="Delete" asp-route-id="@Model.Id" method="post"
-          onsubmit="return confirm('Chỉ hồ sơ hoàn toàn chưa sử dụng mới được xóa. Bạn chắc chắn muốn tiếp tục?');">
-        @Html.AntiForgeryToken()
-        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Xóa</button>
-    </form>
-</div>
+<div class="tenants-page tenants-details-page">
+    <header class="app-page-header">
+        <div class="app-page-heading"><a asp-action="Index" class="tenants-back-link">← Danh sách khách thuê</a><h1>@Model.HoTen</h1><p class="app-page-subtitle">Hồ sơ #@Model.Id · @(current == null ? "Chưa có nơi ở hiện tại" : $"{current.TenNha} / {current.TenPhong}")</p></div>
+        <div class="app-page-actions"><a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Chỉnh sửa hồ sơ</a><form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-confirm="Chỉ hồ sơ hoàn toàn chưa sử dụng mới được xóa. Bạn chắc chắn muốn tiếp tục?">@Html.AntiForgeryToken()<button type="submit" class="btn btn-outline-danger">Xóa hồ sơ</button></form></div>
+    </header>
 
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success">@TempData["Success"]</div>
-}
+    @if (TempData["Error"] != null) { <div class="app-notice is-danger" role="alert">@TempData["Error"]</div> }
+    @if (TempData["Success"] != null) { <div class="app-notice is-success" role="status">@TempData["Success"]</div> }
 
-<div class="row g-3">
-    <div class="col-md-5">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Thông tin cá nhân</h6>
-                <dl class="row mb-0">
-                    <dt class="col-5">Họ tên</dt><dd class="col-7">@Model.HoTen</dd>
-                    <dt class="col-5">Ngày sinh</dt><dd class="col-7">@(Model.NgaySinh?.ToString("dd/MM/yyyy") ?? "-")</dd>
-                    <dt class="col-5">Điện thoại</dt><dd class="col-7">@(Model.SoDienThoai ?? "-")</dd>
-                    <dt class="col-5">CCCD</dt><dd class="col-7">@(Model.CCCD ?? "-")</dd>
-                    <dt class="col-5">Ngày cấp</dt><dd class="col-7">@(Model.NgayCapCCCD?.ToString("dd/MM/yyyy") ?? "-")</dd>
-                    <dt class="col-5">Biển số xe</dt><dd class="col-7">@(Model.BienSoXe ?? "-")</dd>
-                    <dt class="col-5">Loại xe</dt><dd class="col-7">@(Model.LoaiXe ?? "-")</dd>
-                    <dt class="col-5">Nghề nghiệp</dt><dd class="col-7">@(Model.NgheNghiep ?? "-")</dd>
-                    <dt class="col-5">Quê quán</dt><dd class="col-7">@(Model.QueQuan ?? "-")</dd>
-                </dl>
-            </div>
-        </div>
+    <div class="tenants-details-grid">
+        <section class="app-panel"><div class="app-panel-header"><h2>Nhận diện và liên hệ</h2></div><div class="app-panel-body"><dl class="tenants-definition-list">
+            <div><dt>Họ tên</dt><dd>@Model.HoTen</dd></div><div><dt>Ngày sinh</dt><dd>@(Model.NgaySinh?.ToString("dd/MM/yyyy") ?? "Chưa có")</dd></div>
+            <div><dt>Điện thoại</dt><dd>@(Model.SoDienThoai ?? "Chưa có")</dd></div><div><dt>CCCD</dt><dd>@(Model.CCCD ?? "Chưa có")</dd></div>
+            <div><dt>Ngày cấp CCCD</dt><dd>@(Model.NgayCapCCCD?.ToString("dd/MM/yyyy") ?? "Chưa có")</dd></div><div><dt>Quê quán</dt><dd>@(Model.QueQuan ?? "Chưa có")</dd></div>
+            <div><dt>Nghề nghiệp</dt><dd>@(Model.NgheNghiep ?? "Chưa có")</dd></div><div><dt>Phương tiện</dt><dd>@(string.Join(" · ", new[] { Model.LoaiXe, Model.BienSoXe }.Where(x => !string.IsNullOrWhiteSpace(x))))</dd></div>
+        </dl>@if (!string.IsNullOrWhiteSpace(Model.GhiChu)) { <div class="tenants-note"><strong>Ghi chú</strong><p>@Model.GhiChu</p></div> }</div></section>
+
+        <section class="app-panel"><div class="app-panel-header"><div><h2>Ảnh CCCD</h2><p>Ảnh được tải qua endpoint đã xác thực, no-store/private.</p></div></div><div class="app-panel-body tenants-photo-grid">
+            @if (!string.IsNullOrEmpty(Model.AnhCCCDMatTruoc)) { <figure><img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "front" })" alt="CCCD mặt trước của @Model.HoTen" /><figcaption>Mặt trước</figcaption></figure> } else { <div class="tenants-photo-empty">Chưa có ảnh mặt trước</div> }
+            @if (!string.IsNullOrEmpty(Model.AnhCCCDMatSau)) { <figure><img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "back" })" alt="CCCD mặt sau của @Model.HoTen" /><figcaption>Mặt sau</figcaption></figure> } else { <div class="tenants-photo-empty">Chưa có ảnh mặt sau</div> }
+        </div></section>
     </div>
 
-    <div class="col-md-7">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">Ảnh CCCD</h6>
-                <div class="row g-3">
-                    <div class="col-6">
-                        @if (!string.IsNullOrEmpty(Model.AnhCCCDMatTruoc))
-                        {
-                            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "front" })" alt="CCCD mặt trước" class="img-fluid rounded" style="max-height:180px;" />
-                        }
-                        else
-                        {
-                            <p class="text-muted mb-0">Chưa có mặt trước.</p>
-                        }
-                    </div>
-                    <div class="col-6">
-                        @if (!string.IsNullOrEmpty(Model.AnhCCCDMatSau))
-                        {
-                            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "back" })" alt="CCCD mặt sau" class="img-fluid rounded" style="max-height:180px;" />
-                        }
-                        else
-                        {
-                            <p class="text-muted mb-0">Chưa có mặt sau.</p>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrEmpty(Model.GhiChu))
-    {
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title text-muted mb-2">Ghi chú</h6>
-                    <p class="mb-0">@Model.GhiChu</p>
-                </div>
-            </div>
-        </div>
-    }
+    <section class="app-panel tenants-residency-panel"><div class="app-panel-header"><div><h2>Lịch sử cư trú</h2><p>Ngày bắt đầu, dự kiến rời và ngày kết thúc thực tế theo hợp đồng.</p></div></div>
+        @if (!lichSuCuTru.Any()) { <div class="app-empty-state"><div><h3>Chưa có lịch sử cư trú</h3><p>Hồ sơ chưa được gắn vào hợp đồng nào.</p></div></div> }
+        else { <div class="tenants-table-wrap"><table class="tenants-table"><thead><tr><th>Nhà / phòng</th><th>Hợp đồng</th><th>Bắt đầu</th><th>Dự kiến rời</th><th>Kết thúc</th><th>Vai trò</th></tr></thead><tbody>@foreach (var item in lichSuCuTru) { <tr><td data-label="Nhà / phòng"><strong>@item.TenNha / @item.TenPhong</strong></td><td data-label="Hợp đồng"><a asp-controller="HopDong" asp-action="Details" asp-route-id="@item.HopDongId">HĐ #@item.HopDongId</a></td><td data-label="Bắt đầu">@item.NgayBatDau.ToString("dd/MM/yyyy")</td><td data-label="Dự kiến rời">@(item.NgayKetThucDuKien?.ToString("dd/MM/yyyy") ?? "—")</td><td data-label="Kết thúc">@(item.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Đang mở")</td><td data-label="Vai trò"><span class="app-status-badge @(item.LaDaiDien ? "is-info" : "is-neutral")">@(item.LaDaiDien ? "Đại diện" : "Người ở")</span></td></tr> }</tbody></table></div> }
+    </section>
 </div>
 
-<div class="card shadow-sm mt-3">
-    <div class="card-body">
-        <h6 class="card-title text-muted mb-3">Lịch sử cư trú</h6>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead class="table-light"><tr><th>Nhà / Phòng</th><th>Hợp đồng</th><th>Bắt đầu thực tế</th><th>Dự kiến rời</th><th>Kết thúc thực tế</th><th>Vai trò</th></tr></thead>
-                <tbody>
-                @foreach (var item in lichSuCuTru)
-                {
-                    <tr>
-                        <td>@item.TenNha / @item.TenPhong</td>
-                        <td><a asp-controller="HopDong" asp-action="Details" asp-route-id="@item.HopDongId">#@item.HopDongId</a></td>
-                        <td>@item.NgayBatDau.ToString("dd/MM/yyyy")</td>
-                        <td>@(item.NgayKetThucDuKien?.ToString("dd/MM/yyyy") ?? "—")</td>
-                        <td>@(item.NgayKetThuc?.ToString("dd/MM/yyyy") ?? "Đang mở")</td>
-                        <td>@(item.LaDaiDien ? "Đại diện" : "Người ở")</td>
-                    </tr>
-                }
-                @if (!lichSuCuTru.Any())
-                {
-                    <tr><td colspan="6" class="text-center text-muted py-3">Chưa có lịch sử cư trú.</td></tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+@section Scripts { <script src="~/js/tenants.js" asp-append-version="true"></script> }

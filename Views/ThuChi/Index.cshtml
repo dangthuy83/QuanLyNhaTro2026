@@ -1,55 +1,29 @@
 @model IEnumerable<QuanLyNhaTro.Models.ThuChi>
 @{
-    ViewData["Title"] = "Sổ Thu Chi";
+    ViewData["Title"] = "Sổ thu chi";
+    ViewData["ActiveMenu"] = "thuchi";
     int nam = ViewBag.Nam; int thang = ViewBag.Thang; string loai = ViewBag.Loai ?? "";
     var kySo = ViewBag.KySo as QuanLyNhaTro.Models.ThuChiKySo;
     bool daKhoa = kySo?.DaKhoa == true;
+    decimal tongThu = ViewBag.TongThu as decimal? ?? 0m;
+    decimal tongChi = ViewBag.TongChi as decimal? ?? 0m;
+    decimal canDoi = ViewBag.CanDoiThu as decimal? ?? 0m;
 }
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Sổ Thu Chi</h4>
-    <div class="d-flex gap-2">
-        <a asp-action="XuatExcel" asp-route-nam="@nam" asp-route-thang="@thang" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Xuất Excel</a>
-        @if (!daKhoa) { <a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Thêm</a> }
-    </div>
+<div class="cashbook-page">
+    <header class="app-page-header"><div class="app-page-heading"><h1>Sổ thu chi</h1><p class="app-page-subtitle">Theo dõi giao dịch tiền mặt/chuyển khoản chung và bút toán điều chỉnh theo kỳ.</p></div><div class="app-page-actions"><a asp-action="XuatExcel" asp-route-nam="@nam" asp-route-thang="@thang" class="btn btn-outline-primary">Xuất Excel</a>@if (!daKhoa) { <a asp-action="Create" class="btn btn-primary">Thêm giao dịch</a> }</div></header>
+    @if (TempData["Success"] != null) { <div class="app-notice is-success" role="status">@TempData["Success"]</div> }
+    @if (TempData["Error"] != null) { <div class="app-notice is-danger" role="alert">@TempData["Error"]</div> }
+
+    <section class="app-panel cashbook-period-panel"><form method="get" class="cashbook-period-form" aria-label="Chọn kỳ sổ"><div class="app-field"><label for="cashbookMonth">Tháng</label><select id="cashbookMonth" name="thang" class="form-select">@for (int m=1;m<=12;m++){<option value="@m" selected="@(m==thang)">Tháng @m</option>}</select></div><div class="app-field"><label for="cashbookYear">Năm</label><input id="cashbookYear" name="nam" type="number" class="form-control" value="@nam" min="2000" max="2100" /></div><div class="app-field"><label for="cashbookType">Loại giao dịch</label><select id="cashbookType" name="loai" class="form-select"><option value="" selected="@(loai=="")">Tất cả</option><option value="Thu" selected="@(loai=="Thu")">Thu</option><option value="Chi" selected="@(loai=="Chi")">Chi</option></select></div><button class="btn btn-outline-primary">Xem kỳ</button></form><div class="cashbook-period-state"><span class="app-status-badge @(daKhoa ? "is-warning" : "is-success")">@(daKhoa ? "Đã khóa sổ" : "Đang mở")</span><small>Kỳ T@(thang)/@nam</small></div></section>
+
+    @if (daKhoa) { <div class="app-notice is-warning"><div><strong>Tháng đã khóa sổ.</strong><p>Không thể thêm, sửa, xóa hoặc chuyển ngày giao dịch vào/ra kỳ này. Giao dịch gốc chỉ được điều chỉnh bằng bút toán mới trong tháng đang mở.</p></div><small>@kySo!.KhoaLuc?.ToString("dd/MM/yyyy HH:mm")</small></div> }
+    else { <form asp-action="KhoaSo" method="post" class="app-panel cashbook-lock-panel" data-confirm="Khóa sổ tháng này? Thao tác không có nút mở khóa.">@Html.AntiForgeryToken()<input type="hidden" name="thang" value="@thang" /><input type="hidden" name="nam" value="@nam" /><div><strong>Đối chiếu và khóa sổ tháng</strong><p>Sau khi khóa, mọi sửa sai phải dùng bút toán điều chỉnh trong kỳ đang mở.</p></div><label class="visually-hidden" for="lockNote">Ghi chú đối chiếu</label><input id="lockNote" name="ghiChu" class="form-control" placeholder="Ghi chú đối chiếu trước khi khóa" /><button class="btn btn-outline-warning">Khóa sổ tháng</button></form> }
+
+    <div class="cashbook-summary" aria-label="Tổng hợp kỳ"><div><span>Tổng thu</span><strong class="is-income">@tongThu.ToString("N0") đ</strong></div><div><span>Tổng chi</span><strong class="is-expense">@tongChi.ToString("N0") đ</strong></div><div><span>Cân đối thu - chi</span><strong class="@(canDoi >= 0 ? "is-income" : "is-expense")">@canDoi.ToString("N0") đ</strong></div></div>
+
+    <section class="app-panel"><div class="app-panel-header"><div><h2>Nhật ký giao dịch</h2><p>Giao dịch điều chỉnh giữ nguyên liên kết với bút toán gốc.</p></div></div>
+    @if (!Model.Any()) { <div class="app-empty-state"><div><h3>Chưa có giao dịch</h3><p>Không có giao dịch phù hợp trong kỳ và loại đã chọn.</p></div></div> }
+    else { <div class="cashbook-table-wrap"><table class="cashbook-table"><thead><tr><th>Ngày</th><th>Phân loại</th><th>Danh mục / nội dung</th><th>Số tiền</th><th>Liên kết sổ</th><th>Thao tác</th></tr></thead><tbody>@foreach (var tc in Model) { <tr class="@(tc.LaDieuChinh ? "is-adjustment" : null)"><td data-label="Ngày">@tc.NgayPhatSinh.ToString("dd/MM/yyyy")</td><td data-label="Phân loại"><span class="app-status-badge @(tc.LoaiGiaoDich == "Thu" ? "is-success" : "is-danger")">@tc.LoaiGiaoDich</span></td><td data-label="Danh mục / nội dung"><strong>@tc.DanhMuc</strong><small>@(tc.NoiDung ?? "Không có diễn giải")</small></td><td data-label="Số tiền" class="cashbook-amount @(tc.LoaiGiaoDich == "Thu" ? "is-income" : "is-expense")">@tc.SoTien.ToString("N0") đ</td><td data-label="Liên kết sổ">@if (tc.LaDieuChinh) { <span class="app-status-badge is-warning">Điều chỉnh cho #@tc.ThuChiGocId</span> } else { <span class="app-status-badge is-neutral">Giao dịch gốc #@tc.Id</span> }</td><td data-label="Thao tác" class="cashbook-actions">@if (!daKhoa && !tc.LaDieuChinh) { <a asp-action="Edit" asp-route-id="@tc.Id" class="btn btn-sm btn-outline-secondary">Sửa</a><form asp-action="Delete" asp-route-id="@tc.Id" method="post" data-confirm="Xóa giao dịch này?">@Html.AntiForgeryToken()<input type="hidden" name="thang" value="@thang" /><input type="hidden" name="nam" value="@nam" /><button class="btn btn-sm btn-outline-danger">Xóa</button></form> } else if (daKhoa && !tc.LaDieuChinh) { <a asp-action="Create" asp-route-dieuChinhChoId="@tc.Id" class="btn btn-sm btn-outline-warning">Tạo điều chỉnh</a> } else { <span class="cashbook-locked-note">Không được sửa</span> }</td></tr> }</tbody></table></div> }
+    </section>
 </div>
-<form method="get" class="row g-2 mb-3">
-    <div class="col-auto"><select name="thang" class="form-select form-select-sm">@for (int m=1;m<=12;m++){<option value="@m" selected="@(m==thang)">Tháng @m</option>}</select></div>
-    <div class="col-auto"><input name="nam" type="number" class="form-control form-control-sm" value="@nam" min="2000" max="2100" style="width:100px" /></div>
-    <div class="col-auto"><select name="loai" class="form-select form-select-sm"><option value="" selected="@(loai=="")">Tất cả</option><option value="Thu" selected="@(loai=="Thu")">Thu</option><option value="Chi" selected="@(loai=="Chi")">Chi</option></select></div>
-    <div class="col-auto"><button class="btn btn-outline-secondary btn-sm">Lọc</button></div>
-</form>
-@if (daKhoa)
-{
-    <div class="alert alert-warning d-flex justify-content-between align-items-center"><div><strong>Tháng @thang/@nam đã khóa sổ.</strong> Không thể thêm, sửa, xóa hoặc chuyển ngày giao dịch vào/ra kỳ này.</div><span class="small text-muted">@kySo!.KhoaLuc?.ToString("dd/MM/yyyy HH:mm")</span></div>
-}
-else
-{
-    <form asp-action="KhoaSo" method="post" class="border rounded p-3 mb-3" onsubmit="return confirm('Khóa sổ tháng này? Thao tác không có nút mở khóa.');">
-        @Html.AntiForgeryToken()<input type="hidden" name="thang" value="@thang" /><input type="hidden" name="nam" value="@nam" />
-        <div class="d-flex gap-2"><input name="ghiChu" class="form-control form-control-sm" placeholder="Ghi chú đối chiếu trước khi khóa" /><button class="btn btn-sm btn-outline-warning text-nowrap"><i class="bi bi-lock"></i> Khóa sổ tháng</button></div>
-    </form>
-}
-<div class="row g-3 mb-3">
-    <div class="col-md-4"><div class="card border-0 bg-success bg-opacity-10"><div class="card-body py-2"><div class="text-muted small">Tổng Thu</div><div class="fw-bold text-success fs-5">@((ViewBag.TongThu as decimal? ?? 0m).ToString("N0")) đ</div></div></div></div>
-    <div class="col-md-4"><div class="card border-0 bg-danger bg-opacity-10"><div class="card-body py-2"><div class="text-muted small">Tổng Chi</div><div class="fw-bold text-danger fs-5">@((ViewBag.TongChi as decimal? ?? 0m).ToString("N0")) đ</div></div></div></div>
-    <div class="col-md-4">@{decimal cd=ViewBag.CanDoiThu??0m;}<div class="card border-0 @(cd>=0?"bg-primary":"bg-warning") bg-opacity-10"><div class="card-body py-2"><div class="text-muted small">Cân đối</div><div class="fw-bold fs-5">@cd.ToString("N0") đ</div></div></div></div>
-</div>
-<div class="card shadow-sm"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
-    <thead class="table-light"><tr><th>Ngày</th><th>Loại</th><th>Danh mục</th><th>Nội dung</th><th class="text-end">Số tiền</th><th></th></tr></thead>
-    <tbody>
-    @if (!Model.Any()) { <tr><td colspan="6" class="text-center text-muted py-4">Không có giao dịch nào.</td></tr> }
-    @foreach (var tc in Model)
-    {
-        <tr><td class="text-nowrap">@tc.NgayPhatSinh.ToString("dd/MM/yyyy")</td><td><span class="badge @(tc.LoaiGiaoDich=="Thu"?"bg-success":"bg-danger")">@tc.LoaiGiaoDich</span></td><td>@tc.DanhMuc</td><td class="text-muted small">@tc.NoiDung</td><td class="text-end fw-semibold">@tc.SoTien.ToString("N0") đ</td>
-        <td class="text-nowrap">
-            @if (!daKhoa && !tc.LaDieuChinh)
-            {
-                <a asp-action="Edit" asp-route-id="@tc.Id" class="btn btn-sm btn-outline-secondary">Sửa</a>
-                <form asp-action="Delete" asp-route-id="@tc.Id" method="post" class="d-inline" onsubmit="return confirm('Xóa giao dịch này?')">@Html.AntiForgeryToken()<input type="hidden" name="thang" value="@thang" /><input type="hidden" name="nam" value="@nam" /><button class="btn btn-sm btn-outline-danger">Xóa</button></form>
-            }
-            else if (daKhoa && !tc.LaDieuChinh) { <a asp-action="Create" asp-route-dieuChinhChoId="@tc.Id" class="btn btn-sm btn-outline-warning">Điều chỉnh</a> }
-            @if (tc.LaDieuChinh) { <span class="badge bg-warning text-dark">Điều chỉnh #@tc.ThuChiGocId</span> }
-        </td></tr>
-    }
-    </tbody>
-</table></div></div></div>
+@section Scripts { <script src="~/js/cashbook.js" asp-append-version="true"></script> }

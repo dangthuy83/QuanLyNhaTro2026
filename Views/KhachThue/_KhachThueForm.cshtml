@@ -26,7 +26,8 @@
     </div>
 }
 
-<div class="mb-3">
+<div class="tenants-form-grid">
+<div class="app-field tenants-field-wide">
     <label asp-for="HoTen" class="form-label fw-semibold">
         Họ tên <span class="text-danger">*</span>
     </label>
@@ -34,36 +35,29 @@
     <span asp-validation-for="HoTen" class="text-danger small"></span>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6">
+<div class="app-field">
         <label asp-for="NgaySinh" class="form-label fw-semibold">Ngày sinh</label>
         <input asp-for="NgaySinh" type="date" class="form-control" />
-    </div>
-    <div class="col-md-6">
+</div>
+<div class="app-field">
         <label asp-for="SoDienThoai" class="form-label fw-semibold">Điện thoại</label>
         <input asp-for="SoDienThoai" class="form-control" />
         <span asp-validation-for="SoDienThoai" class="text-danger small"></span>
-    </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6">
+<div class="app-field">
         <label asp-for="CCCD" class="form-label fw-semibold">CCCD</label>
         <input asp-for="CCCD" class="form-control" />
         <span asp-validation-for="CCCD" class="text-danger small"></span>
-    </div>
-    <div class="col-md-6">
+</div><div class="app-field">
         <label asp-for="NgayCapCCCD" class="form-label fw-semibold">Ngày cấp CCCD</label>
         <input asp-for="NgayCapCCCD" type="date" class="form-control" />
-    </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6">
+<div class="app-field">
         <label asp-for="BienSoXe" class="form-label fw-semibold">Biển số xe</label>
         <input asp-for="BienSoXe" class="form-control" placeholder="Ví dụ: 59X1-123.45" />
-    </div>
-    <div class="col-md-6">
+</div><div class="app-field">
         <label asp-for="LoaiXe" class="form-label fw-semibold">Loại xe</label>
         <input asp-for="LoaiXe"
                class="form-control"
@@ -77,57 +71,52 @@
             <option value="Xe đạp"></option>
             <option value="Xe đạp điện"></option>
         </datalist>
-    </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6">
+<div class="app-field">
         <label asp-for="NgheNghiep" class="form-label fw-semibold">Nghề nghiệp</label>
         <input asp-for="NgheNghiep" class="form-control" />
-    </div>
-    <div class="col-md-6">
+</div><div class="app-field">
         <label asp-for="QueQuan" class="form-label fw-semibold">Quê quán</label>
         <input asp-for="QueQuan" class="form-control" />
-    </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6">
+<div class="tenants-photo-field">
         <label class="form-label fw-semibold">Ảnh CCCD mặt trước</label>
         <input type="file"
                name="anhCCCDMatTruoc"
                class="form-control"
-               accept=".jpg,.jpeg,.png,.webp" />
+               accept=".jpg,.jpeg,.png,.webp" data-photo-input data-preview-target="tenantFrontPreview" />
         <div class="form-text">JPG, PNG hoặc WEBP; tối đa 5 MB.</div>
 
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatTruoc))
         {
-            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "front" })"
+            <img id="tenantFrontPreview" src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "front" })"
                  alt="CCCD mặt trước"
-                 class="mt-2 rounded"
-                 style="max-height:120px;" />
+                 class="tenants-photo-preview" />
         }
-    </div>
+        else { <div id="tenantFrontPreview" class="tenants-photo-preview" data-preview-alt="Xem trước CCCD mặt trước" hidden></div> }
+</div>
 
-    <div class="col-md-6">
+<div class="tenants-photo-field">
         <label class="form-label fw-semibold">Ảnh CCCD mặt sau</label>
         <input type="file"
                name="anhCCCDMatSau"
                class="form-control"
-               accept=".jpg,.jpeg,.png,.webp" />
+               accept=".jpg,.jpeg,.png,.webp" data-photo-input data-preview-target="tenantBackPreview" />
         <div class="form-text">JPG, PNG hoặc WEBP; tối đa 5 MB.</div>
 
         @if (!string.IsNullOrEmpty(Model?.AnhCCCDMatSau))
         {
-            <img src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "back" })"
+            <img id="tenantBackPreview" src="@Url.Action("Photo", "KhachThue", new { id = Model.Id, side = "back" })"
                  alt="CCCD mặt sau"
-                 class="mt-2 rounded"
-                 style="max-height:120px;" />
+                 class="tenants-photo-preview" />
         }
-    </div>
+        else { <div id="tenantBackPreview" class="tenants-photo-preview" data-preview-alt="Xem trước CCCD mặt sau" hidden></div> }
 </div>
 
-<div class="mb-3">
+<div class="app-field tenants-field-wide">
     <label asp-for="GhiChu" class="form-label fw-semibold">Ghi chú</label>
     <textarea asp-for="GhiChu" class="form-control" rows="2"></textarea>
+</div>
 </div>

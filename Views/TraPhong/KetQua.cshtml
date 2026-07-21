@@ -1,56 +1,42 @@
 @model QuanLyNhaTro.Models.KetQuaTraPhongViewModel
 @{ ViewData["Title"] = "Trả phòng thành công"; }
 
-<div class="text-center my-4">
-    <i class="bi bi-check-circle-fill text-success" style="font-size:3rem"></i>
-    <h4 class="mt-2">Trả phòng thành công</h4>
-    <p class="text-muted">@Model.TenKhachChinh - @Model.TenPhong - ngày @Model.NgayTraPhong.ToString("dd/MM/yyyy")</p>
-</div>
+<div class="lifecycle-page lifecycle-result-page">
+    <header class="lifecycle-result-header">
+        <span class="lifecycle-success-mark" aria-hidden="true">✓</span>
+        <span class="app-page-eyebrow">Đã hoàn tất</span>
+        <h1>Trả phòng thành công</h1>
+        <p>@Model.TenKhachChinh · @Model.TenPhong · @Model.NgayTraPhong.ToString("dd/MM/yyyy")</p>
+    </header>
 
-<div class="card shadow-sm mx-auto" style="max-width:520px">
-    <div class="card-header fw-semibold">Tóm tắt thanh toán cuối</div>
-    <div class="card-body">
-        <table class="table table-sm mb-0">
-            <tbody>
-                <tr><td class="text-muted">Tiền cọc</td><td class="text-end">@Model.TienCoc.ToString("N0") đ</td></tr>
-                <tr><td class="text-muted">Tổng nợ còn lại</td><td class="text-end text-danger">@Model.TongNoConLai.ToString("N0") đ</td></tr>
+    <section class="app-panel lifecycle-result-panel" aria-labelledby="result-title">
+        <div class="app-panel-header"><h2 id="result-title">Kết quả quyết toán</h2></div>
+        <div class="app-panel-body">
+            <dl class="lifecycle-settlement-list">
+                <div><dt>Tiền cọc</dt><dd>@Model.TienCoc.ToString("N0") đ</dd></div>
+                <div><dt>Tổng nợ còn lại</dt><dd>@Model.TongNoConLai.ToString("N0") đ</dd></div>
                 @if (Model.TongTienPhatSinhConLai > 0)
                 {
-                    <tr><td class="text-muted">Khoản phát sinh còn lại</td><td class="text-end text-danger">@Model.TongTienPhatSinhConLai.ToString("N0") đ</td></tr>
+                    <div><dt>Phát sinh còn lại</dt><dd>@Model.TongTienPhatSinhConLai.ToString("N0") đ</dd></div>
                 }
-                <tr class="@(Model.KhachConNoThem > 0 ? "table-danger" : "table-success") fw-bold">
-                    <td>@(Model.KhachConNoThem > 0 ? "Khách còn nợ thêm" : "Hoàn cọc cho khách")</td>
-                    <td class="text-end fs-5">@((Model.KhachConNoThem > 0 ? Model.KhachConNoThem : Model.TienHoanCoc).ToString("N0")) đ</td>
-                </tr>
-            </tbody>
-        </table>
-        @if (Model.CoNoTon)
-        {
-            <div class="alert alert-warning mt-3 py-2 small">
-                <i class="bi bi-exclamation-triangle"></i>
-                Còn nợ tồn. Xem <a asp-controller="BaoCao" asp-action="CongNo">Báo cáo công nợ</a> và khoản phát sinh của hợp đồng.
-            </div>
-        }
-        @if (Model.HoaDonCuoiId.HasValue)
-        {
-            <div class="alert alert-info mt-3 py-2 small">
-                <i class="bi bi-receipt"></i>
-                Đã sinh hóa đơn tháng cuối
-                <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.HoaDonCuoiId">
-                    #@Model.HoaDonCuoiId
-                </a>
-            </div>
-        }
-    </div>
-    <div class="card-footer d-flex gap-2 flex-wrap">
-        <a asp-controller="ChiSoNgoaiHopDong" asp-action="Index"
-           asp-route-phongId="@Model.PhongId"
-           class="btn btn-warning btn-sm">
-            <i class="bi bi-speedometer2"></i> Ghi chỉ số ngoài hợp đồng
-        </a>
-        <a asp-controller="Phong" asp-action="Index" class="btn btn-primary btn-sm">
-            <i class="bi bi-house"></i> Danh sách phòng
-        </a>
-        <a asp-controller="BaoCao" asp-action="CongNo" class="btn btn-outline-secondary btn-sm">Xem công nợ</a>
-    </div>
+                <div class="lifecycle-settlement-total">
+                    <dt>@(Model.KhachConNoThem > 0 ? "Khách còn nợ thêm" : "Hoàn cọc cho khách")</dt>
+                    <dd>@((Model.KhachConNoThem > 0 ? Model.KhachConNoThem : Model.TienHoanCoc).ToString("N0")) đ</dd>
+                </div>
+            </dl>
+            @if (Model.CoNoTon)
+            {
+                <div class="app-notice app-notice-warning" role="alert">Còn nợ tồn. Theo dõi tại <a asp-controller="BaoCao" asp-action="CongNo">Báo cáo công nợ</a>.</div>
+            }
+            @if (Model.HoaDonCuoiId.HasValue)
+            {
+                <div class="app-notice app-notice-info" role="status">Đã sinh hóa đơn tháng cuối <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.HoaDonCuoiId">#@Model.HoaDonCuoiId</a>.</div>
+            }
+        </div>
+        <div class="lifecycle-result-actions">
+            <a asp-controller="ChiSoNgoaiHopDong" asp-action="Index" asp-route-phongId="@Model.PhongId" class="btn btn-warning">Ghi chỉ số ngoài hợp đồng</a>
+            <a asp-controller="Phong" asp-action="Index" class="btn btn-primary">Danh sách phòng</a>
+            <a asp-controller="BaoCao" asp-action="CongNo" class="btn btn-outline-secondary">Xem công nợ</a>
+        </div>
+    </section>
 </div>

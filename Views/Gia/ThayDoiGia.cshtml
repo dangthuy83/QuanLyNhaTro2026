@@ -1,6 +1,7 @@
 @model QuanLyNhaTro.Models.ThayDoiGiaViewModel
 @{ ViewData["Title"] = "Thay đổi giá — " + Model.TenDoiTuong; }
-<h4>Thay đổi giá — <span class="text-primary">@Model.TenDoiTuong</span></h4>
+<div class="services-page services-price-page">
+<header class="app-page-header"><div class="app-page-heading"><h1>Thay đổi giá</h1><p class="app-page-subtitle">@Model.TenDoiTuong</p></div></header>
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -78,7 +79,7 @@
                                 <td class="text-end fw-semibold">@ls.GiaMoi.ToString("N0") đ</td>
                                 <td class="text-muted small">@ls.LyDo</td>
                                 <td>
-                                    <form asp-action="Xoa" method="post" onsubmit="return confirm('Xóa?')">
+                                    <form asp-action="Xoa" method="post" data-confirm="Xóa mốc giá này?">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@ls.Id" />
                                         <input type="hidden" name="loai" value="@Model.LoaiDoiTuong" />
@@ -94,3 +95,5 @@
         </div>
     </div>
 </div>
+</div>
+@section Scripts { <script src="~/js/services.js" asp-append-version="true"></script> }

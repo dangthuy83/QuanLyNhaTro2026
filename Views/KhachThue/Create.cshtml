@@ -4,21 +4,17 @@
     ViewData["ActiveMenu"] = "khachthue";
 }
 
-<div class="d-flex align-items-center mb-3 gap-2">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="mb-0">Thêm khách thuê</h5>
-</div>
-
-<div class="card shadow-sm" style="max-width:680px">
-    <div class="card-body">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-        <form asp-action="Create" method="post" enctype="multipart/form-data">
+<div class="tenants-page tenants-form-page">
+    <header class="app-page-header"><div class="app-page-heading"><a asp-action="Index" class="tenants-back-link">← Danh sách khách thuê</a><h1>Thêm khách thuê</h1><p class="app-page-subtitle">Tạo hồ sơ nhận diện trước khi gắn khách vào hợp đồng.</p></div></header>
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="app-panel tenants-form-panel">
+        <div class="app-panel-header"><div><h2>Thông tin hồ sơ</h2><p>Các trường có dấu * là bắt buộc.</p></div></div>
+        <div class="app-panel-body">
+            <div asp-validation-summary="ModelOnly" class="app-notice is-danger" role="alert"></div>
             @Html.AntiForgeryToken()
             @await Html.PartialAsync("_KhachThueForm", Model)
-            <div class="mt-4 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Lưu</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Huỷ</a>
-            </div>
-        </form>
-    </div>
+        </div>
+        <div class="tenants-form-actions"><button type="submit" class="btn btn-primary">Lưu hồ sơ</button><a asp-action="Index" class="btn btn-outline-secondary">Hủy</a></div>
+    </form>
 </div>
+
+@section Scripts { <script src="~/js/tenants.js" asp-append-version="true"></script> }

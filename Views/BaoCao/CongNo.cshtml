@@ -11,9 +11,10 @@
     int soHoaDonNo = ViewBag.SoHoaDonNo as int? ?? Model.Count();
 }
 
+<div class="operations-page operations-debt-page">
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h4 class="mb-0">Báo cáo công nợ</h4>
+        <h1 class="h4 mb-0">Báo cáo công nợ</h1>
         <div class="text-muted small">@soHoaDonNo hóa đơn còn nợ theo bộ lọc hiện tại</div>
     </div>
     <a asp-action="XuatCongNo"
@@ -143,7 +144,10 @@
                             <td>@x.SoDienThoai</td>
                             <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
                             <td class="text-nowrap">@x.NgayDenHan.ToString("dd/MM/yyyy")</td>
-                            <td>@Html.Raw(TrangThaiBadge(x.TrangThaiHopDong))</td>
+                            <td>
+                                @{ var trangThai = TrangThaiBadge(x.TrangThaiHopDong); }
+                                <span class="badge @trangThai.Css">@trangThai.Text</span>
+                            </td>
                             <td class="text-end">@x.TongCong.ToString("N0")</td>
                             <td class="text-end">@x.SoTienDaThu.ToString("N0")</td>
                             <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
@@ -180,14 +184,15 @@
         </div>
     </div>
 </div>
+</div>
 
 @functions {
-    static string TrangThaiBadge(string trangThai) => trangThai switch
+    static (string Css, string Text) TrangThaiBadge(string trangThai) => trangThai switch
     {
-        "DangHieuLuc" => "<span class='badge bg-success'>Đang ở</span>",
-        "DaKetThuc" => "<span class='badge bg-secondary'>Đã rời</span>",
-        "DaChuyenPhong" => "<span class='badge bg-info text-dark'>Đã chuyển</span>",
-        "DaHuy" => "<span class='badge bg-dark'>Đã hủy</span>",
-        _ => $"<span class='badge bg-light text-dark border'>{trangThai}</span>"
+        "DangHieuLuc" => ("bg-success", "Đang ở"),
+        "DaKetThuc" => ("bg-secondary", "Đã rời"),
+        "DaChuyenPhong" => ("bg-info text-dark", "Đã chuyển"),
+        "DaHuy" => ("bg-dark", "Đã hủy"),
+        _ => ("bg-light text-dark border", trangThai)
     };
 }

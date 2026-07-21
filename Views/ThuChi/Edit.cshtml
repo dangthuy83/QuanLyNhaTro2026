@@ -1,16 +1,4 @@
 @model QuanLyNhaTro.Models.ThuChi
-@{ ViewData["Title"] = "Sửa giao dịch thu chi"; }
-<h4>Sửa giao dịch thu chi</h4>
-<div class="card shadow-sm" style="max-width:520px">
-    <div class="card-body">
-        <form asp-action="Edit" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
-            <partial name="_ThuChiForm" model="Model" />
-            <div class="d-flex gap-2 mt-3">
-                <button class="btn btn-primary">Cập nhật</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
-            </div>
-        </form>
-    </div>
-</div>
+@{ ViewData["Title"] = "Sửa giao dịch thu chi"; ViewData["ActiveMenu"] = "thuchi"; }
+<div class="cashbook-page cashbook-form-page"><header class="app-page-header"><div class="app-page-heading"><a asp-action="Index" asp-route-thang="@Model.NgayPhatSinh.Month" asp-route-nam="@Model.NgayPhatSinh.Year" class="cashbook-back-link">← Sổ T@(Model.NgayPhatSinh.Month)/@Model.NgayPhatSinh.Year</a><h1>Sửa giao dịch #@Model.Id</h1><p class="app-page-subtitle">Chỉ giao dịch gốc trong kỳ đang mở mới có thể sửa.</p></div></header><form asp-action="Edit" method="post" class="app-panel cashbook-form-panel">@Html.AntiForgeryToken()<input type="hidden" asp-for="Id" /><div class="app-panel-body"><div asp-validation-summary="ModelOnly" class="app-notice is-danger" role="alert"></div><partial name="_ThuChiForm" model="Model" /></div><div class="cashbook-form-actions"><button class="btn btn-primary">Lưu thay đổi</button><a asp-action="Index" asp-route-thang="@Model.NgayPhatSinh.Month" asp-route-nam="@Model.NgayPhatSinh.Year" class="btn btn-outline-secondary">Hủy</a></div></form></div>
+@section Scripts { <script src="~/js/cashbook.js" asp-append-version="true"></script> }

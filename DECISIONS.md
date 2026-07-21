@@ -693,3 +693,75 @@ Cập nhật lần cuối: Phiên 68 - 16/07/2026. REVIEW-025 đã diễn tập 
   `wwwroot/js/meters.js`; giữ nguyên route/action/field, antiforgery, auth và nghiệp vụ hiện hữu.
 - Dữ liệu ngoài hợp đồng tiếp tục chỉ là chuỗi mốc audit khi phòng trống/sửa phòng, không được tính
   vào hóa đơn khách thuê.
+
+---
+
+## UI-006 - Quy ước giao diện khách thuê (21/07/2026)
+
+- Năm view Khách thuê dùng namespace `.tenants-page`, component UI-001 và `tenants.js`; route,
+  action, field binding, antiforgery, auth, duplicate-profile policy và lifecycle ảnh giữ nguyên.
+- Trạng thái cư trú/phòng hiện tại tiếp tục lấy từ `KhachThueRepository.GetForIndexAsync` và lịch sử
+  `HopDongKhachThue`; view không tự suy diễn trạng thái.
+- Preview file chỉ dùng `URL.createObjectURL` để hiển thị file người dùng vừa chọn. Server vẫn là
+  nguồn validate type/size, lưu file, thay thế ảnh và cleanup; endpoint `Photo` giữ `no-store, private`.
+
+## UI-010 - Quy ước giao diện tài chính hợp đồng (21/07/2026)
+
+- `.contract-finance-page` phân biệt giao dịch tiền mặt/chuyển khoản với bút toán phi tiền mặt
+  `TruNo`, đồng thời luôn hiển thị liên kết hóa đơn và trạng thái khoản phát sinh bằng chữ.
+- Số dư cọc, công nợ, khả năng ghi nhận và việc đưa khoản phát sinh vào hóa đơn vẫn lấy từ
+  controller/service hiện hữu. `contract-finance.js` chỉ disclosure trường và confirm thao tác.
+
+## UI-011 - Quy ước giao diện chuyển phòng và trả phòng (21/07/2026)
+
+- `.lifecycle-page` trình bày theo trình tự bàn giao, phòng mới, dịch vụ, preview quyết toán và kết
+  quả; mọi số tiền, hóa đơn và quyền thực hiện lấy nguyên từ ViewModel/service hiện hữu.
+- `lifecycle.js` chỉ tải danh mục dịch vụ, tạo liên kết nhập chỉ số, focus/disclosure và confirm;
+  không tính tiền, liên tục chỉ số, settlement hay khả năng chuyển/trả.
+
+## UI-012 - Quy ước giao diện báo cáo và kiểm tra vận hành (21/07/2026)
+
+- `.operations-page` dùng chung filter, KPI, bảng scroll có chủ đích và empty state; công nợ đang ở,
+  đã rời, quá hạn và cảnh báo dữ liệu luôn có nhãn chữ, không chỉ dùng màu.
+- UI màn kiểm tra chỉ hiển thị kết quả và liên kết điều hướng, không thêm nút auto-fix. Tuy nhiên,
+  `KiemTraDuLieuController.Index` hiện gọi `KichHoatHopDongDenHanAsync`, nên route GET chưa đủ điều
+  kiện để được chứng nhận read-only; đây là blocker backend cần batch riêng.
+- Badge trạng thái được Razor encode bình thường, không dùng `Html.Raw` với dữ liệu.
+
+## UI-013 - Quy ước Account và consistency toàn dự án (21/07/2026)
+
+- Login/AccessDenied dùng `.auth-page`, token và typography UI-001; giữ nguyên route, POST,
+  antiforgery, cookie/auth policy và return URL.
+- Audit shared chỉ bổ sung focus-visible, target tối thiểu và nhịp notice/action nhất quán; không
+  redesign lại nghiệp vụ UI-001 đến UI-012 và không thay auth/Data Protection.
+
+## UI-007 - Quy ước giao diện thu chi và khóa sổ (21/07/2026)
+
+- `.cashbook-page` phân biệt bằng nhãn và nội dung: Thu/Chi, giao dịch gốc/bút toán điều chỉnh,
+  kỳ đang mở/đã khóa; không truyền đạt trạng thái chỉ bằng màu.
+- Quyền sửa/xóa/điều chỉnh và khóa sổ vẫn lấy từ `ThuChiKySo`, `ThuChiService` và controller.
+  `cashbook.js` chỉ xử lý confirm presentation; không tính tiền hay thay semantics khóa sổ.
+
+## UI-008 - Quy ước giao diện nhà trọ (21/07/2026)
+
+- Danh sách `.houses-page` hiển thị `SoPhong` từ `LEFT JOIN + COUNT` read-only trong
+  `NhaRepository.GetAllAsync`; đây là dữ liệu hỗ trợ guard, không thay source of truth hay schema.
+- Modal tạo/sửa giữ nguyên POST contract. Nút xóa có nhãn chữ, bị disable khi `SoPhong > 0` và
+  controller vẫn kiểm tra lại bằng `CountPhongAsync` trước khi ghi.
+
+## UI-009 - Quy ước giao diện dịch vụ và giá (21/07/2026)
+
+- `.services-page` trình bày tách biệt loại tính phí, cách tính cố định, đăng ký bắt buộc/tùy chọn,
+  đơn vị, giá mặc định và lịch sử theo kỳ; không tạo công thức tính tiền trong Razor/JavaScript.
+- `services.js` chỉ đồng bộ disabled/disclosure và nạp dữ liệu modal; `GiaService` và
+  `HinhThucDichVuService` tiếp tục quyết định guard hóa đơn, kỳ áp dụng và chỉ số mở đầu.
+
+## UI-006 đến UI-013 - ranh giới validation cuối (21/07/2026)
+
+- Browser QA có thể tạo dữ liệu đại diện chỉ trên DB QA biệt lập; không dùng POST với database vận
+  hành. Preview chuyển/trả phải được mở sau khi dữ liệu chỉ số hợp lệ đã được service xác nhận.
+- UI-006 đến UI-013 hoàn thành ở lớp presentation. Không có schema/migration, công thức tài chính,
+  auth/Data Protection, upload lifecycle, route/action/binding hoặc source of truth nào bị thay đổi.
+- Không công bố acceptance 100% khi còn flow chưa chứng minh hoặc lỗi hành vi ngoài phạm vi
+  presentation. Ba blocker đã xác nhận là: preview Trả phòng trả HTTP 500 khi thiếu chỉ số, bộ lọc
+  Nhắc nợ `Tất cả` bị ép về `DangHieuLuc`, và GET Kiểm tra dữ liệu có thể kích hoạt hợp đồng đến hạn.

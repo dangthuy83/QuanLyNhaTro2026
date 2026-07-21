@@ -1,11 +1,12 @@
 @model QuanLyNhaTro.Models.DichVu
 @using System.Globalization
 
-<div class="mb-2">
+<div class="services-form-grid">
+<div class="app-field services-field-wide">
     <label class="form-label small fw-semibold">Tên dịch vụ <span class="text-danger">*</span></label>
     <input name="TenDichVu" class="form-control form-control-sm" value="@Model.TenDichVu" required />
 </div>
-<div class="form-check mb-2">
+<div class="form-check services-field-wide">
     <label class="form-check-label small fw-semibold">
         <input name="BatBuocKhiThue" type="checkbox" value="true"
                class="form-check-input me-1" checked="@Model.BatBuocKhiThue" />
@@ -13,14 +14,14 @@
     </label>
     <div class="form-text small">Dịch vụ bắt buộc không thể bỏ khỏi hợp đồng.</div>
 </div>
-<div class="mb-2">
+<div class="app-field">
     <label class="form-label small fw-semibold">Loại tính phí</label>
     <select name="LoaiTinhPhi" class="form-select form-select-sm">
         <option value="CoDinh" selected="@(Model.LoaiTinhPhi == "CoDinh")">Cố định</option>
         <option value="TheoChiSo" selected="@(Model.LoaiTinhPhi == "TheoChiSo")">Theo chỉ số</option>
     </select>
 </div>
-<div class="mb-2">
+<div class="app-field">
     <label class="form-label small fw-semibold">Cách tính cố định</label>
     <select name="CachTinhCoDinh" class="form-select form-select-sm">
         <option value="TheoPhong" selected="@(Model.CachTinhCoDinh == "TheoPhong")">Theo phòng</option>
@@ -28,13 +29,14 @@
     </select>
     <div class="form-text small">Chỉ áp dụng khi loại tính phí là cố định.</div>
 </div>
-<div class="mb-2">
+<div class="app-field">
     <label class="form-label small fw-semibold">Đơn vị</label>
     <input name="DonViTinh" class="form-control form-control-sm" value="@Model.DonViTinh" placeholder="kWh, m3, tháng..." />
 </div>
-<div class="mb-2">
+<div class="app-field">
     <label class="form-label small fw-semibold">Đơn giá mặc định</label>
     <input name="DonGiaMacDinh" type="number" min="0" step="1"
            class="form-control form-control-sm" value="@Model.DonGiaMacDinh.ToString("0.##", CultureInfo.InvariantCulture)" />
     <div class="form-text small">Chỉ dùng làm gợi ý khi gán dịch vụ cho phòng.</div>
+</div>
 </div>

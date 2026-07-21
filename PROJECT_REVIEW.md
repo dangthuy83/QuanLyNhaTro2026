@@ -1387,3 +1387,29 @@ Khong lam truoc khi:
 - Sua xong validate chi so va dong ho reset.
 - Them transaction cho cac flow tai chinh chinh.
 - Co quyet dinh ve ledger coc/cong no.
+
+---
+
+## UI-006 đến UI-013 - acceptance QA có điều kiện (21/07/2026)
+
+| Batch | Phạm vi | Trạng thái và bằng chứng |
+|---|---|---|
+| UI-006 | Khách thuê, nhận diện, cư trú, ảnh CCCD | Render 3 viewport, validation/upload/preview/thay-xóa file và Photo auth/header pass. Chưa chứng minh guard xóa khách đang nằm trong hợp đồng. |
+| UI-007 | Thu chi, kỳ sổ, bút toán gốc/điều chỉnh | Render 3 viewport, CRUD, khóa sổ, guard sửa-xóa, bút toán điều chỉnh và export Excel pass. |
+| UI-008 | Nhà trọ, modal tạo/sửa, số phòng và guard xóa | Render 3 viewport, modal/Escape/focus return, CRUD nhà rỗng và guard xóa nhà có phòng pass. |
+| UI-009 | Dịch vụ, hình thức và lịch sử giá | Render 3 viewport, CRUD dịch vụ, thêm-xóa mốc giá được phép và đổi hình thức pass. Chưa chứng minh guard xóa mốc giá đã dùng trên hóa đơn. |
+| UI-010 | Ledger cọc và khoản phát sinh | Hai route 3 viewport, cọc thu/hoàn/trừ nợ và trạng thái khoản phát sinh pass. Flow hiện tại chưa tạo được `DaThu`/`DaTruCoc` để chứng minh hiển thị. |
+| UI-011 | Chuyển phòng, trả phòng và kết quả | Chuyển phòng và trả phòng hoàn tất trên snapshot QA; `KetQua` render 3 viewport. Thiếu chỉ số ở preview Trả phòng trả HTTP 500, không phải blocker recoverable. |
+| UI-012 | Công nợ, nhắc nợ, kiểm tra dữ liệu | Render/filter/empty/details/export pass. `NhacNo` ép lựa chọn `Tất cả` về `DangHieuLuc`; GET `KiemTraDuLieu` gọi service có thể ghi nên chưa đạt hợp đồng read-only. |
+| UI-013 | Login, AccessDenied và audit shared | Login sai/đúng, returnUrl, auth redirect, logout, AccessDenied, drawer/Escape/`inert`/focus return và mobile target pass. Skip link nhận focus nhưng keyboard activation chưa được chứng minh end-to-end. |
+
+Validation build cuối: SDK 10.0.302, restore/build app và ba tool `0 warning / 0 error` với
+warning-as-error; Impeccable detector `[]`; console Browser `0 warning / 0 error`; package direct/transitive
+không vulnerable/deprecated; scan inline style/handler/`Html.Raw` sạch.
+DB vận hành chỉ SELECT và vector count hậu kiểm khớp baseline; POST chỉ chạy trên DB QA/snapshot,
+sau đó toàn bộ schema QA được drop. Hồi quy 16 route đại diện UI-001 đến UI-013 ở 390px không
+overflow và console không có error.
+
+Kết luận: code presentation UI-006 đến UI-013 đã hoàn thành nhưng acceptance **không đạt 100%** do
+các blocker/gap ghi trong bảng. Hosting Bundle 10.0.10 đã có; không migration/import, stage/commit/
+push, publish/deploy hoặc NSSM switch.

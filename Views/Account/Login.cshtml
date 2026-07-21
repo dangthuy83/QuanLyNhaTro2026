@@ -1,8 +1,46 @@
 @model string
 @{ Layout = null; ViewData["Title"] = "Đăng nhập quản trị"; }
-<!doctype html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>Đăng nhập quản trị</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/></head>
-<body class="bg-light"><main class="container py-5"><div class="card shadow-sm mx-auto" style="max-width:420px"><div class="card-body p-4"><h4 class="mb-1">Quản lý nhà trọ</h4><p class="text-muted">Đăng nhập tài khoản quản trị duy nhất.</p>
-<form method="post">@Html.AntiForgeryToken()<input type="hidden" name="returnUrl" value="@Model"/><div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
-<div class="mb-3"><label class="form-label">Tên đăng nhập</label><input name="username" class="form-control" autocomplete="username" required/></div>
-<div class="mb-3"><label class="form-label">Mật khẩu</label><input name="password" type="password" class="form-control" autocomplete="current-password" required/></div>
-<button class="btn btn-primary w-100">Đăng nhập</button></form></div></div></main></body></html>
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B5F59" />
+    <title>Đăng nhập quản trị — Quản lý nhà trọ</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="auth-page auth-login-page">
+    <main class="auth-shell">
+        <section class="auth-intro" aria-labelledby="auth-title">
+            <span class="auth-brand-mark" aria-hidden="true">Q</span>
+            <span class="app-page-eyebrow">Không gian vận hành</span>
+            <h1 id="auth-title">Quản lý nhà trọ</h1>
+            <p>Một nơi để theo dõi phòng, hợp đồng, hóa đơn và các đầu việc vận hành hằng ngày.</p>
+        </section>
+
+        <section class="auth-card" aria-labelledby="login-title">
+            <div class="auth-card-header">
+                <span class="app-page-eyebrow">Tài khoản quản trị</span>
+                <h2 id="login-title">Chào mừng trở lại</h2>
+                <p>Đăng nhập để tiếp tục vào hệ thống.</p>
+            </div>
+            <form method="post" class="auth-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@Model" />
+                <div asp-validation-summary="ModelOnly" class="auth-validation" role="alert"></div>
+                <div>
+                    <label class="form-label" for="username">Tên đăng nhập</label>
+                    <input id="username" name="username" class="form-control" autocomplete="username" autofocus required />
+                </div>
+                <div>
+                    <label class="form-label" for="password">Mật khẩu</label>
+                    <input id="password" name="password" type="password" class="form-control" autocomplete="current-password" required />
+                </div>
+                <button class="btn btn-primary auth-submit">Đăng nhập</button>
+            </form>
+            <p class="auth-private-note">Phiên làm việc được bảo vệ và dành cho người quản trị đã được cấp quyền.</p>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,2 +1,17 @@
 @{ ViewData["Title"] = "Không có quyền truy cập"; }
-<div class="alert alert-danger">Phiên đăng nhập không có quyền truy cập tài nguyên này.</div>
+
+<div class="auth-page auth-access-page">
+    <section class="auth-card" aria-labelledby="access-denied-title">
+        <span class="auth-status-mark" aria-hidden="true">!</span>
+        <span class="app-page-eyebrow">Truy cập bị từ chối</span>
+        <h1 id="access-denied-title">Bạn không có quyền mở nội dung này</h1>
+        <p>Phiên đăng nhập hiện tại không được phép truy cập tài nguyên. Bạn có thể quay về tổng quan hoặc đăng xuất để dùng tài khoản khác.</p>
+        <div class="auth-actions">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Về tổng quan</a>
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-secondary">Đăng xuất</button>
+            </form>
+        </div>
+    </section>
+</div>

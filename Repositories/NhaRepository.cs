@@ -7,7 +7,13 @@ namespace QuanLyNhaTro.Repositories;
 public class NhaRepository(IDbConnection db) : BaseRepository(db)
 {
     public async Task<IEnumerable<Nha>> GetAllAsync()
-        => await _db.QueryAsync<Nha>("SELECT * FROM Nha ORDER BY TenNha");
+        => await _db.QueryAsync<Nha>("""
+            SELECT n.*, COUNT(p.Id) AS SoPhong
+            FROM Nha n
+            LEFT JOIN Phong p ON p.NhaId = n.Id
+            GROUP BY n.Id, n.TenNha, n.DiaChi, n.GhiChu, n.NgayTao
+            ORDER BY n.TenNha
+            """);
 
     public async Task<Nha?> GetByIdAsync(int id)
         => await _db.QueryFirstOrDefaultAsync<Nha>(

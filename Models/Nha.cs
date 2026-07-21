@@ -7,4 +7,5 @@ public class Nha
     public string? DiaChi { get; set; }
     public string? GhiChu { get; set; }
     public DateTime NgayTao { get; set; }
+    public int SoPhong { get; set; }
 }

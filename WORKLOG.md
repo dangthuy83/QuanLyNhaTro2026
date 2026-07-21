@@ -2840,3 +2840,90 @@ Khi kết thúc phiên:
 2. Cập nhật trạng thái build/test.
 3. Chuyển bug đã fix khỏi backlog.
 4. Ghi quyết định mới nếu có.
+
+---
+
+## 21/07/2026 - UI-006 Khách thuê
+
+- Đã redesign `Views/KhachThue/{Index,Details,Create,Edit,_KhachThueForm}.cshtml`, thêm
+  `wwwroot/js/tenants.js` và CSS scope `.tenants-page` trong `wwwroot/css/site.css`.
+- Giữ nguyên upload binding, Photo auth/no-store, duplicate CCCD/SĐT, antiforgery và delete guard.
+- Build SDK 10.0.302 bằng isolated obj/bin: `0 warning / 0 error`. Lượt build thường bị chặn bởi
+  permission `obj/.../rpswa.dswa.cache.json`, được phân loại là lỗi môi trường.
+- Impeccable detector ban đầu bắt hai preview `<img>` rỗng; đã thay bằng container và tạo ảnh khi
+  có file. Browser QA/POST QA DB tạm được gom vào lượt QA liên tục sau khi hoàn tất các view.
+
+## 21/07/2026 - UI-010 Tài chính hợp đồng
+
+- Đã redesign `GiaoDichCoc/Index` và `KhoanPhatSinh/Index`, thêm `.contract-finance-page` và
+  `contract-finance.js`; không còn inline handler hoặc `Html.Raw` trong hai view.
+- Build net10.0 isolated `0 warning / 0 error`; Impeccable detector `[]`.
+- Không thay cọc/công nợ/settlement/số tiền; Browser/POST QA chờ lượt DB QA liên tục.
+
+## 21/07/2026 - UI-011 Chuyển phòng và trả phòng
+
+- Đã redesign `ChuyenPhong/Create`, `TraPhong/Confirm`, `TraPhong/KetQua`; thêm `.lifecycle-page`
+  và `lifecycle.js`, loại `Html.Raw`, inline script và inline handler khỏi ba view.
+- Build net10.0 isolated `0 warning / 0 error`; Impeccable detector `[]`.
+- Không đổi lifecycle, meter, invoice hay settlement; Browser/POST QA chờ lượt DB QA liên tục.
+
+## 21/07/2026 - UI-012 Báo cáo và kiểm tra vận hành
+
+- Đã đồng bộ `BaoCao/CongNo`, `NhacNo/Index`, `KiemTraDuLieu/Index` dưới `.operations-page`;
+  loại `Html.Raw` khỏi badge trạng thái và inline width khỏi bảng readiness.
+- Build net10.0 isolated `0 warning / 0 error`; Impeccable detector `[]`.
+- Không thêm auto-fix hoặc ghi dữ liệu; Browser QA/export chờ lượt validation liên tục.
+
+## 21/07/2026 - UI-013 Account và consistency
+
+- Đã redesign `Account/Login` và `AccessDenied` dưới `.auth-page`; audit shell/shared focus,
+  notice, action target và quét inline handler/`Html.Raw` toàn phạm vi UI-006 đến UI-013.
+- Build net10.0 isolated `0 warning / 0 error`; Impeccable detector Account/shared `[]`.
+- Auth contract và security không đổi; Browser auth/regression chờ lượt validation cuối.
+
+## 21/07/2026 - UI-007 Thu chi và khóa sổ
+
+- Đã redesign bốn view `ThuChi`, thêm `.cashbook-page` và `cashbook.js`; loại bỏ inline confirm.
+- Build net10.0 isolated `0 warning / 0 error`; Impeccable detector `[]`.
+- Giữ nguyên action/field/antiforgery, Excel export, bút toán điều chỉnh và khóa sổ. Browser/POST QA
+  được ghi chờ DB QA trong lượt validation liên tục.
+
+## 21/07/2026 - UI-008 Nhà trọ
+
+- Đã redesign `Views/Nha/Index.cshtml`, thêm `houses.js`, `.houses-page`, `Nha.SoPhong` và aggregate
+  read-only ở `NhaRepository.GetAllAsync`.
+- Build net10.0 isolated `0 warning / 0 error`; Impeccable detector `[]`.
+- Create/Edit/Delete contract không đổi; guard xóa được trình bày rõ và vẫn được server recheck.
+
+## 21/07/2026 - UI-009 Dịch vụ và giá
+
+- Đã redesign `DichVu/Index`, `_DichVuForm`, `Gia/ThayDoiGia`, `HinhThucDichVu/Create`; thêm
+  `.services-page` và `services.js`, loại bỏ inline script/handler.
+- Build net10.0 isolated `0 warning / 0 error`; Impeccable detector `[]`.
+- Không thay công thức/giá/kỳ/service semantics; Browser/POST QA chờ lượt DB QA liên tục.
+
+## 21/07/2026 - Consistency và validation cuối UI-006 đến UI-013
+
+- Browser QA in-app tại 1440x900, 768x900 và 390x844 đã chạy cho UI-006 đến UI-013; hồi quy cuối
+  16 route đại diện UI-001 đến UI-013 ở 390x844 không overflow và console không có error. Drawer,
+  Escape, `inert`, focus return và target mobile pass; skip link nhận focus nhưng kích hoạt keyboard
+  tự động chưa chứng minh được chuyển focus đích nên vẫn là gap.
+- UI-006 đã chạy upload giả/sai type/quá 5 MB/hợp lệ, preview, thay ảnh, cleanup và Photo auth/header;
+  UI-007 đã chạy khóa sổ, bút toán điều chỉnh, guard sửa/xóa và export Excel; UI-008 chạy CRUD/guard;
+  UI-009 chạy CRUD dịch vụ, đổi/xóa giá và đổi hình thức; UI-010 chạy ledger cọc/khoản phát sinh;
+  UI-011 chạy chuyển phòng và trả phòng đến `KetQua`; UI-012 chạy filter/empty/details/export;
+  UI-013 chạy login sai/đúng, returnUrl, redirect bảo vệ, logout, AccessDenied và drawer.
+- Dữ liệu ghi chỉ chạy trên `QuanLyNhaTro_UI006_013_ACCEPTANCE_QA_20260721` và các snapshot biệt
+  lập. Fingerprint TSV SHA-256 cuối của DB QA chính là
+  `116F73D16B5BD263589BEB28231E3784113B1EC6E503F27B05D619F65DB7C91B`.
+- DB vận hành `QuanLyNhaTro` chỉ được SELECT. Vector count 25 bảng hậu kiểm khớp tuyệt đối baseline;
+  fingerprint baseline đã ghi là `8469246324C096DCFFE3CA3F2AF26E60DA9E4BCC0319AE1C1E8D13A774CA3D1F`.
+- Restore/build app và ba tool bằng SDK 10.0.302, net10.0, warning-as-error: cả bốn `0 warning /
+  0 error`. Audit NuGet direct/transitive: không vulnerable, không deprecated. Impeccable detector
+  `[]`; scan inline style/handler/`Html.Raw` sạch trong phạm vi UI-006 đến UI-013.
+- Acceptance chưa đạt 100%: Trả phòng thiếu chỉ số trả HTTP 500 thay vì blocker UI; Nhắc nợ không
+  chọn được thật sự `Tất cả`; GET Kiểm tra dữ liệu gọi service có thể ghi. Chưa chứng minh guard xóa
+  khách đang dùng, guard không cho xóa mốc giá đã dùng, các trạng thái `DaThu`/`DaTruCoc` của khoản
+  phát sinh và keyboard activation của skip link. Các mục này không được ghi nhận pass.
+- Không migration/import, không publish/deploy/NSSM switch, không stage/commit/push. Hosting Bundle
+  10.0.10 chỉ được ghi nhận là đã có; toàn bộ listener, schema QA và artifact tạm được dọn cuối batch.

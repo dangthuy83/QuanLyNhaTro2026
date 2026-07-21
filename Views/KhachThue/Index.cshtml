@@ -8,86 +8,59 @@
     int? phongId = ViewBag.PhongId;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">Danh sách khách thuê</h5>
-    <a asp-action="Create" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Thêm khách</a>
-</div>
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-}
-@if (TempData["Warning"] != null)
-{
-    <div class="alert alert-warning alert-dismissible fade show py-2">@TempData["Warning"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-}
+<div class="tenants-page" data-tenants-list>
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <h1>Khách thuê</h1>
+            <p class="app-page-subtitle">Tra cứu hồ sơ nhận diện, nơi ở hiện tại và lịch sử cư trú.</p>
+        </div>
+        <div class="app-page-actions">
+            <a asp-action="Create" class="btn btn-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>Thêm khách thuê</span></a>
+        </div>
+    </header>
 
-<form method="get" class="card card-body shadow-sm mb-3">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-5">
-            <label class="form-label small">Tìm kiếm</label>
-            <input name="tuKhoa" value="@tuKhoa" class="form-control" placeholder="Tên, SĐT, CCCD hoặc biển số" />
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small">Phòng hiện tại</label>
-            <select name="phongId" class="form-select">
-                <option value="">Tất cả phòng</option>
-                @foreach (var p in danhSachPhong)
-                {
-                    <option value="@p.Id" selected="@(phongId == p.Id)">@p.TenPhong</option>
-                }
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Trạng thái</label>
-            <select name="trangThai" class="form-select">
-                <option value="TatCa" selected="@(string.IsNullOrEmpty(trangThai) || trangThai == "TatCa")">Tất cả</option>
-                <option value="DangO" selected="@(trangThai == "DangO")">Đang ở</option>
-                <option value="SapDen" selected="@(trangThai == "SapDen")">Sắp đến</option>
-                <option value="DaRoi" selected="@(trangThai == "DaRoi")">Đã rời</option>
-                <option value="ChuaCuTru" selected="@(trangThai == "ChuaCuTru")">Chưa cư trú</option>
-            </select>
-        </div>
-        <div class="col-md-2 d-flex gap-2">
-            <button class="btn btn-primary flex-grow-1">Lọc</button>
-            <a asp-action="Index" class="btn btn-outline-secondary">Xóa</a>
-        </div>
-    </div>
-</form>
+    @if (TempData["Success"] != null) { <div class="app-notice is-success" role="status">@TempData["Success"]</div> }
+    @if (TempData["Warning"] != null) { <div class="app-notice is-warning" role="status">@TempData["Warning"]</div> }
 
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light"><tr><th>Họ tên</th><th>Điện thoại</th><th>CCCD</th><th>Biển số</th><th>Phòng hiện tại</th><th>Dự kiến rời</th><th>Trạng thái</th><th></th></tr></thead>
-            <tbody>
+    <form method="get" class="app-panel tenants-filter-panel" aria-label="Bộ lọc khách thuê">
+        <div class="tenants-filter-grid">
+            <div class="app-field tenants-search-field"><label for="tenantKeyword">Tìm hồ sơ</label><input id="tenantKeyword" name="tuKhoa" value="@tuKhoa" class="form-control" placeholder="Tên, SĐT, CCCD hoặc biển số" /></div>
+            <div class="app-field"><label for="tenantRoom">Phòng hiện tại</label><select id="tenantRoom" name="phongId" class="form-select"><option value="">Tất cả phòng</option>@foreach (var p in danhSachPhong) { <option value="@p.Id" selected="@(phongId == p.Id)">@p.TenPhong</option> }</select></div>
+            <div class="app-field"><label for="tenantStatus">Trạng thái cư trú</label><select id="tenantStatus" name="trangThai" class="form-select"><option value="TatCa" selected="@(string.IsNullOrEmpty(trangThai) || trangThai == "TatCa")">Tất cả</option><option value="DangO" selected="@(trangThai == "DangO")">Đang ở</option><option value="SapDen" selected="@(trangThai == "SapDen")">Sắp đến</option><option value="DaRoi" selected="@(trangThai == "DaRoi")">Đã rời</option><option value="ChuaCuTru" selected="@(trangThai == "ChuaCuTru")">Chưa cư trú</option></select></div>
+            <div class="tenants-filter-actions"><button class="btn btn-primary">Áp dụng</button><a asp-action="Index" class="btn btn-outline-secondary">Xóa lọc</a></div>
+        </div>
+        <p class="tenants-result-count" aria-live="polite"><strong>@Model.Count()</strong> hồ sơ phù hợp</p>
+    </form>
+
+    <section class="app-panel tenants-list-panel" aria-labelledby="tenantsListTitle">
+        <div class="app-panel-header"><div><h2 id="tenantsListTitle">Danh sách hồ sơ</h2><p>Trạng thái được xác định từ lịch sử cư trú hiện hành.</p></div></div>
+        @if (!Model.Any())
+        {
+            <div class="app-empty-state"><div><svg class="app-icon" aria-hidden="true"><use href="#icon-users"></use></svg><h2>Không có khách phù hợp</h2><p>Thử thay đổi bộ lọc hoặc tạo hồ sơ khách thuê mới.</p></div></div>
+        }
+        else
+        {
+            <div class="tenants-table-wrap"><table class="tenants-table"><thead><tr><th>Hồ sơ</th><th>Liên hệ / nhận diện</th><th>Nơi ở hiện tại</th><th>Dự kiến rời</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
             @foreach (var k in Model)
             {
+                var initial = string.IsNullOrWhiteSpace(k.HoTen) ? "?" : k.HoTen.Trim()[0].ToString().ToUpperInvariant();
                 <tr>
-                    <td><a asp-action="Details" asp-route-id="@k.Id" class="fw-semibold text-decoration-none">@k.HoTen</a></td>
-                    <td>@(k.SoDienThoai ?? "—")</td><td>@(k.CCCD ?? "—")</td><td>@(k.BienSoXe ?? "—")</td>
-                    <td>@(k.PhongHienTai ?? "—")</td>
-                    <td>@(k.NgayKetThucDuKienHienTai?.ToString("dd/MM/yyyy") ?? "—")</td>
-                    <td><span class="badge @TrangThaiClass(k.TrangThaiCuTru)">@TrangThaiText(k.TrangThaiCuTru)</span></td>
-                    <td class="text-end text-nowrap">
-                        <a asp-action="Edit" asp-route-id="@k.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
-                    </td>
+                    <td data-label="Hồ sơ"><div class="tenants-identity"><span class="tenants-avatar" aria-hidden="true">@initial</span><div><a asp-action="Details" asp-route-id="@k.Id" class="tenants-name">@k.HoTen</a><small>Biển số: @(k.BienSoXe ?? "Chưa có")</small></div></div></td>
+                    <td data-label="Liên hệ / nhận diện"><span>@(k.SoDienThoai ?? "Chưa có SĐT")</span><small>CCCD: @(k.CCCD ?? "Chưa có")</small></td>
+                    <td data-label="Nơi ở">@(k.PhongHienTai ?? "Chưa xếp phòng")</td>
+                    <td data-label="Dự kiến rời">@(k.NgayKetThucDuKienHienTai?.ToString("dd/MM/yyyy") ?? "—")</td>
+                    <td data-label="Trạng thái"><span class="app-status-badge @TrangThaiClass(k.TrangThaiCuTru)">@TrangThaiText(k.TrangThaiCuTru)</span></td>
+                    <td data-label="Thao tác" class="tenants-row-actions"><a asp-action="Details" asp-route-id="@k.Id" class="btn btn-sm btn-outline-primary">Mở hồ sơ</a><a asp-action="Edit" asp-route-id="@k.Id" class="btn btn-sm btn-outline-secondary">Chỉnh sửa</a></td>
                 </tr>
             }
-            @if (!Model.Any())
-            {
-                <tr><td colspan="8" class="text-center text-muted py-4">Không có khách phù hợp.</td></tr>
-            }
-            </tbody>
-        </table>
-    </div>
+            </tbody></table></div>
+        }
+    </section>
 </div>
 
 @functions {
-    private static string TrangThaiText(string value) => value switch
-    {
-        "DangO" => "Đang ở", "SapDen" => "Sắp đến", "DaRoi" => "Đã rời", _ => "Chưa cư trú"
-    };
-    private static string TrangThaiClass(string value) => value switch
-    {
-        "DangO" => "bg-success", "SapDen" => "bg-warning text-dark", "DaRoi" => "bg-secondary", _ => "bg-light text-dark border"
-    };
+    private static string TrangThaiText(string value) => value switch { "DangO" => "Đang ở", "SapDen" => "Sắp đến", "DaRoi" => "Đã rời", _ => "Chưa cư trú" };
+    private static string TrangThaiClass(string value) => value switch { "DangO" => "is-success", "SapDen" => "is-warning", "DaRoi" => "is-neutral", _ => "is-info" };
 }
+
+@section Scripts { <script src="~/js/tenants.js" asp-append-version="true"></script> }

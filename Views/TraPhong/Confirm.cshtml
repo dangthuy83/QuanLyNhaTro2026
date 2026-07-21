@@ -1,125 +1,98 @@
 @model QuanLyNhaTro.Models.TraPhongViewModel
 @{ ViewData["Title"] = "Xác nhận trả phòng"; }
-<h4>Trả phòng — <span class="text-primary">@Model.TenPhong</span></h4>
-<p class="text-muted">Khách: <strong>@Model.TenKhachChinh</strong></p>
-<div class="row g-4">
-    <div class="col-md-5">
-        <div class="card shadow-sm">
-            <div class="card-header fw-semibold">Chọn ngày trả phòng</div>
-            <div class="card-body">
-                <form method="get" asp-action="Confirm">
+
+<div class="lifecycle-page lifecycle-checkout-page" data-lifecycle="checkout">
+    <header class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Kết thúc hợp đồng</span>
+            <h1>Trả phòng @Model.TenPhong</h1>
+            <p>Khách chính: <strong>@Model.TenKhachChinh</strong>. Preview dưới đây lấy nguyên từ service trả phòng.</p>
+        </div>
+        <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDongId" class="btn btn-outline-secondary">Về hợp đồng</a>
+    </header>
+
+    <div class="lifecycle-checkout-grid">
+        <aside class="app-panel lifecycle-date-panel">
+            <div class="app-panel-header"><h2>Ngày trả phòng</h2></div>
+            <div class="app-panel-body">
+                <form method="get" asp-action="Confirm" data-auto-submit="date-change">
                     <input type="hidden" name="hopDongId" value="@Model.HopDongId" />
-                    <div class="mb-3">
-                        <label class="form-label">Ngày trả phòng</label>
-                        <input type="date" name="ngayTraPhong" class="form-control"
-                               value="@Model.NgayTraPhong.ToString("yyyy-MM-dd")"
-                               onchange="this.form.submit()" />
-                        <div class="form-text">Thay đổi ngày để cập nhật preview.</div>
-                    </div>
+                    <label class="form-label" for="ngayTraPhong">Ngày bàn giao</label>
+                    <input id="ngayTraPhong" type="date" name="ngayTraPhong" class="form-control"
+                           value="@Model.NgayTraPhong.ToString("yyyy-MM-dd")" />
+                    <p class="form-text">Đổi ngày để server cập nhật lại preview.</p>
+                    <button class="btn btn-outline-primary w-100">Cập nhật preview</button>
                 </form>
             </div>
-        </div>
-    </div>
-    <div class="col-md-7">
-        <div class="card shadow-sm">
-            <div class="card-header fw-semibold">Thông tin thanh toán cuối</div>
-            <div class="card-body">
+        </aside>
+
+        <section class="app-panel lifecycle-settlement-panel" aria-labelledby="settlement-title">
+            <div class="app-panel-header">
+                <div><h2 id="settlement-title">Quyết toán cuối</h2><p>Số liệu và quyền thực hiện do service cung cấp.</p></div>
+            </div>
+            <div class="app-panel-body">
                 @if (!Model.CoTheTraPhong)
                 {
-                    <div class="alert alert-danger py-2 small">
-                        <i class="bi bi-x-octagon me-1"></i>
+                    <div class="app-notice app-notice-danger" role="alert">
                         <strong>Chưa thể trả phòng.</strong> @Model.LyDoChanTraPhong
                         @if (Model.HoaDonKyTraPhongId.HasValue)
                         {
-                            <a asp-controller="HoaDon" asp-action="Details"
-                               asp-route-id="@Model.HoaDonKyTraPhongId.Value"
-                               class="alert-link ms-1">Mở hóa đơn #@Model.HoaDonKyTraPhongId.Value</a>
+                            <a asp-controller="HoaDon" asp-action="Details" asp-route-id="@Model.HoaDonKyTraPhongId.Value">Mở hóa đơn #@Model.HoaDonKyTraPhongId.Value</a>
                         }
                     </div>
                 }
                 else if (Model.CanSinhHoaDonMoi)
                 {
-                    <div class="alert alert-warning py-2 small">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        Sẽ sinh hóa đơn kỳ cuối tính
-                        <strong>@Model.SoNgayO / @Model.SoNgayTrongThang ngày</strong>.
-                    </div>
+                    <div class="app-notice app-notice-warning" role="status">Sẽ sinh hóa đơn kỳ cuối tính <strong>@Model.SoNgayO / @Model.SoNgayTrongThang ngày</strong>.</div>
                 }
                 else
                 {
-                    <div class="alert alert-info py-2 small">
-                        <i class="bi bi-info-circle"></i>
-                        Hóa đơn kỳ trả phòng hiện hữu đã khớp số ngày ở — không sinh hóa đơn mới.
-                    </div>
+                    <div class="app-notice app-notice-info" role="status">Hóa đơn kỳ trả phòng hiện hữu đã khớp số ngày ở; không sinh hóa đơn mới.</div>
                 }
-                <table class="table table-sm">
-                    <tbody>
-                        @if (Model.CanSinhHoaDonMoi)
-                        {
-                            <tr>
-                                <td class="text-muted">Tiền phòng tháng cuối (pro-rata)</td>
-                                <td class="text-end fw-semibold">@Model.TienPhongProRata.ToString("N0") đ</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Dịch vụ tháng cuối</td>
-                                <td class="text-end fw-semibold">@Model.TongTienDichVuThangCuoi.ToString("N0") đ</td>
-                            </tr>
-                        }
-                        @if (Model.TongTienPhatSinhChuaXuLy > 0)
-                        {
-                            <tr>
-                                <td class="text-muted">Khoản phát sinh chưa xử lý</td>
-                                <td class="text-end fw-semibold text-danger">@Model.TongTienPhatSinhChuaXuLy.ToString("N0") đ</td>
-                            </tr>
-                        }
-                        <tr>
-                            <td class="text-muted">Tổng nợ còn lại</td>
-                            <td class="text-end fw-semibold text-danger">@Model.TongNoConLai.ToString("N0") đ</td>
-                        </tr>
-                        @if (Model.TienTruNoTuCoc > 0)
-                        {
-                            <tr>
-                                <td class="text-muted">Trừ nợ vào cọc</td>
-                                <td class="text-end fw-semibold text-warning">@Model.TienTruNoTuCoc.ToString("N0") đ</td>
-                            </tr>
-                        }
-                        <tr class="table-light">
-                            <td class="fw-bold">Tiền cọc</td>
-                            <td class="text-end fw-bold">@Model.TienCoc.ToString("N0") đ</td>
-                        </tr>
-                        <tr class="@(Model.KhachConNoThem > 0 ? "table-danger" : "table-success")">
-                            <td class="fw-bold">@(Model.KhachConNoThem > 0 ? "Khách còn nợ thêm" : "Hoàn cọc cho khách")</td>
-                            <td class="text-end fw-bold fs-5">@((Model.KhachConNoThem > 0 ? Model.KhachConNoThem : Model.TienHoanCoc).ToString("N0")) đ</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <form asp-action="Execute" method="post">
+
+                <dl class="lifecycle-settlement-list">
+                    @if (Model.CanSinhHoaDonMoi)
+                    {
+                        <div><dt>Tiền phòng tháng cuối</dt><dd>@Model.TienPhongProRata.ToString("N0") đ</dd></div>
+                        <div><dt>Dịch vụ tháng cuối</dt><dd>@Model.TongTienDichVuThangCuoi.ToString("N0") đ</dd></div>
+                    }
+                    @if (Model.TongTienPhatSinhChuaXuLy > 0)
+                    {
+                        <div><dt>Phát sinh chưa xử lý</dt><dd>@Model.TongTienPhatSinhChuaXuLy.ToString("N0") đ</dd></div>
+                    }
+                    <div><dt>Tổng nợ còn lại</dt><dd>@Model.TongNoConLai.ToString("N0") đ</dd></div>
+                    @if (Model.TienTruNoTuCoc > 0)
+                    {
+                        <div><dt>Trừ nợ vào cọc</dt><dd>@Model.TienTruNoTuCoc.ToString("N0") đ</dd></div>
+                    }
+                    <div><dt>Tiền cọc</dt><dd>@Model.TienCoc.ToString("N0") đ</dd></div>
+                    <div class="lifecycle-settlement-total">
+                        <dt>@(Model.KhachConNoThem > 0 ? "Khách còn nợ thêm" : "Hoàn cọc cho khách")</dt>
+                        <dd>@((Model.KhachConNoThem > 0 ? Model.KhachConNoThem : Model.TienHoanCoc).ToString("N0")) đ</dd>
+                    </div>
+                </dl>
+
+                <form asp-action="Execute" method="post" data-confirm="Xác nhận trả phòng ngày @Model.NgayTraPhong.ToString("dd/MM/yyyy")? Thao tác không thể hoàn tác.">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="hopDongId" value="@Model.HopDongId" />
                     <input type="hidden" name="ngayTraPhong" value="@Model.NgayTraPhong.ToString("yyyy-MM-dd")" />
-                    <div class="mb-3">
-                        <label class="form-label">Ghi chú (tùy chọn)</label>
-                        <input name="ghiChu" class="form-control" placeholder="VD: Thỏa thuận hoàn 50%..." />
-                    </div>
-                    <div class="d-flex gap-2">
+                    <label class="form-label" for="ghiChu">Ghi chú (tùy chọn)</label>
+                    <input id="ghiChu" name="ghiChu" class="form-control" placeholder="Ví dụ: thỏa thuận hoàn cọc" />
+                    <div class="lifecycle-form-actions">
+                        <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDongId" class="btn btn-outline-secondary">Hủy</a>
                         @if (Model.CoTheTraPhong)
                         {
-                            <button class="btn btn-danger"
-                                    onclick="return confirm('Xác nhận trả phòng ngày @Model.NgayTraPhong.ToString("dd/MM/yyyy")? Không thể hoàn tác.')">
-                                <i class="bi bi-door-open"></i> Xác nhận trả phòng
-                            </button>
+                            <button class="btn btn-danger">Xác nhận trả phòng</button>
                         }
                         else
                         {
-                            <button class="btn btn-danger" type="button" disabled>
-                                <i class="bi bi-lock"></i> Chưa thể trả phòng
-                            </button>
+                            <button class="btn btn-danger" type="button" disabled>Chưa thể trả phòng</button>
                         }
-                        <a asp-controller="HopDong" asp-action="Details"
-                           asp-route-id="@Model.HopDongId" class="btn btn-outline-secondary">Hủy</a>
                     </div>
                 </form>
             </div>
-        </div>
+        </section>
     </div>
 </div>
+
+@section Scripts { <script src="~/js/lifecycle.js" asp-append-version="true"></script> }

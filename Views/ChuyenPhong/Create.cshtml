@@ -1,167 +1,105 @@
 @model QuanLyNhaTro.Models.ChuyenPhongViewModel
-@using System.Text.Json
 @{
     ViewData["Title"] = "Chuyển phòng";
-    var selectedJson = JsonSerializer.Serialize(Model.PhongDichVuIds ?? []);
-    var restoreSelection = Model.PhongDichVuIds?.Length > 0;
+    var selectedIds = string.Join(",", Model.PhongDichVuIds ?? []);
 }
 
-<h4>Chuyển phòng - <span class="text-primary">@Model.TenPhongCu</span></h4>
-<p class="text-muted">Tạo hợp đồng mới và quyết toán phòng cũ. Nếu chuyển giữa tháng, hệ thống sinh 2 hóa đơn ghép; nếu chuyển ngày cuối tháng, chỉ sinh hóa đơn phòng cũ.</p>
+<div class="lifecycle-page lifecycle-transfer-page"
+     data-lifecycle="transfer"
+     data-selected-service-ids="@selectedIds"
+     data-restore-selection="@((Model.PhongDichVuIds?.Length ?? 0) > 0 ? "true" : "false")"
+     data-meter-url="@Url.Action("NhapTheoPhong", "ChiSo")"
+     data-service-url="@Url.Action("DichVuTheoPhong", "HopDong")"
+     data-old-contract-id="@Model.HopDongCuId">
+    <header class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Vòng đời hợp đồng</span>
+            <h1>Chuyển phòng từ @Model.TenPhongCu</h1>
+            <p>Chọn ngày bàn giao và phòng mới. Hệ thống hiện hữu quyết định hóa đơn, chỉ số và hợp đồng kế tiếp.</p>
+        </div>
+        <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDongCuId" class="btn btn-outline-secondary">Về hợp đồng</a>
+    </header>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show py-2" style="max-width:560px">
-        @TempData["Success"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    @if (TempData["Success"] != null)
+    {
+        <div class="app-notice app-notice-success" role="status">
+            <strong>Đã xử lý.</strong> @TempData["Success"]
+        </div>
+    }
+
+    <div class="app-notice app-notice-info" role="note">
+        <strong>Mốc cần nhớ:</strong> ngày chuyển đi là ngày cuối ở phòng cũ; phòng mới tính từ ngày kế tiếp.
+        Khoản phát sinh đến hết ngày chuyển thuộc hóa đơn phòng cũ.
     </div>
-}
 
-<div class="card shadow-sm" style="max-width:560px">
-    <div class="card-body">
-        <form asp-action="Create" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="HopDongCuId" />
-            <div class="mb-3">
-                <label class="form-label">Ngày chuyển đi <span class="text-danger">*</span></label>
+    <form asp-action="Create" method="post" class="app-panel lifecycle-form-panel">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="HopDongCuId" />
+        <div class="app-panel-header">
+            <div>
+                <h2>Thông tin bàn giao</h2>
+                <p>Giá trị tiền và dịch vụ được gửi về server theo đúng contract hiện hữu.</p>
+            </div>
+        </div>
+        <div class="app-panel-body lifecycle-form-grid">
+            <div class="lifecycle-field-wide">
+                <label asp-for="NgayChuyenDi" class="form-label">Ngày chuyển đi <span class="text-danger" aria-hidden="true">*</span></label>
                 <input asp-for="NgayChuyenDi" type="date" class="form-control" />
-                <div class="form-text">Ngày cuối ở phòng cũ. Phòng mới tính từ ngày hôm sau.</div>
-                <div class="form-text">Khoản phát sinh đến hết ngày chuyển được đưa vào hóa đơn phòng cũ.</div>
+                <span asp-validation-for="NgayChuyenDi" class="text-danger small"></span>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Dịch vụ hợp đồng mới</label>
-                <div id="dichVuPhongMoi" class="border rounded p-2">
-                    <p class="text-muted small mb-0">Chọn phòng mới để tải dịch vụ.</p>
-                </div>
-                <div class="form-text">Dịch vụ bắt buộc không thể bỏ.</div>
-            </div>
-
-            <hr>
-            <h6 class="fw-bold">Phòng mới</h6>
-            <div class="mb-3">
-                <label class="form-label">Chọn phòng <span class="text-danger">*</span></label>
+            <section class="lifecycle-room-card" aria-labelledby="new-room-title">
+                <h3 id="new-room-title">1. Chọn phòng mới</h3>
+                <label asp-for="PhongMoiId" class="form-label">Phòng trống <span class="text-danger" aria-hidden="true">*</span></label>
                 <select asp-for="PhongMoiId" class="form-select">
                     <option value="">-- Chọn phòng trống --</option>
-                    @foreach (var p in Model.DsPhongTrong)
+                    @foreach (var room in Model.DsPhongTrong)
                     {
-                        <option value="@p.Id">@p.TenPhong - @p.GiaThueMacDinh.ToString("N0") đ/tháng</option>
+                        <option value="@room.Id">@room.TenPhong - @room.GiaThueMacDinh.ToString("N0") đ/tháng</option>
                     }
                 </select>
                 <span asp-validation-for="PhongMoiId" class="text-danger small"></span>
-                <div class="form-text">
-                    Nếu phòng mới có dịch vụ theo chỉ số, hãy nhập chỉ số kỳ chuyển trước khi xác nhận.
-                </div>
-                <a id="linkNhapChiSoPhongMoi"
-                   href="#"
-                   class="btn btn-sm btn-outline-primary mt-2 disabled"
-                   aria-disabled="true">
-                    <i class="bi bi-speedometer2"></i> Nhập chỉ số phòng mới
+                <a id="linkNhapChiSoPhongMoi" href="#" class="btn btn-outline-primary disabled" aria-disabled="true">
+                    Nhập chỉ số phòng mới
                 </a>
-            </div>
+                <p class="form-text">Dịch vụ theo chỉ số cần có chỉ số kỳ chuyển trước khi xác nhận.</p>
+            </section>
 
-            <div class="row g-3 mb-3">
-                <div class="col">
-                    <label class="form-label">Tiền thuê mới (đ) <span class="text-danger">*</span></label>
-                    <input asp-for="TienThueMoi" type="number" class="form-control" min="0" step="50000" />
-                    <span asp-validation-for="TienThueMoi" class="text-danger small"></span>
+            <section class="lifecycle-room-card" aria-labelledby="new-contract-title">
+                <h3 id="new-contract-title">2. Giá trị hợp đồng mới</h3>
+                <div class="lifecycle-money-grid">
+                    <div>
+                        <label asp-for="TienThueMoi" class="form-label">Tiền thuê mới (đ) <span class="text-danger" aria-hidden="true">*</span></label>
+                        <input asp-for="TienThueMoi" type="number" class="form-control" min="0" step="50000" />
+                        <span asp-validation-for="TienThueMoi" class="text-danger small"></span>
+                    </div>
+                    <div>
+                        <label asp-for="TienCocMoi" class="form-label">Tiền cọc mới (đ)</label>
+                        <input asp-for="TienCocMoi" type="number" class="form-control" min="0" step="100000" />
+                        <p class="form-text">Cọc phòng cũ: <strong>@Model.TienCocCu.ToString("N0") đ</strong></p>
+                    </div>
                 </div>
-                <div class="col">
-                    <label class="form-label">Tiền cọc mới (đ)</label>
-                    <input asp-for="TienCocMoi" type="number" class="form-control" min="0" step="100000" />
-                    <div class="form-text">Cọc cũ: @Model.TienCocCu.ToString("N0") đ</div>
+            </section>
+
+            <section class="lifecycle-field-wide lifecycle-services" aria-labelledby="new-services-title">
+                <h3 id="new-services-title">3. Dịch vụ hợp đồng mới</h3>
+                <div id="dichVuPhongMoi" class="lifecycle-service-list" aria-live="polite">
+                    <p class="text-muted small mb-0">Chọn phòng mới để tải dịch vụ.</p>
                 </div>
-            </div>
+                <p class="form-text">Dịch vụ bắt buộc được đánh dấu bằng chữ và không thể bỏ chọn.</p>
+            </section>
 
-            <div class="alert alert-info py-2 small">
-                <i class="bi bi-info-circle"></i>
-                DV <strong>Cố định</strong> tính ở hóa đơn phòng mới khi chuyển giữa tháng; nếu chuyển cuối tháng thì tính ở hóa đơn phòng cũ.
-                DV <strong>Theo chỉ số</strong> cần có chỉ số phòng cũ và phòng mới trong kỳ chuyển.
-                Chuyển ngày cuối tháng không yêu cầu chỉ số/hóa đơn phòng mới ở tháng cũ.
+            <div class="lifecycle-field-wide app-notice app-notice-warning" role="note">
+                Dịch vụ cố định và theo chỉ số được tính theo quy tắc hiện hữu của service. JavaScript trên màn hình này không tính tiền hay quyết định khả năng chuyển.
             </div>
-
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary">Xác nhận chuyển phòng</button>
-                <a asp-controller="HopDong" asp-action="Details"
-                   asp-route-id="@Model.HopDongCuId" class="btn btn-outline-secondary">Hủy</a>
-            </div>
-        </form>
-    </div>
+        </div>
+        <div class="lifecycle-form-actions">
+            <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDongCuId" class="btn btn-outline-secondary">Hủy</a>
+            <button class="btn btn-primary">Xác nhận chuyển phòng</button>
+        </div>
+    </form>
 </div>
 
-<script>
-    (() => {
-        const phongSelect = document.querySelector("[name='PhongMoiId']");
-        const ngayChuyenDiInput = document.querySelector("[name='NgayChuyenDi']");
-        const link = document.getElementById("linkNhapChiSoPhongMoi");
-        const serviceContainer = document.getElementById('dichVuPhongMoi');
-        let restoreSelection = @restoreSelection.ToString().ToLowerInvariant();
-        const selectedIds = new Set(@Html.Raw(selectedJson));
-        const baseUrl = "@Url.Action("NhapTheoPhong", "ChiSo")";
-        const serviceUrl = "@Url.Action("DichVuTheoPhong", "HopDong")";
-        const hopDongCuId = "@Model.HopDongCuId";
-
-        const syncLink = () => {
-            const phongId = phongSelect?.value;
-            const ngayChuyenDi = ngayChuyenDiInput?.value;
-
-            if (!phongId || !ngayChuyenDi) {
-                link.href = "#";
-                link.classList.add("disabled");
-                link.setAttribute("aria-disabled", "true");
-                return;
-            }
-
-            const date = new Date(`${ngayChuyenDi}T00:00:00`);
-            const thang = date.getMonth() + 1;
-            const nam = date.getFullYear();
-            const params = new URLSearchParams({
-                phongId,
-                thang,
-                nam,
-                returnHopDongId: hopDongCuId
-            });
-
-            link.href = `${baseUrl}?${params.toString()}`;
-            link.classList.remove("disabled");
-            link.removeAttribute("aria-disabled");
-        };
-
-        const loadServices = async () => {
-            const phongId = phongSelect?.value;
-            if (!phongId) {
-                serviceContainer.innerHTML = '<p class="text-muted small mb-0">Chọn phòng mới để tải dịch vụ.</p>';
-                return;
-            }
-            const response = await fetch(`${serviceUrl}?phongId=${encodeURIComponent(phongId)}`);
-            if (!response.ok) {
-                serviceContainer.innerHTML = '<p class="text-danger small mb-0">Không tải được dịch vụ.</p>';
-                return;
-            }
-            const rows = await response.json();
-            serviceContainer.innerHTML = rows.map(item => {
-                const checked = item.batBuoc || !restoreSelection || selectedIds.has(item.id);
-                const lock = item.batBuoc ? 'onclick="return false"' : '';
-                const badge = item.batBuoc ? '<span class="badge bg-danger ms-1">Bắt buộc</span>' : '';
-                return `<div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" name="PhongDichVuIds"
-                           value="${item.id}" id="pdv_${item.id}" ${checked ? 'checked' : ''} ${lock}>
-                    <label class="form-check-label" for="pdv_${item.id}">
-                        ${item.tenDichVu} ${badge}
-                        <span class="text-muted small">— ${Number(item.donGia || 0).toLocaleString('vi-VN')} đ</span>
-                    </label>
-                </div>`;
-            }).join('') || '<p class="text-warning small mb-0">Phòng chưa cấu hình dịch vụ.</p>';
-        };
-
-        phongSelect?.addEventListener("change", () => {
-            selectedIds.clear();
-            restoreSelection = false;
-            syncLink();
-            loadServices();
-        });
-        ngayChuyenDiInput?.addEventListener("change", syncLink);
-        syncLink();
-        loadServices();
-    })();
-</script>
+@section Scripts {
+    <script src="~/js/lifecycle.js" asp-append-version="true"></script>
+}
