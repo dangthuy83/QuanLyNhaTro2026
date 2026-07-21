@@ -64,14 +64,23 @@ public class TraPhongService(
 
             await using var conn = new MySqlConnection(config.GetConnectionString("DefaultConnection"));
             await conn.OpenAsync();
-            var chiTietDv = await TinhChiTietDichVuAsync(conn, null, hd.PhongId, hopDongId, dvPhong, thang, nam);
-            tongDichVuThangCuoi = chiTietDv.Sum(d => d.ThanhTien);
+            try
+            {
+                var chiTietDv = await TinhChiTietDichVuAsync(
+                    conn, null, hd.PhongId, hopDongId, dvPhong, thang, nam);
+                tongDichVuThangCuoi = chiTietDv.Sum(d => d.ThanhTien);
+            }
+            catch (ThieuChiSoTraPhongException ex)
+            {
+                lyDoChanTraPhong = ex.Message;
+            }
         }
 
         decimal tongNo = await hoaDonRepo.GetTongNoConLaiAsync(hopDongId);
         var khoanPhatSinh = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(hopDongId, ngayTraPhong);
         decimal tongPhatSinhChuaXuLy = khoanPhatSinh.Sum(x => x.SoTienConLai);
-        if (canSinhHd) tongNo += tienPhongProRata + tongDichVuThangCuoi + tongPhatSinhChuaXuLy;
+        if (canSinhHd && lyDoChanTraPhong == null)
+            tongNo += tienPhongProRata + tongDichVuThangCuoi + tongPhatSinhChuaXuLy;
         else tongNo += tongPhatSinhChuaXuLy;
         decimal soDuCoc = await giaoDichCocService.GetSoDuHienTaiAsync(hopDongId);
         decimal tienTruNoTuCoc = Math.Min(soDuCoc, Math.Max(0, tongNo));
@@ -83,7 +92,7 @@ public class TraPhongService(
             TenKhachChinh = khach?.HoTen ?? "(chua co khach)",
             TienCoc = soDuCoc,
             NgayTraPhong = ngayTraPhong,
-            CoTheTraPhong = danhGiaHoaDon != KetQuaDanhGiaHoaDonKyTraPhong.BiChan,
+            CoTheTraPhong = lyDoChanTraPhong == null,
             LyDoChanTraPhong = lyDoChanTraPhong,
             HoaDonKyTraPhongId = hdThangNay?.Id,
             CanSinhHoaDonMoi = canSinhHd,
@@ -336,7 +345,8 @@ public class TraPhongService(
             {
                 var chiSo = await LayChiSoAsync(conn, tx, phongId, hopDongId, dv.DichVuId, thang, nam);
                 if (chiSo == null)
-                    throw new InvalidOperationException($"Thieu chi so {dv.DichVu.TenDichVu} ky {thang}/{nam} de tra phong.");
+                    throw new ThieuChiSoTraPhongException(
+                        $"Thieu chi so {dv.DichVu.TenDichVu} ky {thang}/{nam} de tra phong.");
 
                 var soLuong = ChiSoConsumptionCalculator.Calculate(chiSo);
                 result.Add(new ChiTietDichVuTam(
@@ -526,4 +536,7 @@ public class TraPhongService(
         decimal SoLuong,
         decimal DonGia,
         decimal ThanhTien);
+
+    private sealed class ThieuChiSoTraPhongException(string message)
+        : InvalidOperationException(message);
 }

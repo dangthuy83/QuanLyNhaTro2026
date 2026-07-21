@@ -9,6 +9,10 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
+@if (TempData["Success"] != null)
+{
+    <div class="app-notice is-success" role="status">@TempData["Success"]</div>
+}
 <div class="row g-4">
     <div class="col-md-5">
         <div class="card shadow-sm">

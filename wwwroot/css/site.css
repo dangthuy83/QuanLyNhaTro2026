@@ -1708,6 +1708,7 @@ p {
     .services-field-wide { grid-column: auto; }
     .services-price-page > .row { display: grid; gap: var(--space-md); }
     .services-price-page > .row > * { width: 100%; padding: 0; }
+    .services-price-page .btn { min-width: 2.75rem; min-height: 2.75rem; }
     .services-method-page .card { overflow: hidden; }
     .services-method-page .card-body.row { display: grid; grid-template-columns: 1fr; margin: 0; }
     .services-method-page .card-body.row > * { width: 100%; padding-right: 0; padding-left: 0; }
@@ -1717,6 +1718,7 @@ p {
 
 @media (pointer: coarse) {
     .services-page .btn, .services-page .form-control, .services-page .form-select, .services-page .form-check-input { min-height: 2.75rem; }
+    .services-price-page .btn { min-width: 2.75rem; }
 }
 
 /* UI-008: Houses */
@@ -4087,6 +4089,7 @@ p {
     .tenants-table td::before { content: attr(data-label); color: var(--color-muted); font-size: .72rem; font-weight: 750; text-transform: uppercase; }
     .tenants-table td:first-child { display: block; }
     .tenants-table td:first-child::before { display: none; }
+    .tenants-details-page .tenants-table a { display: inline-flex; min-height: 2.75rem; align-items: center; }
     .tenants-row-actions { display: grid !important; grid-template-columns: 1fr 1fr !important; padding-top: .7rem !important; border-top: 1px solid var(--color-border) !important; }
     .tenants-photo-grid { grid-template-columns: 1fr; }
     .tenants-name { display: inline-flex; min-height: 2.75rem; align-items: center; }

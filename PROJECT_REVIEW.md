@@ -1413,3 +1413,28 @@ overflow và console không có error.
 Kết luận: code presentation UI-006 đến UI-013 đã hoàn thành nhưng acceptance **không đạt 100%** do
 các blocker/gap ghi trong bảng. Hosting Bundle 10.0.10 đã có; không migration/import, stage/commit/
 push, publish/deploy hoặc NSSM switch.
+
+## UI-006 đến UI-013 - kết quả gap closure (21/07/2026)
+
+| Mục | Kết quả |
+|---|---|
+| UI-006 | PASS trên DB QA: xóa khách đang có hợp đồng/quan hệ bị chặn ở UI và POST, dữ liệu giữ nguyên; khách chưa dùng xóa được sau reset. |
+| UI-009 | PASS trên DB QA: hóa đơn dùng đúng snapshot giá; mốc đã dùng không xóa được và DB không đổi; mốc chưa dùng xóa được. |
+| UI-010 | `DaThu`: N/A vì không có write path hiện hữu. `DaTruCoc`: PASS qua flow Trả phòng. `Điều chỉnh`: PASS qua flow Chuyển phòng nội bộ. |
+| UI-011 | FIXED: thiếu chỉ số trở thành blocker ModelState/ViewModel, không HTTP 500; execute vẫn rollback; success path pass trên snapshot riêng. |
+| UI-012 Nhắc nợ | FIXED: vắng tham số dùng mặc định đang ở; tham số rỗng là `Tất cả`, bao gồm đang ở/đã kết thúc/đã chuyển và đủ nhóm tuổi nợ. |
+| UI-012 Kiểm tra dữ liệu | FIXED: GET không gọi activation/mutation; fingerprint dump trước/sau trùng tuyệt đối. |
+| UI-013 | PASS: automation chứng minh drawer/Escape/focus return/focus-visible; người dùng manual QA Tab + Enter, URL tới `#main-content` và focus vào nội dung chính. |
+
+Acceptance UI-006 đến UI-013 **đạt 100%**: mọi gap đã được đóng bằng Browser/POST/DB QA hoặc được
+chứng minh N/A theo contract hiện hữu; bước keyboard skip-link cuối đã được người dùng xác nhận trên
+trình duyệt thật.
+
+Không có schema/migration, auth, package, công thức tài chính, cọc/công nợ, settlement hay deploy.
+Hai file opening-balance được giữ nguyên; không stage/commit/push trong batch này.
+
+Validation cuối: SDK 10.0.302; restore/build app và ba tool net10.0 warning-as-error đều
+`0 warning / 0 error`; audit NuGet direct/transitive không vulnerable/deprecated; Impeccable
+detector `[]`. Hậu kiểm DB vận hành khớp 25/25 row count và checksum với bản restore baseline.
+Toàn bộ listener, Browser session, hai schema QA/compare, snapshot, dump, log, cache và harness của
+batch đã được dọn.

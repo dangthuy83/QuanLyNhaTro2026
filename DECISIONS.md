@@ -765,3 +765,20 @@ Cập nhật lần cuối: Phiên 68 - 16/07/2026. REVIEW-025 đã diễn tập 
 - Không công bố acceptance 100% khi còn flow chưa chứng minh hoặc lỗi hành vi ngoài phạm vi
   presentation. Ba blocker đã xác nhận là: preview Trả phòng trả HTTP 500 khi thiếu chỉ số, bộ lọc
   Nhắc nợ `Tất cả` bị ép về `DangHieuLuc`, và GET Kiểm tra dữ liệu có thể kích hoạt hợp đồng đến hạn.
+
+## UI-006 đến UI-013 - quyết định đóng gap acceptance (21/07/2026)
+
+- Preview Trả phòng được phép trả về ViewModel bị chặn khi thiếu chỉ số. Chỉ exception thiếu chỉ số
+  do `TraPhongService` nhận diện mới được chuyển thành `CoTheTraPhong = false` và ModelState; đường
+  thực thi vẫn ném lỗi và rollback. Không đổi công thức, nối chỉ số, settlement hay transaction.
+- `NhacNo` phân biệt query không truyền `trangThaiHopDong` (mặc định `DangHieuLuc`) với query có
+  tham số rỗng (người vận hành chọn `Tất cả`, không lọc trạng thái hợp đồng).
+- `KiemTraDuLieu/Index` là GET kiểm tra read-only và không kích hoạt hợp đồng đến hạn. Workflow kích
+  hoạt hiện hữu không được chuyển sang GET khác; mọi mutation phải tiếp tục đi qua workflow vận hành
+  có chủ đích.
+- `DaThu` hiện chỉ là hằng/nhãn, chưa có đường controller/service tạo trạng thái đó nên acceptance
+  ghi N/A theo contract hiện tại. `DaTruCoc` được tạo thật qua Trả phòng; `Điều chỉnh` chỉ được tạo
+  nội bộ bởi Chuyển phòng, không phải lựa chọn nhập tay.
+- Người dùng đã hoàn tất manual QA skip link trên trình duyệt thật: Tab đưa focus tới link, Enter
+  chuyển URL tới `#main-content` và focus vào nội dung chính. Kết hợp với bằng chứng automation cho
+  drawer, Escape, `inert`, focus return và focus-visible, acceptance UI-006 đến UI-013 đạt 100%.

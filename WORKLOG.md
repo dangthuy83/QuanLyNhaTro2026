@@ -2927,3 +2927,37 @@ Khi kết thúc phiên:
   phát sinh và keyboard activation của skip link. Các mục này không được ghi nhận pass.
 - Không migration/import, không publish/deploy/NSSM switch, không stage/commit/push. Hosting Bundle
   10.0.10 chỉ được ghi nhận là đã có; toàn bộ listener, schema QA và artifact tạm được dọn cuối batch.
+
+## 21/07/2026 - UI-006-TO-UI-013-GAP-CLOSURE
+
+- Baseline xác nhận `HEAD = main = origin/main = 6bb8a2756985e47923e34b6570de947db0e2d4bc`.
+  MigrationRunner `status` chỉ đọc nhận đủ bootstrap 01-10 và journal 11-12; không apply migration.
+- Mọi seed, POST và lifecycle chạy trên schema tạm `QuanLyNhaTro_UI_GAP_20260721_001`, khôi phục
+  snapshot riêng giữa control/blocker/success case. DB vận hành chỉ SELECT.
+- UI-006: service tạo khách đang dùng, hợp đồng và `HopDongKhachThue`; xóa bằng Browser và POST trực
+  tiếp đều bị chặn cùng lý do, ba bản ghi vẫn còn. Sau reset, khách chưa dùng xóa thành công.
+- UI-009: service tạo lịch sử giá và hóa đơn snapshot đúng `123.456 đ`; mốc đã dùng bị chặn và DB
+  không đổi, mốc chưa dùng xóa được. Không chèn quan hệ giả để né guard.
+- UI-010: source scan xác nhận `DaThu` không có write path nên N/A theo contract hiện tại.
+  `DaTruCoc` được tạo qua Trả phòng thành công; `Điều chỉnh` được tạo qua Chuyển phòng và không xuất
+  hiện trong lựa chọn nhập tay.
+- UI-011: tái hiện baseline HTTP 500 với stack từ `TraPhongService.TinhChiTietDichVuAsync` qua
+  `TinhPreviewAsync` tới `TraPhongController.Confirm`. Bản sửa trả blocker recoverable ở 1440/768/
+  390; execute vẫn rollback. Success path chạy trên snapshot riêng và tạo kết quả `DaTruCoc`.
+- UI-012 Nhắc nợ: không truyền trạng thái mặc định `DangHieuLuc`; truyền rỗng hiển thị cả
+  `DangHieuLuc`, `DaKetThuc`, `DaChuyenPhong`, gồm chưa đến hạn, quá hạn 16 ngày và trên 30 ngày.
+  GET Kiểm tra dữ liệu có dump fingerprint trước/sau trùng tuyệt đối:
+  `2C298FBF998A4F0B9A0A67DF7A8CBFE64743A8E9F40D26C47E1DF9F378BA5610`.
+- UI-013: Browser chứng minh drawer 390px, Escape, `inert`, focus return và outline focus-visible.
+  Người dùng hoàn tất manual QA: Tab focus skip link, Enter chuyển URL tới `#main-content` và focus
+  vào nội dung chính. Gap keyboard cuối đã đóng; acceptance UI-006 đến UI-013 đạt 100%.
+- Regression đăng nhập thật đại diện UI-001 đến UI-012 ở 1440px không overflow; các route ảnh hưởng
+  đã kiểm tra 1440/768/390, target mobile tối thiểu 44px. Impeccable detector `[]`; scan toàn repo
+  chỉ còn các inline/`Html.Raw` lịch sử ngoài phạm vi thay đổi, không phát sinh mới trong batch.
+- Restore và build app cùng ba tool bằng SDK 10.0.302, net10.0, warning-as-error đều đạt
+  `0 warning / 0 error`. Audit NuGet online direct/transitive: không vulnerable, không deprecated.
+- Hậu kiểm DB vận hành so với bản restore baseline: 25/25 bảng có row count và `CHECKSUM TABLE`
+  trùng khớp, fingerprint vector là
+  `C502A96A419E6F07DBA7FC2F14A2023AEE095D8D2E1184499CEFA2B75466422E`.
+- Đã dừng listener QA, đóng Browser, drop cả schema QA và schema compare, xóa snapshot/dump/log,
+  baseline copy và `UiGapHarness`. Không còn schema hoặc artifact tạm của batch.

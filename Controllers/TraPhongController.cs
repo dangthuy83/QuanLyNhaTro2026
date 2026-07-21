@@ -16,6 +16,8 @@ public class TraPhongController(
             return BadRequest("Hợp đồng không hợp lệ.");
 
         var vm = await svc.TinhPreviewAsync(hopDongId, ngayTraPhong ?? DateTime.Today);
+        if (!vm.CoTheTraPhong && !string.IsNullOrWhiteSpace(vm.LyDoChanTraPhong))
+            ModelState.AddModelError(string.Empty, vm.LyDoChanTraPhong);
         return View(vm);
     }
 

@@ -16,7 +16,9 @@ public class NhacNoController(
     {
         ViewData["ActiveMenu"] = "nhacno";
 
-        trangThaiHopDong ??= "DangHieuLuc";
+        trangThaiHopDong = Request.Query.ContainsKey(nameof(trangThaiHopDong))
+            ? trangThaiHopDong ?? string.Empty
+            : "DangHieuLuc";
         nhomNo ??= "QuaHan";
 
         var all = (await hoaDonRepo.GetCongNoAsync()).ToList();
