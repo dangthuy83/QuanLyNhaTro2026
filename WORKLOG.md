@@ -10,7 +10,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | UPGRADE-NET10 hoàn tất; Hosting Bundle 10.0.10 đã cài trên máy này; còn gate riêng cho publish/deploy và NSSM/service switch |
+| Giai đoạn | RELEASE net10.0 + Remember Me đã switch NSSM và hoàn tất manual login/persistent-cookie smoke ngày 21/07/2026 |
 | Build | Phiên 73: app và ba tool `net10.0` build với SDK 10.0.302, `0 warning / 0 error` khi bật `-warnaserror` |
 | Restore | Phiên 73: restore đủ bốn project; audit direct/transitive không có package deprecated/vulnerable |
 | Database | Phiên 73: DB vận hành chỉ chạy `MigrationRunner status` trước/sau và giữ journal 1..12; mọi POST/import chạy trên DB tạm `qlnt_upgrade_net10_019f8032`, sau đó dọn bỏ. |
@@ -2974,3 +2974,28 @@ Khi kết thúc phiên:
 - HTTP QA: remember=false không có `Expires`; remember=true có expiry 365 ngày; logout phát cookie
   xóa; route bảo vệ sau logout redirect về Login. Browser QA 1440/390 không overflow, label/target
   61.875px, nút 48px, console sạch. Impeccable detector `[]`.
+
+## 21/07/2026 - RELEASE net10.0, Remember Me và mật khẩu NSSM
+
+- Baseline release: `HEAD = main = origin/main = 35adf93c89026ffcbb715ded44c16a1e30fe2227`, SDK
+  10.0.302. App và ba tool build Release warning-as-error đều `0 warning / 0 error`; audit NuGet
+  direct/transitive không có package vulnerable.
+- MigrationRunner `status` chỉ đọc nhận đủ journal 01-12, không apply. Snapshot
+  `--single-transaction` restore vào DB QA riêng và đối chiếu 25 bảng không lệch row count; schema
+  QA và dump tạm đã xóa.
+- Artifact sạch được publish vào
+  `C:\Apps\QuanLyNhaTro-Releases\35adf93-remember-20260721-223902`, 55 file, DLL SHA-256
+  `8EA5DFB8180710CD956122706B35641D52EA3375E5D8F62ECE11DCA790921C04`; không chứa appsettings,
+  Database, tools hoặc opening-balance.
+- Lần switch đầu rollback thành công về release cũ vì harness PowerShell thiếu assembly HTTP;
+  release cũ sau rollback vẫn Running và `/healthz` 200. Sau khi sửa harness, switch lần hai pass:
+  NSSM Running, `/healthz` 200, Login 200 có RememberMe, route `/Phong` chưa xác thực trả 302 về
+  Login. Hash NSSM khớp user-secrets local; connection string được chuyển sang environment ngoài
+  artifact. Không in hoặc lưu secret trong evidence.
+- Browser release QA tại 1440/768/390: console sạch, không overflow; mobile input/nút 48px và vùng
+  Remember Me 62px. Người dùng đăng nhập NSSM thành công bằng mật khẩu mới, chọn `Ghi nhớ trên
+  thiết bị này`, đóng trình duyệt rồi mở lại và vào thẳng ứng dụng không cần đăng nhập; manual
+  password/persistent-cookie smoke pass.
+- DB vận hành chỉ SELECT; dump fingerprint trước/sau release trùng tuyệt đối:
+  `C187E63E4263AACDA6D785F0C06A9E336E051E7B01294060F96D913E9C48C76F` (25 bảng). Không migration,
+  import, schema change hoặc xoay Data Protection keys.

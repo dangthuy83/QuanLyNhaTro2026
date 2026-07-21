@@ -1445,3 +1445,18 @@ batch đã được dọn.
   mặc định vẫn là phiên 8 giờ, logout vẫn xóa cookie thiết bị hiện tại.
 - Password tối thiểu 8 ký tự; local VS Code dùng .NET user-secrets. Không có secret/hash mới trong
   repository và chưa thay cấu hình NSSM production.
+
+## RELEASE - net10.0 + Remember Me (21/07/2026)
+
+NSSM `QuanLyNhaTro` đã switch thành công sang
+`C:\Apps\QuanLyNhaTro-Releases\35adf93-remember-20260721-223902` từ commit
+`35adf93c89026ffcbb715ded44c16a1e30fe2227`. DLL SHA-256 là
+`8EA5DFB8180710CD956122706B35641D52EA3375E5D8F62ECE11DCA790921C04`; release cũ vẫn được giữ
+nguyên cho rollback.
+
+Health 200, Login 200 có RememberMe và auth redirect 302 pass sau switch. Browser 1440/768/390
+không overflow, console sạch, target mobile đạt 44px. Hash password NSSM khớp user-secrets local
+nhưng không được ghi ra. Người dùng đã đăng nhập NSSM thành công, chọn ghi nhớ, đóng/mở lại trình
+duyệt và vào ứng dụng không cần đăng nhập; persistent-cookie smoke pass. DB vận hành chỉ SELECT,
+journal 01-12, fingerprint dump 25 bảng trước/sau trùng tuyệt đối. Không migration, import, schema
+change hay xoay Data Protection keys.

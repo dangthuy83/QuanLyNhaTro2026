@@ -792,3 +792,14 @@ Cập nhật lần cuối: Phiên 68 - 16/07/2026. REVIEW-025 đã diễn tập 
 - Mật khẩu quản trị tối thiểu 8 ký tự. `AdminPasswordHasher` chỉ sinh hash, không tự ghi cấu hình.
 - Development dùng .NET user-secrets qua `UserSecretsId`; không lưu hash trong appsettings/repo.
   Cấu hình NSSM production là gate riêng và không thay đổi trong batch này.
+
+## RELEASE - net10.0 và Remember Me trên NSSM (21/07/2026)
+
+- Sau approval riêng của chủ hệ thống, NSSM `QuanLyNhaTro` được chuyển sang release versioned
+  `C:\Apps\QuanLyNhaTro-Releases\35adf93-remember-20260721-223902`; release cũ được giữ nguyên để
+  rollback.
+- Artifact publish không mang `appsettings*.json`, `Database`, `tools` hoặc opening-balance. Cấu
+  hình kết nối vận hành và hash mật khẩu được cấp qua `AppEnvironmentExtra`; hash NSSM lấy đúng từ
+  user-secrets Development hiện tại, không ghi plaintext/hash vào repository hay nhật ký.
+- Không apply migration, import hoặc sửa dữ liệu vận hành. Data Protection keys không xoay nên
+  cookie hiện hữu không bị thu hồi hàng loạt chỉ bởi lần release này.
