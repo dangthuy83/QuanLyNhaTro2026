@@ -70,6 +70,10 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 - Sau approval deploy riêng, release `2863277-legacy-period-20260726-235900` đã được switch qua
   NSSM. `QuanLyNhaTro` chạy artifact mới và `/healthz` trả HTTP 200; không migration, không ghi
   production DB và không thay đổi contract cutover/tài chính.
+- Hotfix kế tiếp `6365889` xác nhận cả GET `KiemTraDuLieu/Index` là consumer của kỳ thu: dùng
+  `BillingCollectionPeriodPolicy.Resolve`, redirect kỳ cũ về default cùng thông báo và không gọi
+  preview hóa đơn với kỳ bị policy từ chối. Không khôi phục `DefaultBillingPeriodResolver` cho
+  màn này.
 
 ---
 

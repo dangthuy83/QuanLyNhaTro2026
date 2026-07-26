@@ -3256,3 +3256,21 @@ Khi kết thúc phiên:
   tại port 5001 trả HTTP 200 `{"status":"healthy"}`. GET chưa đăng nhập `/HoaDon?thang=8&nam=2026`
   trả 302 về Login đúng auth gate. Không migration, không ghi production DB; artifact `2128d48`
   được giữ lại làm rollback.
+
+## 26/07/2026 - HOTFIX-KIEMTRADULIEU-LEGACY-PERIOD-500
+
+- Production báo `KiemTraDuLieu` HTTP 500. Root cause source: controller còn resolve default
+  `06/2026` bằng `DefaultBillingPeriodResolver`, sau đó gọi `TinhHoaDonDuKienAsync`; policy
+  cutover từ chối kỳ trước `08/2026` và exception chưa được bắt.
+- `KiemTraDuLieuController.Index` nay resolve qua `BillingCollectionPeriodPolicy`; URL kỳ cũ
+  redirect về default `08/2026` cùng thông báo nghiệp vụ, nên không truyền kỳ bị từ chối vào
+  preview hóa đơn. Không thay đổi POST, `CutoverPeriod`, M13 hay contract tài chính.
+- Build `dotnet build QuanLyNhaTro.csproj -c Release --no-restore -warnaserror` pass `0 warning /
+  0 error`; `git diff --check` sạch trước commit. Commit source `6365889`.
+- Sau approval deploy: artifact
+  `C:\Apps\QuanLyNhaTro-Releases\6365889-legacy-readiness-20260726-220427` (55 files, không
+  config/schema/tools) đã switch `Application`/`AppDirectory` qua NSSM. Service
+  `SERVICE_RUNNING`, `/healthz` HTTP 200; GET chưa đăng nhập
+  `/KiemTraDuLieu?thang=8&nam=2026` trả 302 về Login đúng auth gate. Không migration, không ghi
+  production DB; artifact `2863277` vẫn giữ làm rollback. Browser production có auth chưa chạy vì
+  Browser trên máy QA bị chặn truy cập IP LAN.

@@ -72,6 +72,14 @@ chính sách; console warning/error rỗng. Sau approval deploy riêng, release
 `/healthz` trả HTTP 200. Không migration, không ghi production DB và không đổi M13/cutover hay
 contract tài chính.
 
+Follow-up cùng ngày: `KiemTraDuLieu/Index` còn dùng `DefaultBillingPeriodResolver`, nên GET mặc
+định `06/2026` gọi `TinhHoaDonDuKienAsync` và policy throw thành HTTP 500. Hotfix `6365889` đổi
+GET này sang policy cutover và redirect kỳ cũ về `08/2026` với thông báo. Release
+`6365889-legacy-readiness-20260726-220427` đã switch qua NSSM; service `SERVICE_RUNNING`,
+`/healthz` HTTP 200 và GET chưa đăng nhập `KiemTraDuLieu?thang=8&nam=2026` trả 302 về Login.
+Không migration, không ghi production DB; browser production có xác thực chưa chạy vì Browser
+trên máy QA bị chặn truy cập IP LAN.
+
 ---
 
 ## UPGRADE-NET10 - 20/07/2026
