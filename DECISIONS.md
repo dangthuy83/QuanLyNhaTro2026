@@ -59,6 +59,14 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   `InvalidOperationException` không bắt thành HTTP 500.
 - Đây chỉ là quyết định điều hướng/khả dụng. Không tạo hóa đơn lịch sử, không nới `CutoverPeriod`,
   không sửa migration M13 hay dữ liệu production để hỗ trợ URL cũ.
+- Cách áp dụng đã chốt cho batch sửa URL: Dashboard lấy trực tiếp
+  `BillingCollectionPeriodPolicy.DefaultCollectionPeriod()` để các link Hóa đơn, nhập chỉ số,
+  preview chốt và kiểm tra dữ liệu dùng cùng kỳ. Ba GET Hóa đơn có resolve kỳ (`Index`,
+  `ChotHangLoat`, `Create`) bắt `InvalidOperationException` của policy và redirect về kỳ mặc định
+  cùng thông báo nghiệp vụ; POST vẫn để policy fail-closed.
+- QA browser đã đăng nhập xác nhận Dashboard và các quick action mang kỳ `08/2026`; GET
+  `/HoaDon?thang=8&nam=2026` render bình thường và URL cũ `06/2026` redirect về `08/2026` kèm
+  thông báo chính sách. Đây là bằng chứng local-only, không mở quyền deploy/release/NSSM.
 
 ---
 

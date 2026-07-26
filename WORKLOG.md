@@ -10,8 +10,8 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Migration 13, release `2128d48` và cutover production HĐ #10 đã hoàn tất; cần xử lý riêng lỗi điều hướng kỳ trước cutover trên Tổng quan |
-| Build | Phiên 74: app và ba tool vận hành `net10.0` build SDK 10.0.302 với `-warnaserror`, `0 warning / 0 error` |
+| Giai đoạn | Migration 13, release `2128d48` và cutover production HĐ #10 đã hoàn tất; source đã sửa URL kỳ cũ, còn một gate deploy riêng |
+| Build | Phiên 75: app build SDK 10.0.302 với `-warnaserror`, `0 warning / 0 error` qua output cô lập |
 | Restore | Assets local đủ để build; package audit direct/transitive phiên 74 bị chặn vì môi trường không được phép truy cập NuGet, chưa được ghi nhận pass |
 | Database | Production đã có journal 01..13; mọi thao tác DB tiếp theo vẫn phải theo gate riêng và chỉ đọc cho đến khi được phê duyệt ghi |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
@@ -37,7 +37,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 10 | Rà tiếp UI chỉ số nhiều đoạn sau vận hành thật | Phiên 38 đã smoke test qua MVC form thật; in-app browser plugin bị lỗi hạ tầng `failed to write kernel assets` nên chưa có screenshot browser | Thấp |
 | 11 | Rà UI khoản phát sinh sau pilot | Đã có bản tối thiểu cho hợp đồng/hóa đơn/trả phòng; theo dõi nhu cầu ảnh hiện trạng, danh mục tài sản, hoặc báo cáo riêng | Thấp |
 | 12 | Rà màn sẵn sàng vận hành sau khi có dữ liệu thật | Màn `KiemTraDuLieu/Index` đã build pass; cần dùng với dữ liệu thật để tinh chỉnh bộ lọc/badge nếu phát sinh cách vận hành mới | Thấp |
-| 13 | Sửa điều hướng kỳ cũ trước cutover | Tổng quan dùng tháng trước (`06/2026`) nhưng `HoaDon/Index` chỉ nhận `KyThu >= 08/2026`, gây HTTP 500; cần batch code/QA/deploy riêng | Cao |
+| 13 | Sửa điều hướng kỳ cũ trước cutover | Source đã dùng kỳ thu mặc định và GET Hóa đơn kỳ cũ redirect có thông báo; Browser smoke đã đăng nhập/deploy còn là gate riêng | Cao |
 
 ### Quy ước GitHub
 
@@ -58,6 +58,24 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 75 - URL kỳ cũ sau cutover (26/07/2026)
+
+- Baseline `HEAD=a306663`; hai file opening-balance local vẫn untracked và không bị sửa, stage,
+  commit hay xóa.
+- `HomeController` không còn suy ra tháng trước; Dashboard dùng
+  `BillingCollectionPeriodPolicy.DefaultCollectionPeriod()` nên toàn bộ quick action đang bind
+  `Model.Thang/Nam` dẫn vào kỳ thu hợp lệ 08/2026.
+- GET `HoaDon/Index`, `HoaDon/ChotHangLoat` và `HoaDon/Create` bắt lỗi resolve kỳ cũ, đặt
+  thông báo chính sách và redirect về `HoaDon/Index` kỳ mặc định. POST/lập/chốt vẫn không đổi,
+  tiếp tục fail-closed ở policy/service; không sửa `CutoverPeriod`, M13 hay dữ liệu tài chính.
+- `dotnet build QuanLyNhaTro.csproj --no-restore -warnaserror -p:OutputPath=bin\\CutoverLegacyUrl\\`
+  pass `0 warning / 0 error`. Verifier controller tạm thời pass: GET `06/2026` redirect về
+  `08/2026` có thông báo, còn policy resolve trực tiếp `08/2026` hợp lệ. Verifier/log tạm đã xóa.
+- Browser smoke đã đăng nhập chưa thực hiện được: browser không có tab/session đăng nhập và
+  listener artifact cô lập không mở được. Không dùng credentials, không ghi production DB, không
+  deploy/NSSM/migration/stage/commit/push. Cần chạy lại smoke sau khi có phiên QA đã đăng nhập
+  hoặc sau approval deploy riêng.
 
 ### Phiên 74 - BILLING-ADVANCE-RENT-ARREARS-SERVICE-CUTOVER-202608
 
@@ -3212,3 +3230,21 @@ Khi kết thúc phiên:
   default của Dashboard với `BillingCollectionPeriodPolicy.DefaultCollectionPeriod()` và xử lý URL
   kỳ cũ bằng redirect/thông báo an toàn, rồi build + Browser smoke có xác thực trước một deploy gate
   riêng.
+
+## 26/07/2026 - DASHBOARD-LEGACY-COLLECTION-PERIOD-500 (sửa local, QA hoàn tất)
+
+- `HomeController` lấy kỳ mặc định từ `BillingCollectionPeriodPolicy.DefaultCollectionPeriod()`;
+  mọi quick action Dashboard tiếp tục dùng `Model.Thang/Nam`, nên đồng bộ về `08/2026`.
+  GET `HoaDon/Index`, `ChotHangLoat` và `Create` chuyển `InvalidOperationException` của policy
+  thành redirect về Index ở kỳ mặc định kèm thông báo nghiệp vụ; POST giữ fail-closed.
+- Build `dotnet build QuanLyNhaTro.csproj --no-restore -warnaserror` pass `0 warning / 0 error`.
+  Verifier controller xác nhận `08/2026` hợp lệ và `06/2026` redirect về `08/2026`; `git diff --check`
+  sạch.
+- Browser QA local đã đăng nhập: Dashboard hiển thị `Tổng quan tháng 8/2026`; Hóa đơn, nhập chỉ số,
+  chốt hàng loạt và kiểm tra dữ liệu đều có `thang=8&nam=2026`. Click link Hóa đơn từ Dashboard tới
+  `/HoaDon?thang=8&nam=2026`; direct GET kỳ hợp lệ render `Kỳ thu 8/2026`; direct GET URL cũ
+  `06/2026` redirect về `08/2026` và hiện thông báo “Chính sách thu tiền phòng trước chỉ áp dụng từ
+  kỳ thu 08/2026. Đã chuyển đến kỳ thu 08/2026.” Console warning/error rỗng.
+- Local QA dùng `UseEphemeralDataProtection=true` vì profile key ring bị từ chối; User Secrets cục bộ
+  chỉ dùng để admin đăng nhập và không được ghi/in vào repo. Không deploy/release/NSSM/migration,
+  không ghi production DB, không stage/commit/push. Dừng trước deploy để chờ approval riêng.

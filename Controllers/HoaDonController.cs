@@ -20,7 +20,15 @@ public class HoaDonController(
     public async Task<IActionResult> Index(int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "hoadon";
-        var ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
+        CollectionPeriods ky;
+        try
+        {
+            ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return RedirectToDefaultCollectionPeriod(ex);
+        }
         thang = ky.Thang;
         nam = ky.Nam;
 
@@ -52,7 +60,15 @@ public class HoaDonController(
         string trangThaiDong = "TatCa")
     {
         ViewData["ActiveMenu"] = "hoadon";
-        var ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
+        CollectionPeriods ky;
+        try
+        {
+            ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return RedirectToDefaultCollectionPeriod(ex);
+        }
         thang = ky.Thang;
         nam = ky.Nam;
 
@@ -138,7 +154,15 @@ public class HoaDonController(
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
         if (hopDong == null) return NotFound();
 
-        var ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
+        CollectionPeriods ky;
+        try
+        {
+            ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return RedirectToDefaultCollectionPeriod(ex);
+        }
         ViewBag.HopDong = hopDong;
         ViewBag.DuKien = await hoaDonService.TinhHoaDonDuKienAsync(hopDongId, ky.Thang, ky.Nam);
         ViewBag.Thang = ky.Thang;
@@ -346,5 +370,13 @@ public class HoaDonController(
             khach.HoTen.Contains(keyword, StringComparison.OrdinalIgnoreCase)
             || (!string.IsNullOrWhiteSpace(khach.SoDienThoai)
                 && khach.SoDienThoai.Contains(keyword, StringComparison.OrdinalIgnoreCase)));
+
+    }
+
+    private IActionResult RedirectToDefaultCollectionPeriod(InvalidOperationException ex)
+    {
+        var kyMacDinh = BillingCollectionPeriodPolicy.DefaultCollectionPeriod();
+        TempData["Error"] = $"{ex.Message} Đã chuyển đến kỳ thu {kyMacDinh.Month:D2}/{kyMacDinh.Year}.";
+        return RedirectToAction(nameof(Index), new { thang = kyMacDinh.Month, nam = kyMacDinh.Year });
     }
 }

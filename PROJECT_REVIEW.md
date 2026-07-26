@@ -59,6 +59,17 @@ GET kỳ cũ thành redirect/thông báo rõ ràng. Phải giữ fail-closed cho
 liệu lịch sử giả, không nới `CutoverPeriod`; build và Browser smoke đã đăng nhập phải pass trước khi
 mở một gate deploy riêng.
 
+Cập nhật source local cùng ngày: Dashboard đã dùng
+`BillingCollectionPeriodPolicy.DefaultCollectionPeriod()`; các quick action giữ `Model.Thang/Nam`
+nên cùng kỳ thu. GET `HoaDon/Index`, `ChotHangLoat` và `Create` nay bắt lỗi kỳ không hợp lệ, thông
+báo chính sách rồi redirect về `HoaDon/Index` ở kỳ mặc định; POST và `CutoverPeriod` không đổi.
+Build warning-as-error pass `0/0`; verifier controller xác nhận `06/2026 -> 08/2026` có thông báo
+và `08/2026` vẫn resolve hợp lệ. Browser smoke QA đã đăng nhập xác nhận Dashboard hiển thị
+`08/2026`, hai link Hóa đơn mang query `thang=8&nam=2026` và link được điều hướng tới Index hợp lệ.
+GET trực tiếp `08/2026` render `Kỳ thu 8/2026`; GET `06/2026` redirect về `08/2026` với thông báo
+chính sách; console warning/error rỗng. Đây vẫn chỉ là validation local; deploy-ready cần approval
+deploy riêng và không được suy ra từ browser QA.
+
 ---
 
 ## UPGRADE-NET10 - 20/07/2026

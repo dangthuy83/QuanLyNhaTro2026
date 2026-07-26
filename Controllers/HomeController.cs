@@ -17,9 +17,9 @@ public class HomeController(
         await hopDongService.KichHoatHopDongDenHanAsync(DateTime.Today);
         ViewData["ActiveMenu"] = "dashboard";
 
-        var ky = DefaultBillingPeriodResolver.Resolve();
-        var thang = ky.Thang;
-        var nam = ky.Nam;
+        var ky = BillingCollectionPeriodPolicy.DefaultCollectionPeriod();
+        var thang = ky.Month;
+        var nam = ky.Year;
 
         // ── Thống kê phòng ───────────────────────────────────────────────────
         var tatCaPhong = (await phongRepo.GetAllTheoTrangThaiHieuLucAsync(DateTime.Today)).ToList();
