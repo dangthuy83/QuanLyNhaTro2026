@@ -98,6 +98,8 @@ builder.Services.AddScoped<ChiSoNgoaiHopDongService>();
 builder.Services.AddScoped<TenantPhotoStorage>();
 builder.Services.AddScoped<ThuChiService>();
 builder.Services.AddScoped<MoSoService>();
+builder.Services.AddScoped<TinDungTienPhongService>();
+builder.Services.AddScoped<DongHopDongTruocCutoverService>();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();

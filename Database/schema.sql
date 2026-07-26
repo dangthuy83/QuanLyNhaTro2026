@@ -3,13 +3,11 @@
 -- MySQL 8.x / InnoDB / utf8mb4
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS QuanLyNhaTro
-    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE QuanLyNhaTro;
-
--- Fresh databases are created at the repository baseline through REVIEW-027.
--- Migration runners treat this row as covering all ordered migrations <= 12.
+-- Caller must create and select the target database explicitly before sourcing
+-- this file. This prevents a fresh-schema smoke from silently switching back to
+-- the operational database.
+-- Fresh databases are created at the repository baseline through sequence 13.
+-- Migration runners treat this row as covering all ordered migrations <= 13.
 CREATE TABLE MigrationJournal (
     MigrationId VARCHAR(160) PRIMARY KEY,
     SequenceNo INT NOT NULL,
@@ -23,8 +21,8 @@ CREATE TABLE MigrationJournal (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO MigrationJournal(MigrationId, SequenceNo, Sha256, Source, Notes)
-VALUES ('schema-baseline-20260716-review027', 12, NULL, 'FreshBaseline',
-        'Fresh schema already includes ordered migrations 1..12; no update script was replayed.');
+VALUES ('schema-baseline-20260726-advance-rent', 13, NULL, 'FreshBaseline',
+        'Fresh schema already includes ordered migrations 1..13; no update script was replayed.');
 
 -- ============================================================
 -- 1. NHA — Nhà trọ (bảng gốc, dù chỉ quản lý 1 nhà vẫn nên giữ
@@ -326,8 +324,15 @@ CREATE TABLE ChiSoDienNuoc (
     CONSTRAINT CK_ChiSo_NgayDoc CHECK (
         NgayDoc IS NOT NULL
         AND YEAR(NgayDoc) BETWEEN 2000 AND 2100
-        AND MONTH(NgayDoc) = Thang
-        AND YEAR(NgayDoc) = Nam
+        AND (
+            (NgayDoc BETWEEN
+                DATE_ADD(STR_TO_DATE(CONCAT(Nam,'-',LPAD(Thang,2,'0'),'-01'),'%Y-%m-%d'),INTERVAL 1 MONTH)
+                AND DATE_ADD(
+                    DATE_ADD(STR_TO_DATE(CONCAT(Nam,'-',LPAD(Thang,2,'0'),'-01'),'%Y-%m-%d'),INTERVAL 1 MONTH),
+                    INTERVAL 4 DAY))
+            OR
+            (MONTH(NgayDoc)=Thang AND YEAR(NgayDoc)=Nam)
+        )
     ),
     CONSTRAINT CK_ChiSo_KhongAmTrenDongHo CHECK (
         ChiSoDau >= 0
@@ -475,14 +480,19 @@ CREATE TABLE HoaDon (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     HopDongId INT NOT NULL,
     HoaDonGhepId INT NULL,
-    Thang TINYINT NOT NULL,
-    Nam SMALLINT NOT NULL,
+    KyThu DATE NOT NULL,
+    KyTienPhong DATE NOT NULL,
+    KyDichVu DATE NOT NULL,
+    LoaiHoaDon VARCHAR(30) NOT NULL DEFAULT 'DinhKy',
+    Thang TINYINT GENERATED ALWAYS AS (MONTH(KyThu)) STORED,
+    Nam SMALLINT GENERATED ALWAYS AS (YEAR(KyThu)) STORED,
     TienPhong DECIMAL(12,0) NOT NULL,
     SoNgayO TINYINT NULL,
     SoNgayTrongThang TINYINT NULL,
     TongTienDichVu DECIMAL(12,0) NOT NULL DEFAULT 0,
     TongTienPhatSinh DECIMAL(12,0) NOT NULL DEFAULT 0,
     TienNoKyTruoc DECIMAL(12,0) NOT NULL DEFAULT 0,
+    TienTinDungApDung DECIMAL(12,0) NOT NULL DEFAULT 0,
     TongCong DECIMAL(12,0) NOT NULL DEFAULT 0,
     SoTienDaThu DECIMAL(12,0) NOT NULL DEFAULT 0,
     TrangThaiThanhToan VARCHAR(20) NOT NULL DEFAULT 'ChuaThu',
@@ -499,30 +509,46 @@ CREATE TABLE HoaDon (
     CccdKhachDaiDienSnapshot VARCHAR(20) NULL,
     CONSTRAINT FK_HoaDon_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_HoaDon_Ghep FOREIGN KEY (HoaDonGhepId) REFERENCES HoaDon(Id),
-    CONSTRAINT UQ_HoaDon UNIQUE (HopDongId, Thang, Nam),
-    CONSTRAINT CK_HoaDon_Ky CHECK (Thang BETWEEN 1 AND 12 AND Nam BETWEEN 2000 AND 2100),
+    CONSTRAINT UQ_HoaDon UNIQUE (HopDongId, KyThu, LoaiHoaDon),
+    CONSTRAINT CK_HoaDon_Ky CHECK (
+        DAY(KyThu)=1 AND DAY(KyTienPhong)=1 AND DAY(KyDichVu)=1
+        AND YEAR(KyThu) BETWEEN 2000 AND 2100
+        AND KyThu >= '2026-08-01'
+        AND (
+            (LoaiHoaDon='DinhKy' AND KyTienPhong=KyThu
+             AND KyDichVu=DATE_SUB(KyThu,INTERVAL 1 MONTH))
+            OR
+            (LoaiHoaDon<>'DinhKy' AND KyTienPhong=KyThu AND KyDichVu=KyThu)
+        )
+    ),
+    CONSTRAINT CK_HoaDon_Loai CHECK (
+        LoaiHoaDon IN ('DinhKy','KhoiTaoHopDong','QuyetToanTraPhong',
+                       'QuyetToanChuyenPhongCu','QuyetToanChuyenPhongMoi')
+    ),
     CONSTRAINT CK_HoaDon_NgayNghiepVu CHECK (
         YEAR(NgayLap) BETWEEN 2000 AND 2100
         AND (NgayThuThucTe IS NULL OR YEAR(NgayThuThucTe) BETWEEN 2000 AND 2100)
     ),
     CONSTRAINT CK_HoaDon_NgayDenHan CHECK (
-        YEAR(NgayDenHan) BETWEEN 2000 AND 2101
-        AND NgayDenHan BETWEEN
-            DATE_ADD(STR_TO_DATE(CONCAT(Nam, '-', LPAD(Thang, 2, '0'), '-01'), '%Y-%m-%d'), INTERVAL 1 MONTH)
-            AND LAST_DAY(DATE_ADD(STR_TO_DATE(CONCAT(Nam, '-', LPAD(Thang, 2, '0'), '-01'), '%Y-%m-%d'), INTERVAL 1 MONTH))
+        (LoaiHoaDon='DinhKy' AND NgayDenHan=DATE_ADD(KyThu,INTERVAL 9 DAY))
+        OR
+        (LoaiHoaDon<>'DinhKy' AND NgayDenHan BETWEEN KyThu AND LAST_DAY(KyThu))
     ),
     CONSTRAINT CK_HoaDon_Tien CHECK (
         TienPhong >= 0
         AND TongTienDichVu >= 0
         AND TongTienPhatSinh >= 0
         AND TienNoKyTruoc >= 0
+        AND TienTinDungApDung >= 0
         AND TongCong >= 0
         AND SoTienDaThu >= 0
         AND SoTienDaThu <= TongCong
-        AND TongCong = TienPhong + TongTienDichVu + TongTienPhatSinh + TienNoKyTruoc
+        AND TongCong = TienPhong + TongTienDichVu + TongTienPhatSinh
+                       + TienNoKyTruoc - TienTinDungApDung
     ),
     CONSTRAINT CK_HoaDon_TrangThai CHECK (
         (SoTienDaThu = 0 AND TrangThaiThanhToan = 'ChuaThu')
+        OR (TongCong = 0 AND SoTienDaThu = 0 AND TrangThaiThanhToan = 'DaThu')
         OR (SoTienDaThu > 0 AND SoTienDaThu < TongCong AND TrangThaiThanhToan = 'ThuMotPhan')
         OR (SoTienDaThu = TongCong AND SoTienDaThu > 0 AND TrangThaiThanhToan = 'DaThu')
     ),
@@ -532,9 +558,7 @@ CREATE TABLE HoaDon (
             SoNgayO > 0
             AND SoNgayTrongThang BETWEEN 28 AND 31
             AND SoNgayO <= SoNgayTrongThang
-            AND SoNgayTrongThang = DAY(LAST_DAY(STR_TO_DATE(
-                CONCAT(Nam, '-', LPAD(Thang, 2, '0'), '-01'), '%Y-%m-%d'
-            )))
+            AND SoNgayTrongThang = DAY(LAST_DAY(KyTienPhong))
         )
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -577,6 +601,14 @@ CREATE TABLE ChiTietHoaDon (
     ThanhTien DECIMAL(12,0) NOT NULL,
     TenDichVuSnapshot VARCHAR(100) NOT NULL,
     DonViTinhSnapshot VARCHAR(30) NOT NULL,
+    KySuDung DATE NOT NULL,
+    NgayDocSnapshot DATE NULL,
+    ChiSoDauSnapshot DECIMAL(12,2) NULL,
+    ChiSoCuoiSnapshot DECIMAL(12,2) NULL,
+    LoaiGhiNhanSnapshot VARCHAR(20) NULL,
+    ChiSoTruocResetSnapshot DECIMAL(12,2) NULL,
+    ChiSoSauResetSnapshot DECIMAL(12,2) NULL,
+    LyDoDieuChinhSnapshot VARCHAR(255) NULL,
     CONSTRAINT FK_CTHD_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
     CONSTRAINT FK_CTHD_DichVu FOREIGN KEY (DichVuId) REFERENCES DichVu(Id),
     CONSTRAINT FK_CTHD_ChiSo FOREIGN KEY (ChiSoDienNuocId) REFERENCES ChiSoDienNuoc(Id),
@@ -585,6 +617,17 @@ CREATE TABLE ChiTietHoaDon (
         AND DonGia >= 0
         AND ThanhTien >= 0
         AND ThanhTien = ROUND(SoLuong * DonGia, 0)
+    ),
+    CONSTRAINT CK_CTHD_Ky CHECK (DAY(KySuDung)=1 AND YEAR(KySuDung) BETWEEN 2000 AND 2100),
+    CONSTRAINT CK_CTHD_ChiSoSnapshot CHECK (
+        (ChiSoDienNuocId IS NULL
+         AND NgayDocSnapshot IS NULL AND ChiSoDauSnapshot IS NULL
+         AND ChiSoCuoiSnapshot IS NULL AND LoaiGhiNhanSnapshot IS NULL)
+        OR
+        (ChiSoDienNuocId IS NOT NULL
+         AND NgayDocSnapshot IS NOT NULL AND ChiSoDauSnapshot IS NOT NULL
+         AND ChiSoCuoiSnapshot IS NOT NULL
+         AND LoaiGhiNhanSnapshot IN ('BinhThuong','Reset'))
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -623,24 +666,90 @@ CREATE TABLE GiaoDichCoc (
     NgayGiaoDich DATE NOT NULL,
     HoaDonId INT NULL,
     PhuongThuc VARCHAR(20) NULL,
+    DotMoSoId INT NULL,
+    NguonThamChieu VARCHAR(100) NULL,
+    NguonDoiChieu VARCHAR(255) NULL,
     GhiChu VARCHAR(255) NULL,
     NgayTao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_GiaoDichCoc_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
     CONSTRAINT FK_GiaoDichCoc_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
-    CONSTRAINT CK_GiaoDichCoc_Loai CHECK (LoaiGiaoDich IN ('ThuCoc', 'ThuThemCoc', 'HoanCoc', 'TruNo', 'DieuChinh')),
+    CONSTRAINT FK_GiaoDichCoc_DotMoSo FOREIGN KEY (DotMoSoId) REFERENCES DotMoSo(Id),
+    CONSTRAINT CK_GiaoDichCoc_Loai CHECK (LoaiGiaoDich IN ('ThuCoc', 'ThuThemCoc', 'HoanCoc', 'TruNo', 'DieuChinh', 'SoDuMoSo')),
     CONSTRAINT CK_GiaoDichCoc_PhuongThuc CHECK (PhuongThuc IS NULL OR PhuongThuc IN ('TienMat', 'ChuyenKhoan')),
     CONSTRAINT CK_GiaoDichCoc_SoDu CHECK (SoDuSauGiaoDich >= 0),
     CONSTRAINT CK_GiaoDichCoc_SoTien CHECK (
-        (LoaiGiaoDich IN ('ThuCoc', 'ThuThemCoc') AND SoTien > 0)
+        (LoaiGiaoDich IN ('ThuCoc', 'ThuThemCoc', 'SoDuMoSo') AND SoTien > 0)
         OR (LoaiGiaoDich IN ('HoanCoc', 'TruNo') AND SoTien < 0)
         OR (LoaiGiaoDich = 'DieuChinh' AND SoTien <> 0)
     ),
     CONSTRAINT CK_GiaoDichCoc_Ngay CHECK (YEAR(NgayGiaoDich) BETWEEN 2000 AND 2100),
-    CONSTRAINT CK_GiaoDichCoc_LienKet CHECK (HoaDonId IS NULL OR LoaiGiaoDich = 'TruNo')
+    CONSTRAINT CK_GiaoDichCoc_LienKet CHECK (HoaDonId IS NULL OR LoaiGiaoDich = 'TruNo'),
+    CONSTRAINT CK_GiaoDichCoc_MoSoNguon CHECK (
+        (LoaiGiaoDich='SoDuMoSo' AND DotMoSoId IS NOT NULL
+         AND CHAR_LENGTH(TRIM(NguonThamChieu))>0 AND PhuongThuc IS NULL AND HoaDonId IS NULL)
+        OR
+        (LoaiGiaoDich<>'SoDuMoSo' AND DotMoSoId IS NULL AND NguonThamChieu IS NULL)
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE INDEX IX_GiaoDichCoc_HopDong ON GiaoDichCoc(HopDongId, NgayGiaoDich, Id);
 CREATE INDEX IX_GiaoDichCoc_HoaDon ON GiaoDichCoc(HoaDonId);
+
+CREATE TABLE GiaoDichTinDungTienPhong (
+    Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    HopDongId INT NOT NULL,
+    HoaDonId INT NULL,
+    HopDongLienQuanId INT NULL,
+    LoaiGiaoDich VARCHAR(30) NOT NULL,
+    SoTien DECIMAL(12,0) NOT NULL,
+    SoDuSauGiaoDich DECIMAL(12,0) NOT NULL,
+    NgayGiaoDich DATE NOT NULL,
+    IdempotencyKey VARCHAR(160) NOT NULL,
+    LyDo VARCHAR(500) NOT NULL,
+    NguoiThucHien VARCHAR(100) NOT NULL,
+    NgayTao DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT UQ_TinDungTienPhong_Idempotency UNIQUE (IdempotencyKey),
+    CONSTRAINT FK_TinDungTienPhong_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
+    CONSTRAINT FK_TinDungTienPhong_HoaDon FOREIGN KEY (HoaDonId) REFERENCES HoaDon(Id),
+    CONSTRAINT FK_TinDungTienPhong_HopDongLienQuan FOREIGN KEY (HopDongLienQuanId) REFERENCES HopDong(Id),
+    CONSTRAINT CK_TinDungTienPhong_Loai CHECK (
+        LoaiGiaoDich IN ('TaoKhiTraPhong','ChuyenSangHopDong','ApDungHoaDon','HoanTien','DieuChinh')
+    ),
+    CONSTRAINT CK_TinDungTienPhong_Tien CHECK (
+        SoTien <> 0 AND SoDuSauGiaoDich >= 0
+        AND ((LoaiGiaoDich IN ('TaoKhiTraPhong','ChuyenSangHopDong') AND SoTien > 0)
+             OR (LoaiGiaoDich IN ('ApDungHoaDon','HoanTien') AND SoTien < 0)
+             OR LoaiGiaoDich='DieuChinh')
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IX_TinDungTienPhong_HopDong
+    ON GiaoDichTinDungTienPhong(HopDongId,NgayGiaoDich,Id);
+
+CREATE TABLE AuditDongHopDongTruocCutover (
+    Id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    HopDongId INT NOT NULL,
+    NgayTraPhong DATE NOT NULL,
+    KyTienPhongDaThanhToanDen DATE NOT NULL,
+    KyDichVuDaThanhToanDen DATE NOT NULL,
+    CongNoXacNhan DECIMAL(12,0) NOT NULL,
+    SoTienHoanCoc DECIMAL(12,0) NOT NULL,
+    NgayHoanCoc DATE NOT NULL,
+    NguonDoiChieu VARCHAR(255) NOT NULL,
+    NguoiThucHien VARCHAR(100) NOT NULL,
+    LyDoCutover VARCHAR(500) NOT NULL,
+    IdempotencyKey VARCHAR(160) NOT NULL,
+    ThoiGianThucHien DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT UQ_AuditCutover_HopDong UNIQUE (HopDongId),
+    CONSTRAINT UQ_AuditCutover_Idempotency UNIQUE (IdempotencyKey),
+    CONSTRAINT FK_AuditCutover_HopDong FOREIGN KEY (HopDongId) REFERENCES HopDong(Id),
+    CONSTRAINT CK_AuditCutover_Ky CHECK (
+        NgayTraPhong < '2026-08-01'
+        AND DAY(KyTienPhongDaThanhToanDen)=1
+        AND DAY(KyDichVuDaThanhToanDen)=1
+        AND CongNoXacNhan=0 AND SoTienHoanCoc>0
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
 -- 12.1. KHOANPHATSINHHOPDONG - khoan mot lan gan voi hop dong
@@ -963,6 +1072,49 @@ BEGIN
     IF PeriodState = 'DaKhoa' THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'REVIEW-022: thang thu chi da khoa; khong the xoa giao dich.';
+    END IF;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER TR_HoaDon_SnapshotImmutable_Update
+BEFORE UPDATE ON HoaDon
+FOR EACH ROW
+BEGIN
+    IF (EXISTS(SELECT 1 FROM ThanhToan WHERE HoaDonId=OLD.Id)
+        OR EXISTS(SELECT 1 FROM GiaoDichTinDungTienPhong WHERE HoaDonId=OLD.Id))
+       AND NOT (
+           NEW.KyThu <=> OLD.KyThu
+           AND NEW.KyTienPhong <=> OLD.KyTienPhong
+           AND NEW.KyDichVu <=> OLD.KyDichVu
+           AND NEW.LoaiHoaDon <=> OLD.LoaiHoaDon
+           AND NEW.TienPhong <=> OLD.TienPhong
+           AND NEW.TongTienDichVu <=> OLD.TongTienDichVu
+           AND NEW.TongTienPhatSinh <=> OLD.TongTienPhatSinh
+           AND NEW.TienNoKyTruoc <=> OLD.TienNoKyTruoc
+           AND NEW.TienTinDungApDung <=> OLD.TienTinDungApDung
+           AND NEW.TongCong <=> OLD.TongCong
+           AND NEW.NhaIdSnapshot <=> OLD.NhaIdSnapshot
+           AND NEW.TenNhaSnapshot <=> OLD.TenNhaSnapshot
+           AND NEW.PhongIdSnapshot <=> OLD.PhongIdSnapshot
+           AND NEW.TenPhongSnapshot <=> OLD.TenPhongSnapshot
+           AND NEW.KhachDaiDienIdSnapshot <=> OLD.KhachDaiDienIdSnapshot
+           AND NEW.TenKhachDaiDienSnapshot <=> OLD.TenKhachDaiDienSnapshot
+           AND NEW.CccdKhachDaiDienSnapshot <=> OLD.CccdKhachDaiDienSnapshot
+       ) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT='M13: invoice snapshot is immutable after payment.';
+    END IF;
+END$$
+
+CREATE TRIGGER TR_CTHD_SnapshotImmutable_Update
+BEFORE UPDATE ON ChiTietHoaDon
+FOR EACH ROW
+BEGIN
+    IF (EXISTS(SELECT 1 FROM ThanhToan WHERE HoaDonId=OLD.HoaDonId)
+        OR EXISTS(SELECT 1 FROM GiaoDichTinDungTienPhong WHERE HoaDonId=OLD.HoaDonId)) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT='M13: invoice detail snapshot is immutable after payment.';
     END IF;
 END$$
 DELIMITER ;

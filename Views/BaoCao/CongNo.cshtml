@@ -120,7 +120,7 @@
                         <th>Phòng</th>
                         <th>Khách thuê</th>
                         <th>SĐT</th>
-                        <th>Kỳ</th>
+                        <th>Ba kỳ</th>
                         <th>Đến hạn</th>
                         <th>Trạng thái</th>
                         <th class="text-end">Tổng cộng</th>
@@ -142,13 +142,23 @@
                             <td class="fw-semibold">@x.TenPhong</td>
                             <td>@x.TenKhachChinh</td>
                             <td>@x.SoDienThoai</td>
-                            <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
+                            <td class="small text-nowrap">
+                                <strong>Thu @x.KyThu.ToString("MM/yyyy")</strong><br />
+                                Phòng @x.KyTienPhong.ToString("MM/yyyy")<br />
+                                DV @x.KyDichVu.ToString("MM/yyyy")
+                            </td>
                             <td class="text-nowrap">@x.NgayDenHan.ToString("dd/MM/yyyy")</td>
                             <td>
                                 @{ var trangThai = TrangThaiBadge(x.TrangThaiHopDong); }
                                 <span class="badge @trangThai.Css">@trangThai.Text</span>
                             </td>
-                            <td class="text-end">@x.TongCong.ToString("N0")</td>
+                            <td class="text-end">
+                                @x.TongCong.ToString("N0")
+                                @if (x.TienTinDungApDung > 0)
+                                {
+                                    <small class="d-block text-success">Credit −@x.TienTinDungApDung.ToString("N0")</small>
+                                }
+                            </td>
                             <td class="text-end">@x.SoTienDaThu.ToString("N0")</td>
                             <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
                             <td>

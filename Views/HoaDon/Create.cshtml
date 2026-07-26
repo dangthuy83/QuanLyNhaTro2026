@@ -34,7 +34,12 @@
             </section>
 
             <section class="app-panel invoices-preview-panel" aria-labelledby="invoice-preview-heading">
-                <div class="app-panel-header"><div><h2 id="invoice-preview-heading">Preview kỳ @thang/@nam</h2><p>Dữ liệu được tính lại từ `HoaDonService.TinhHoaDonDuKienAsync`.</p></div>@if (canCreate) { <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Sẵn sàng tạo</span> } else { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Đang bị chặn</span> }</div>
+                <div class="app-panel-header"><div><h2 id="invoice-preview-heading">Phiếu tính tiền kỳ thu @thang/@nam</h2><p>Tiền phòng và dịch vụ được lấy từ hai kỳ riêng theo policy server.</p></div>@if (canCreate) { <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Sẵn sàng tạo</span> } else { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Đang bị chặn</span> }</div>
+                <div class="invoices-period-strip" aria-label="Ba kỳ của phiếu tính tiền">
+                    <div><span>Kỳ thu</span><strong>@(duKien?.KyThu.ToString("MM/yyyy") ?? "—")</strong><small>Hạn @(duKien?.NgayDenHan.ToString("dd/MM/yyyy") ?? "—")</small></div>
+                    <div><span>Kỳ tiền phòng</span><strong>@(duKien?.KyTienPhong.ToString("MM/yyyy") ?? "—")</strong><small>Thu trước trong tháng hiện tại</small></div>
+                    <div><span>Kỳ dịch vụ</span><strong>@(duKien?.KyDichVu.ToString("MM/yyyy") ?? "—")</strong><small>Tiêu thụ tháng trước</small></div>
+                </div>
                 <div class="app-panel-body">
                     @if (duKien != null)
                     {
@@ -56,9 +61,29 @@
                         }
                         <div class="invoices-preview-lines">
                             <div><span>Tiền phòng @if (duKien.SoNgayO.HasValue) { <small>(@duKien.SoNgayO/@duKien.SoNgayTrongThang ngày)</small> }</span><strong>@duKien.TienPhong.ToString("N0") đ</strong></div>
-                            @foreach (var item in duKien.ChiTiet) { <div><span>@item.TenDichVu <small>@item.SoLuong.ToString("N2") × @item.DonGia.ToString("N0")</small></span><strong>@item.ThanhTien.ToString("N0") đ</strong></div> }
+                            @foreach (var item in duKien.ChiTiet)
+                            {
+                                <div>
+                                    <span>
+                                        @item.TenDichVu · kỳ @item.KySuDung.ToString("MM/yyyy")
+                                        <small>
+                                            @item.SoLuong.ToString("N2") × @item.DonGia.ToString("N0")
+                                            @if (item.ChiSoDau.HasValue)
+                                            {
+                                                <text> · đọc @item.NgayDoc?.ToString("dd/MM/yyyy"): @item.ChiSoDau.Value.ToString("N2") → @item.ChiSoCuoi!.Value.ToString("N2")</text>
+                                            }
+                                            @if (item.LoaiGhiNhan == "Reset")
+                                            {
+                                                <text> · reset @item.ChiSoTruocReset?.ToString("N2") → @item.ChiSoSauReset?.ToString("N2"): @item.LyDoDieuChinh</text>
+                                            }
+                                        </small>
+                                    </span>
+                                    <strong>@item.ThanhTien.ToString("N0") đ</strong>
+                                </div>
+                            }
                             @foreach (var item in duKien.KhoanPhatSinh) { <div><span>@item.MoTa <small>Khoản phát sinh</small></span><strong>@item.SoTienConLai.ToString("N0") đ</strong></div> }
                             @if (duKien.TienNoKyTruoc > 0) { <div class="is-danger"><span>Nợ kỳ trước</span><strong>@duKien.TienNoKyTruoc.ToString("N0") đ</strong></div> }
+                            @if (duKien.TienTinDungApDung > 0) { <div class="is-success"><span>Tín dụng tiền phòng áp dụng</span><strong>−@duKien.TienTinDungApDung.ToString("N0") đ</strong></div> }
                             <div class="invoices-preview-total"><span>Tổng dự kiến</span><strong>@duKien.TongCong.ToString("N0") đ</strong></div>
                         </div>
                     }

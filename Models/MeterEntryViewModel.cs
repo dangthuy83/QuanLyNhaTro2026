@@ -9,6 +9,8 @@ public sealed class MeterEntryViewModel
     public HopDong? HopDong { get; set; }
     public Phong? Phong { get; set; }
     public int? ReturnHopDongId { get; set; }
+    public DateTime? NgayBanGiao { get; set; }
+    public bool LaChiSoBanGiao => NgayBanGiao.HasValue;
     public List<DichVu> DichVuTheoChiSo { get; set; } = [];
     public Dictionary<int, ChiSoDienNuoc> ChiSoHienTai { get; set; } = [];
     public Dictionary<int, decimal> ChiSoDauTheoDichVu { get; set; } = [];

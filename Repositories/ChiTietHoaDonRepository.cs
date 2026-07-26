@@ -18,10 +18,14 @@ public class ChiTietHoaDonRepository(IDbConnection db) : BaseRepository(db)
         const string sql = """
             INSERT INTO ChiTietHoaDon
                 (HoaDonId, DichVuId, SoLuong, DonGia, ThanhTien, ChiSoDienNuocId,
-                 TenDichVuSnapshot, DonViTinhSnapshot)
+                 TenDichVuSnapshot, DonViTinhSnapshot, KySuDung, NgayDocSnapshot,
+                 ChiSoDauSnapshot, ChiSoCuoiSnapshot, LoaiGhiNhanSnapshot,
+                 ChiSoTruocResetSnapshot, ChiSoSauResetSnapshot, LyDoDieuChinhSnapshot)
             VALUES
                 (@HoaDonId, @DichVuId, @SoLuong, @DonGia, @ThanhTien, @ChiSoDienNuocId,
-                 @TenDichVuSnapshot, @DonViTinhSnapshot)
+                 @TenDichVuSnapshot, @DonViTinhSnapshot, @KySuDung, @NgayDocSnapshot,
+                 @ChiSoDauSnapshot, @ChiSoCuoiSnapshot, @LoaiGhiNhanSnapshot,
+                 @ChiSoTruocResetSnapshot, @ChiSoSauResetSnapshot, @LyDoDieuChinhSnapshot)
             """;
         await _db.ExecuteAsync(sql, ct);
     }
@@ -31,10 +35,14 @@ public class ChiTietHoaDonRepository(IDbConnection db) : BaseRepository(db)
         const string sql = """
             INSERT INTO ChiTietHoaDon
                 (HoaDonId, DichVuId, SoLuong, DonGia, ThanhTien, ChiSoDienNuocId,
-                 TenDichVuSnapshot, DonViTinhSnapshot)
+                 TenDichVuSnapshot, DonViTinhSnapshot, KySuDung, NgayDocSnapshot,
+                 ChiSoDauSnapshot, ChiSoCuoiSnapshot, LoaiGhiNhanSnapshot,
+                 ChiSoTruocResetSnapshot, ChiSoSauResetSnapshot, LyDoDieuChinhSnapshot)
             VALUES
                 (@HoaDonId, @DichVuId, @SoLuong, @DonGia, @ThanhTien, @ChiSoDienNuocId,
-                 @TenDichVuSnapshot, @DonViTinhSnapshot)
+                 @TenDichVuSnapshot, @DonViTinhSnapshot, @KySuDung, @NgayDocSnapshot,
+                 @ChiSoDauSnapshot, @ChiSoCuoiSnapshot, @LoaiGhiNhanSnapshot,
+                 @ChiSoTruocResetSnapshot, @ChiSoSauResetSnapshot, @LyDoDieuChinhSnapshot)
             """;
         await conn.ExecuteAsync(sql, ct, transaction: tx);
     }

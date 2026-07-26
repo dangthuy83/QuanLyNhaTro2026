@@ -20,7 +20,7 @@ public class HoaDonController(
     public async Task<IActionResult> Index(int? thang, int? nam)
     {
         ViewData["ActiveMenu"] = "hoadon";
-        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        var ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
         thang = ky.Thang;
         nam = ky.Nam;
 
@@ -52,7 +52,7 @@ public class HoaDonController(
         string trangThaiDong = "TatCa")
     {
         ViewData["ActiveMenu"] = "hoadon";
-        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        var ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
         thang = ky.Thang;
         nam = ky.Nam;
 
@@ -138,7 +138,7 @@ public class HoaDonController(
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
         if (hopDong == null) return NotFound();
 
-        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        var ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
         ViewBag.HopDong = hopDong;
         ViewBag.DuKien = await hoaDonService.TinhHoaDonDuKienAsync(hopDongId, ky.Thang, ky.Nam);
         ViewBag.Thang = ky.Thang;
@@ -239,9 +239,10 @@ public class HoaDonController(
 
         var bytes = excelService.XuatPhieuThu(hd, chiTiet, khoanPhatSinh, thanhToan);
 
+        var prefix = thanhToan.Any() ? "PhieuThu" : "PhieuTinhTien";
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            $"PhieuThu_T{hd.Thang}_{hd.Nam}_{hd.TenPhongSnapshot}.xlsx");
+            $"{prefix}_KyThu_{hd.KyThu:yyyyMM}_{hd.TenPhongSnapshot}.xlsx");
     }
 
     // GET /HoaDon/InPhieuThu/5

@@ -2,11 +2,12 @@
 @{
     ViewData["Title"] = "Xem trước chốt hóa đơn";
     ViewData["ActiveMenu"] = "hoadon";
+    var kyDichVu = new DateTime(Model.Nam, Model.Thang, 1).AddMonths(-1);
 }
 
 <div class="invoices-page invoices-bulk-page" data-invoice-bulk>
     <a asp-action="Index" asp-route-thang="@Model.Thang" asp-route-nam="@Model.Nam" class="invoices-back-link"><svg class="app-icon" aria-hidden="true"><use href="#icon-back"></use></svg>Danh sách hóa đơn</a>
-    <header class="app-page-header"><div class="app-page-heading"><h1>Chốt hóa đơn @Model.Thang/@Model.Nam</h1><p class="app-page-subtitle">Bắt đầu từ kỳ, rà từng blocker rồi chỉ chọn các dòng server xác định là sẵn sàng.</p></div></header>
+    <header class="app-page-header"><div class="app-page-heading"><h1>Chốt kỳ thu @Model.Thang/@Model.Nam</h1><p class="app-page-subtitle">Tiền phòng @Model.Thang/@Model.Nam, dịch vụ @kyDichVu.ToString("MM/yyyy"); rà từng blocker trước khi chốt.</p></div></header>
 
 @if (TempData["Success"] != null)
 {

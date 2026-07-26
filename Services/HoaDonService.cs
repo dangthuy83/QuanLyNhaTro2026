@@ -17,7 +17,8 @@ public class HoaDonService(
     KhoanPhatSinhHopDongRepository khoanPhatSinhRepo,
     LichSuThayDoiGiaRepository lichSuGiaRepo,
     CongNoSettlementService congNoSettlementService,
-    HoaDonSnapshotService snapshotService)
+    HoaDonSnapshotService snapshotService,
+    TinDungTienPhongService tinDungService)
 {
     public async Task<decimal> LayGiaApDungAsync(
         string loaiDoiTuong,
@@ -39,6 +40,7 @@ public class HoaDonService(
         int? hoaDonGhepId = null,
         string? ghiChu = null)
     {
+        var periods = BillingCollectionPeriodPolicy.Resolve(thang, nam);
         var duKien = await TinhHoaDonDuKienAsync(hopDongId, thang, nam, soNgayO, soNgayTrongThang, hoaDonGhepId, ghiChu);
         if (duKien.HoaDonDaCo != null)
             throw new InvalidOperationException($"Hoa don ky {thang}/{nam} cua hop dong #{hopDongId} da ton tai.");
@@ -49,6 +51,10 @@ public class HoaDonService(
         var hoaDon = new HoaDon
         {
             HopDongId = hopDongId,
+            KyThu = periods.KyThu,
+            KyTienPhong = periods.KyTienPhong,
+            KyDichVu = periods.KyDichVu,
+            LoaiHoaDon = "DinhKy",
             Thang = thang,
             Nam = nam,
             NgayLap = DateTime.Now,
@@ -56,6 +62,7 @@ public class HoaDonService(
             TongTienDichVu = duKien.TongTienDichVu,
             TongTienPhatSinh = duKien.TongTienPhatSinh,
             TienNoKyTruoc = duKien.TienNoKyTruoc,
+            TienTinDungApDung = duKien.TienTinDungApDung,
             TongCong = duKien.TongCong,
             SoTienDaThu = 0,
             TrangThaiThanhToan = "ChuaThu",
@@ -73,6 +80,8 @@ public class HoaDonService(
         try
         {
             var existingInTransaction = await hoaDonRepo.GetByHopDongKyAsync(conn, tx, hopDongId, thang, nam);
+            existingInTransaction ??= await hoaDonRepo.GetByHopDongKyLoaiForUpdateAsync(
+                conn, tx, hopDongId, thang, nam, "KhoiTaoHopDong");
             if (existingInTransaction != null)
                 throw new InvalidOperationException($"Hoa don ky {thang}/{nam} cua hop dong #{hopDongId} da ton tai.");
 
@@ -103,7 +112,22 @@ public class HoaDonService(
                     SoLuong = ct.SoLuong,
                     DonGia = ct.DonGia,
                     ThanhTien = ct.ThanhTien
+                    ,
+                    KySuDung = ct.KySuDung
                 }));
+
+            var tinDungDaApDung = await TinDungTienPhongService.ApDungVaoHoaDonAsync(
+                conn,
+                tx,
+                hopDongId,
+                hoaDonId,
+                hoaDon.TienPhong + hoaDon.TongTienDichVu
+                    + hoaDon.TongTienPhatSinh + hoaDon.TienNoKyTruoc,
+                hoaDon.NgayLap,
+                "Hệ thống");
+            if (tinDungDaApDung != duKien.TienTinDungApDung)
+                throw new InvalidOperationException(
+                    "Số dư tín dụng tiền phòng đã thay đổi. Vui lòng tải lại phiếu tính tiền.");
 
             await khoanPhatSinhRepo.GanVaoHoaDonAsync(
                 conn,
@@ -156,15 +180,20 @@ public class HoaDonService(
         int? hoaDonGhepId = null,
         string? ghiChu = null)
     {
-        if (!BusinessDataLimits.IsValidPeriod(thang, nam))
-            throw new InvalidOperationException("Ky hoa don phai nam trong dai 01/2000 den 12/2100.");
+        var periods = BillingCollectionPeriodPolicy.Resolve(thang, nam);
 
         var result = new HoaDonDuKien
         {
             HopDongId = hopDongId,
             Thang = thang,
             Nam = nam,
+            KyThu = periods.KyThu,
+            KyTienPhong = periods.KyTienPhong,
+            KyDichVu = periods.KyDichVu,
+            NgayDenHan = periods.NgayDenHan,
             HoaDonDaCo = await hoaDonRepo.GetByHopDongKyAsync(hopDongId, thang, nam)
+                ?? await hoaDonRepo.GetByHopDongKyLoaiAsync(
+                    hopDongId, thang, nam, "KhoiTaoHopDong")
         };
 
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
@@ -180,15 +209,17 @@ public class HoaDonService(
         {
             var (soNgayTinhTien, soNgayTrongThangTinhTien) = ResolveSoNgayTinhTien(
                 hopDong,
-                thang,
-                nam,
+                periods.KyTienPhong.Month,
+                periods.KyTienPhong.Year,
                 soNgayO,
                 soNgayTrongThang);
 
             result.SoNgayO = soNgayTinhTien;
             result.SoNgayTrongThang = soNgayTrongThangTinhTien;
 
-            var giaPhong = await LayGiaApDungAsync("HopDong", hopDong.Id, thang, nam, hopDong.TienThueThoaThuan);
+            var giaPhong = await LayGiaApDungAsync(
+                "HopDong", hopDong.Id, periods.KyTienPhong.Month, periods.KyTienPhong.Year,
+                hopDong.TienThueThoaThuan);
             result.TienPhong = soNgayTinhTien.HasValue && soNgayTrongThangTinhTien.HasValue
                 ? BillingPeriodCalculator.CalculateRoomCharge(giaPhong, soNgayTinhTien.Value, soNgayTrongThangTinhTien.Value)
                 : giaPhong;
@@ -200,17 +231,19 @@ public class HoaDonService(
         }
 
         var danhSachDV = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
-            hopDongId, thang, nam)).ToList();
+            hopDongId, periods.KyDichVu.Month, periods.KyDichVu.Year)).ToList();
         if (danhSachDV.Count == 0)
             result.CanhBao.Add("Hop dong chua dang ky dich vu nao trong ky.");
 
-        var chiSoTheoKy = (await chiSoRepo.GetByHopDongKyAsync(hopDongId, thang, nam)).ToList();
+        var chiSoTheoKy = (await chiSoRepo.GetByHopDongKyAsync(
+            hopDongId, periods.KyDichVu.Month, periods.KyDichVu.Year)).ToList();
 
         foreach (var pdv in danhSachDV)
         {
             if (pdv.DichVu == null) continue;
 
-            var donGia = await LayGiaApDungAsync("DichVu", pdv.Id, thang, nam, pdv.DonGia);
+            var donGia = await LayGiaApDungAsync(
+                "DichVu", pdv.Id, periods.KyDichVu.Month, periods.KyDichVu.Year, pdv.DonGia);
 
             if (pdv.DichVu.LoaiTinhPhi == "TheoChiSo")
             {
@@ -235,6 +268,15 @@ public class HoaDonService(
                         SoLuong = soLuong,
                         DonGia = donGia,
                         ThanhTien = thanhTien
+                        ,
+                        KySuDung = periods.KyDichVu,
+                        NgayDoc = chiSo.NgayDoc,
+                        ChiSoDau = chiSo.ChiSoDau,
+                        ChiSoCuoi = chiSo.ChiSoCuoi,
+                        LoaiGhiNhan = chiSo.LoaiGhiNhan,
+                        ChiSoTruocReset = chiSo.ChiSoTruocReset,
+                        ChiSoSauReset = chiSo.ChiSoSauReset,
+                        LyDoDieuChinh = chiSo.LyDoDieuChinh
                     });
                     result.TongTienDichVu += thanhTien;
                 }
@@ -250,7 +292,7 @@ public class HoaDonService(
                 decimal soLuong;
                 try
                 {
-                    var kyBatDau = new DateTime(nam, thang, 1);
+                    var kyBatDau = periods.KyDichVu;
                     var kyKetThuc = kyBatDau.AddMonths(1).AddDays(-1);
                     soLuong = await FixedServiceQuantityCalculator.ResolveQuantityAsync(
                         db, null, hopDongId, pdv.DichVu, kyBatDau, kyKetThuc);
@@ -272,12 +314,14 @@ public class HoaDonService(
                     SoLuong = soLuong,
                     DonGia = donGia,
                     ThanhTien = thanhTien
+                    ,
+                    KySuDung = periods.KyDichVu
                 });
                 result.TongTienDichVu += thanhTien;
             }
         }
 
-        var denNgay = new DateTime(nam, thang, BillingPeriodCalculator.GetDaysInMonth(thang, nam));
+        var denNgay = periods.KyThu.AddMonths(1).AddDays(-1);
         var khoanPhatSinh = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(hopDongId, denNgay);
         foreach (var khoan in khoanPhatSinh)
         {
@@ -302,7 +346,12 @@ public class HoaDonService(
         if (result.TienNoKyTruoc > 0)
             result.CanhBao.Add($"Co no ky truoc {result.TienNoKyTruoc:N0} d.");
 
-        result.TongCong = result.TienPhong + result.TongTienDichVu + result.TongTienPhatSinh + result.TienNoKyTruoc;
+        var truocTinDung = result.TienPhong + result.TongTienDichVu
+            + result.TongTienPhatSinh + result.TienNoKyTruoc;
+        result.TienTinDungApDung = Math.Min(await tinDungService.GetSoDuAsync(hopDongId), truocTinDung);
+        if (result.TienTinDungApDung > 0)
+            result.CanhBao.Add($"Tự động áp dụng tín dụng tiền phòng {result.TienTinDungApDung:N0} đ.");
+        result.TongCong = truocTinDung - result.TienTinDungApDung;
         return result;
     }
 

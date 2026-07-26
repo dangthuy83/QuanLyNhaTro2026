@@ -1,5 +1,24 @@
 # Database updates
 
+BILLING-ADVANCE-RENT-ARREARS-SERVICE-CUTOVER-202608 apply-once (chưa áp production):
+
+- `20260726_advance_rent_collection_periods.sql` là sequence 13, SHA-256
+  `64430E364AD41662E8B967E1DF0168CA88DC12D11939414C2F96CD073E40928E`.
+  Migration thêm `KyThu/KyTienPhong/KyDichVu`, loại hóa đơn, snapshot chỉ số/reset,
+  ledger tín dụng tiền phòng và audit đóng hợp đồng trước cutover.
+- Backfill chỉ được phép khi các hóa đơn cũ có thể chứng minh an toàn. Trên DB vận hành
+  được quan sát ngày 26/07/2026 có `HoaDon=0`, nên migration không cần suy diễn lịch sử
+  hoặc tạo chứng từ giả. Blocker chạy trước DDL và fail closed nếu gặp dữ liệu không thể
+  ánh xạ.
+- Rehearsal dùng `QuanLyNhaTro_BILLING_ADVANCE_QA_20260726`: restore snapshot hiện
+  hành, `apply-next` đúng sequence, source lại script an toàn và Runner status 1..13
+  không pending. Fresh DB `QuanLyNhaTro_BILLING_ADVANCE_FRESH_20260726` tạo từ
+  `schema.sql` có 27 bảng, 9 trigger và `FreshBaseline` qua sequence 13.
+- Hai DB QA và snapshot rehearsal phải bị xóa sau batch. Production chỉ được chạy
+  `status` SELECT-only; cần backup mới, restore verify, phê duyệt migration riêng và
+  chỉ dùng `MigrationRunner apply-next`. Không replay sequence 1..12 và không chạy
+  archive.
+
 REVIEW-027 apply-once (đã áp DB vận hành ngày 17/07/2026):
 
 - `20260716_review027_opening_balances.sql`: tạo `DotMoSo`, `HopDongMoSo`, `CongNoMoSo`,

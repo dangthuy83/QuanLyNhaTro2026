@@ -9,6 +9,7 @@
      data-selected-service-ids="@selectedIds"
      data-restore-selection="@((Model.PhongDichVuIds?.Length ?? 0) > 0 ? "true" : "false")"
      data-meter-url="@Url.Action("NhapTheoPhong", "ChiSo")"
+     data-old-meter-url="@Url.Action("Nhap", "ChiSo")"
      data-service-url="@Url.Action("DichVuTheoPhong", "HopDong")"
      data-old-contract-id="@Model.HopDongCuId">
     <header class="app-page-header">
@@ -46,6 +47,9 @@
                 <label asp-for="NgayChuyenDi" class="form-label">Ngày chuyển đi <span class="text-danger" aria-hidden="true">*</span></label>
                 <input asp-for="NgayChuyenDi" type="date" class="form-control" />
                 <span asp-validation-for="NgayChuyenDi" class="text-danger small"></span>
+                <a id="linkNhapChiSoPhongCu" href="#" class="btn btn-outline-primary disabled" aria-disabled="true">
+                    Nhập chỉ số kết thúc phòng cũ
+                </a>
             </div>
 
             <section class="lifecycle-room-card" aria-labelledby="new-room-title">
@@ -62,7 +66,7 @@
                 <a id="linkNhapChiSoPhongMoi" href="#" class="btn btn-outline-primary disabled" aria-disabled="true">
                     Nhập chỉ số phòng mới
                 </a>
-                <p class="form-text">Dịch vụ theo chỉ số cần có chỉ số kỳ chuyển trước khi xác nhận.</p>
+                <p class="form-text">Đây là mốc bàn giao thực tế của phòng mới vào ngày bắt đầu hợp đồng mới.</p>
             </section>
 
             <section class="lifecycle-room-card" aria-labelledby="new-contract-title">

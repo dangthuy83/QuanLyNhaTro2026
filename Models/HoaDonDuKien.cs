@@ -5,6 +5,10 @@ public class HoaDonDuKien
     public int HopDongId { get; set; }
     public int Thang { get; set; }
     public int Nam { get; set; }
+    public DateTime KyThu { get; set; }
+    public DateTime KyTienPhong { get; set; }
+    public DateTime KyDichVu { get; set; }
+    public DateTime NgayDenHan { get; set; }
     public HopDong? HopDong { get; set; }
     public HoaDon? HoaDonDaCo { get; set; }
     public decimal TienPhong { get; set; }
@@ -12,6 +16,7 @@ public class HoaDonDuKien
     public decimal TongTienPhatSinh { get; set; }
     public decimal TienNoKyTruoc { get; set; }
     public decimal TienNoMoSo { get; set; }
+    public decimal TienTinDungApDung { get; set; }
     public decimal TongCong { get; set; }
     public int? SoNgayO { get; set; }
     public int? SoNgayTrongThang { get; set; }
@@ -55,6 +60,14 @@ public class HoaDonDuKienChiTiet
     public decimal SoLuong { get; set; }
     public decimal DonGia { get; set; }
     public decimal ThanhTien { get; set; }
+    public DateTime KySuDung { get; set; }
+    public DateTime? NgayDoc { get; set; }
+    public decimal? ChiSoDau { get; set; }
+    public decimal? ChiSoCuoi { get; set; }
+    public string? LoaiGhiNhan { get; set; }
+    public decimal? ChiSoTruocReset { get; set; }
+    public decimal? ChiSoSauReset { get; set; }
+    public string? LyDoDieuChinh { get; set; }
     public bool CanChiSo => LoaiTinhPhi == "TheoChiSo";
     public bool CoChiSo => !CanChiSo || ChiSoDienNuocId.HasValue;
 }

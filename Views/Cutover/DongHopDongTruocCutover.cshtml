@@ -1,0 +1,102 @@
+@model QuanLyNhaTro.Models.DongHopDongTruocCutoverViewModel
+@{
+    ViewData["Title"] = "Đóng hợp đồng trước cutover";
+}
+
+<div class="cutover-page">
+    <header class="app-page-header">
+        <div class="app-page-heading">
+            <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDongId"
+               class="app-back-link">Quay lại hợp đồng #@Model.HopDongId</a>
+            <h1>Đóng hợp đồng trước cutover</h1>
+            <p>Workflow có guard cho @Model.TenPhong. Không tạo hóa đơn, thanh toán, công nợ, khoản phát sinh hay chỉ số giả.</p>
+        </div>
+    </header>
+
+    @if (Model.DaThucHien)
+    {
+        <div class="app-notice is-success" role="status">
+            Hợp đồng này đã được xử lý. Workflow chống chạy lặp và sẽ không hoàn cọc lần hai.
+        </div>
+    }
+
+    <form asp-action="DongHopDongTruocCutover" method="post" class="cutover-form">
+        @Html.AntiForgeryToken()
+        <input asp-for="HopDongId" type="hidden" />
+        <input asp-for="TenPhong" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="app-notice is-danger" role="alert"></div>
+        <fieldset class="cutover-fieldset" disabled="@Model.DaThucHien">
+
+        <section class="app-panel">
+            <div class="app-panel-header">
+                <div>
+                    <h2>Mốc đã đối chiếu</h2>
+                    <p>Nhập đúng chứng từ nguồn; mọi giá trị được khóa và kiểm tra lại trong transaction.</p>
+                </div>
+            </div>
+            <div class="cutover-fields">
+                <div class="app-field">
+                    <label asp-for="NgayTraPhong">Ngày trả phòng thực tế</label>
+                    <input asp-for="NgayTraPhong" class="form-control" />
+                    <span asp-validation-for="NgayTraPhong" class="text-danger"></span>
+                </div>
+                <div class="app-field">
+                    <label asp-for="KyTienPhongDaThanhToanDen">Tiền phòng đã thanh toán đến kỳ</label>
+                    <input asp-for="KyTienPhongDaThanhToanDen" class="form-control" />
+                    <small>Dùng ngày đầu tháng, ví dụ 01/06/2026.</small>
+                </div>
+                <div class="app-field">
+                    <label asp-for="KyDichVuDaThanhToanDen">Dịch vụ đã thanh toán đến kỳ</label>
+                    <input asp-for="KyDichVuDaThanhToanDen" class="form-control" />
+                </div>
+                <div class="app-field">
+                    <label asp-for="CongNoXacNhan">Công nợ xác nhận</label>
+                    <input asp-for="CongNoXacNhan" class="form-control" />
+                </div>
+                <div class="app-field">
+                    <label asp-for="SoTienHoanCoc">Số tiền hoàn cọc</label>
+                    <input asp-for="SoTienHoanCoc" class="form-control" />
+                </div>
+                <div class="app-field">
+                    <label asp-for="NgayHoanCoc">Ngày hoàn cọc</label>
+                    <input asp-for="NgayHoanCoc" class="form-control" />
+                </div>
+                <div class="app-field cutover-wide">
+                    <label asp-for="NguonDoiChieu">Nguồn đối chiếu</label>
+                    <input asp-for="NguonDoiChieu" class="form-control" placeholder="Ví dụ: Sổ thu của gia đình" />
+                    <span asp-validation-for="NguonDoiChieu" class="text-danger"></span>
+                </div>
+                <div class="app-field cutover-wide">
+                    <label asp-for="LyDoCutover">Lý do cutover</label>
+                    <textarea asp-for="LyDoCutover" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <section class="app-panel cutover-confirmations" aria-labelledby="cutover-confirm-title">
+            <div class="app-panel-header">
+                <div>
+                    <h2 id="cutover-confirm-title">Xác nhận bắt buộc</h2>
+                    <p>Thiếu một xác nhận, POST sẽ fail closed và không ghi một phần.</p>
+                </div>
+            </div>
+            <label class="cutover-check">
+                <input asp-for="XacNhanKhongConCongNo" class="form-check-input" />
+                <span>Tôi xác nhận công nợ bằng 0 và không còn khoản phát sinh chưa xử lý.</span>
+            </label>
+            <label class="cutover-check">
+                <input asp-for="XacNhanKhongTaoChiSoCuoi" class="form-check-input" />
+                <span>Tôi xác nhận không tạo chỉ số cuối hoặc chỉ số ngoài hợp đồng giả.</span>
+            </label>
+        </section>
+
+        <div class="cutover-actions">
+            <a asp-controller="HopDong" asp-action="Details" asp-route-id="@Model.HopDongId"
+               class="btn btn-outline-secondary">Hủy</a>
+            <button type="submit" class="btn btn-danger" disabled="@Model.DaThucHien">
+                Đóng hợp đồng và ghi audit
+            </button>
+        </div>
+        </fieldset>
+    </form>
+</div>

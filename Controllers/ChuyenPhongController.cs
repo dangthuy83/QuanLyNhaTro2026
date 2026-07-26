@@ -27,6 +27,9 @@ public class ChuyenPhongController(
             TenPhongCu   = phongCu?.TenPhong ?? "",
             TienCocCu    = hd.TienCoc,
             TienCocMoi   = hd.TienCoc,
+            NgayChuyenDi = DateTime.Today < BillingCollectionPeriodPolicy.CutoverPeriod
+                ? BillingCollectionPeriodPolicy.CutoverPeriod
+                : DateTime.Today,
             DsPhongTrong = dsPhongTrong
         });
     }

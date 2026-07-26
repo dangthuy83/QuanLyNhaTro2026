@@ -22,6 +22,10 @@ public class TraPhongViewModel
     public int SoNgayO { get; set; }
     public int SoNgayTrongThang { get; set; }
     public decimal TienPhongProRata { get; set; }
+    public decimal TienPhongDaTraTruoc { get; set; }
+    public decimal TinDungTienPhongTaoMoi { get; set; }
+    public decimal TinDungApDung { get; set; }
+    public decimal TienHoanTinDung { get; set; }
     public decimal TongTienDichVuThangCuoi { get; set; }
     public decimal TongTienPhatSinhChuaXuLy { get; set; }
     public decimal TongNoConLai { get; set; }
@@ -41,6 +45,9 @@ public class KetQuaTraPhongViewModel
     public decimal TongNoConLai { get; set; }
     public decimal TongTienPhatSinhConLai { get; set; }
     public decimal TienTruNoTuCoc { get; set; }
+    public decimal TinDungTienPhongTaoMoi { get; set; }
+    public decimal TinDungApDung { get; set; }
+    public decimal TienHoanTinDung { get; set; }
     public decimal TienHoanCoc { get; set; }
     public decimal KhachConNoThem { get; set; }
     public bool CoNoTon { get; set; }

@@ -11,7 +11,9 @@ public class ChiSoService(
     ChiSoDienNuocRepository chiSoRepo,
     MeterContinuityService continuity)
 {
-    public async Task LuuBatchAsync(IEnumerable<ChiSoDienNuoc> chiSos)
+    public async Task LuuBatchAsync(
+        IEnumerable<ChiSoDienNuoc> chiSos,
+        DateTime? ngayBanGiao = null)
     {
         var items = chiSos.ToList();
         if (items.Count == 0) return;
@@ -35,7 +37,7 @@ public class ChiSoService(
 
             foreach (var item in items)
             {
-                await ValidateNgayDocAsync(conn, tx, item);
+                await ValidateNgayDocAsync(conn, tx, item, ngayBanGiao);
                 if (item.LoaiGhiNhan == ChiSoDienNuoc.LoaiReset && string.IsNullOrWhiteSpace(item.LyDoDieuChinh))
                     throw new InvalidOperationException("Reset bat buoc co ly do dieu chinh.");
                 _ = ChiSoConsumptionCalculator.Calculate(item);
@@ -112,21 +114,38 @@ public class ChiSoService(
         }
     }
 
-    private static async Task ValidateNgayDocAsync(MySqlConnection conn, MySqlTransaction tx, ChiSoDienNuoc item)
+    private static async Task ValidateNgayDocAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        ChiSoDienNuoc item,
+        DateTime? ngayBanGiao)
     {
         if (!item.NgayDoc.HasValue) throw new InvalidOperationException("Ngay doc chi so la bat buoc.");
         var ngayDoc = item.NgayDoc.Value.Date;
-        if (ngayDoc.Month != item.Thang || ngayDoc.Year != item.Nam)
-            throw new InvalidOperationException($"Ngay doc {ngayDoc:dd/MM/yyyy} khong thuoc ky {item.Thang}/{item.Nam}.");
+        if (ngayBanGiao.HasValue)
+        {
+            var ngayThucTe = ngayBanGiao.Value.Date;
+            if (ngayDoc != ngayThucTe
+                || item.Thang != ngayThucTe.Month
+                || item.Nam != ngayThucTe.Year)
+                throw new InvalidOperationException(
+                    "Chỉ số bàn giao/kết thúc phải dùng đúng ngày thực tế và đúng kỳ sử dụng chứa ngày đó.");
+        }
+        else if (!MeterReadingWindowPolicy.IsRegularReadDate(ngayDoc, item.Thang, item.Nam))
+            throw new InvalidOperationException(
+                $"Chỉ số kỳ sử dụng {item.Thang}/{item.Nam} phải đọc thực tế từ ngày 01 đến 05 tháng kế tiếp.");
         if (!item.HopDongId.HasValue) return;
         var hopDong = await conn.QueryFirstOrDefaultAsync<HopDong>(
             "SELECT * FROM HopDong WHERE Id = @Id FOR UPDATE", new { Id = item.HopDongId.Value }, tx)
             ?? throw new InvalidOperationException($"Khong tim thay hop dong #{item.HopDongId.Value}.");
         if (hopDong.PhongId != item.PhongId)
             throw new InvalidOperationException("Chi so khong thuoc phong cua hop dong.");
-        if (ngayDoc < hopDong.NgayBatDau.Date ||
-            (hopDong.NgayKetThuc.HasValue && ngayDoc > hopDong.NgayKetThuc.Value.Date))
-            throw new InvalidOperationException($"Ngay doc {ngayDoc:dd/MM/yyyy} nam ngoai thoi gian hieu luc hop dong.");
+        var kyBatDau = new DateTime(item.Nam, item.Thang, 1);
+        var kyKetThuc = kyBatDau.AddMonths(1).AddDays(-1);
+        if (hopDong.NgayBatDau.Date > kyKetThuc
+            || (hopDong.NgayKetThuc.HasValue && hopDong.NgayKetThuc.Value.Date < kyBatDau))
+            throw new InvalidOperationException(
+                $"Hợp đồng không có thời gian cư trú trong kỳ sử dụng {item.Thang}/{item.Nam}.");
     }
 
     private static async Task<bool> DaDuocDungTrenHoaDonAsync(MySqlConnection conn, MySqlTransaction tx, int chiSoId)

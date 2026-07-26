@@ -10,6 +10,10 @@ public class BaoCaoCongNoViewModel
     public int HoaDonId { get; set; }
     public int Thang { get; set; }
     public int Nam { get; set; }
+    public DateTime KyThu { get; set; }
+    public DateTime KyTienPhong { get; set; }
+    public DateTime KyDichVu { get; set; }
+    public decimal TienTinDungApDung { get; set; }
     public decimal TongCong { get; set; }
     public decimal SoTienDaThu { get; set; }
     public decimal ConLai => TongCong - SoTienDaThu;

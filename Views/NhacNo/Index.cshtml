@@ -126,7 +126,7 @@
                     <th>Phòng</th>
                     <th>Khách thuê</th>
                     <th>SĐT</th>
-                    <th>Kỳ</th>
+                    <th>Ba kỳ</th>
                     <th>Đến hạn</th>
                     <th class="text-end">Còn nợ</th>
                     <th>Quá hạn</th>
@@ -157,9 +157,19 @@
                                 <a href="tel:@x.SoDienThoai" class="text-decoration-none">@x.SoDienThoai</a>
                             }
                         </td>
-                        <td class="text-nowrap">T@(x.Thang)/@x.Nam</td>
+                        <td class="small text-nowrap">
+                            <strong>Thu @x.KyThu.ToString("MM/yyyy")</strong><br />
+                            Phòng @x.KyTienPhong.ToString("MM/yyyy")<br />
+                            DV @x.KyDichVu.ToString("MM/yyyy")
+                        </td>
                         <td class="text-nowrap">@x.NgayDenHan.ToString("dd/MM/yyyy")</td>
-                        <td class="text-end fw-bold text-danger">@x.ConLai.ToString("N0") đ</td>
+                        <td class="text-end fw-bold text-danger">
+                            @x.ConLai.ToString("N0") đ
+                            @if (x.TienTinDungApDung > 0)
+                            {
+                                <small class="d-block text-success">Credit −@x.TienTinDungApDung.ToString("N0")</small>
+                            }
+                        </td>
                         <td>
                             @if (x.SoNgayQuaHan > 0)
                             {

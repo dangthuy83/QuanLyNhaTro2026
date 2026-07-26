@@ -21,7 +21,7 @@
 <div class="invoices-page invoices-index-page" data-invoice-list>
     <header class="app-page-header">
         <div class="app-page-heading">
-            <h1>Hóa đơn tháng @thang/@nam</h1>
+            <h1>Kỳ thu @thang/@nam</h1>
             <p class="app-page-subtitle">Theo dõi số phải thu, tiền đã nhận và công nợ theo từng phòng. Kết chuyển nợ và trừ cọc luôn được tách khỏi tiền thực thu.</p>
         </div>
         <div class="app-page-actions" aria-label="Thao tác module Hóa đơn">
@@ -31,8 +31,8 @@
 
     <section class="app-panel invoices-period-panel" aria-labelledby="invoice-period-heading">
         <div>
-            <h2 id="invoice-period-heading">Kỳ hóa đơn</h2>
-            <p>Đổi kỳ để xem đúng snapshot hóa đơn đã chốt.</p>
+            <h2 id="invoice-period-heading">Kỳ thu</h2>
+            <p>Tiền phòng cùng tháng; dịch vụ của tháng liền trước.</p>
         </div>
         <form method="get" class="invoices-period-form">
             <div><label for="invoice-month">Tháng</label><select id="invoice-month" name="thang" class="form-select">@for (int m = 1; m <= 12; m++) { <option value="@m" selected="@(m == thang)">Tháng @m</option> }</select></div>
@@ -104,7 +104,7 @@
                         <td data-label="Nhà / phòng / khách">
                             <a asp-action="Details" asp-route-id="@hd.Id" class="invoices-room-name">@hd.TenPhongSnapshot</a>
                             <span class="invoices-cell-meta">@hd.TenNhaSnapshot · @hd.TenKhachDaiDienSnapshot</span>
-                            <span class="invoices-cell-meta">Hóa đơn #@hd.Id · Kỳ @hd.Thang/@hd.Nam</span>
+                            <span class="invoices-cell-meta">Hóa đơn #@hd.Id · Thu @hd.KyThu.ToString("MM/yyyy") · Phòng @hd.KyTienPhong.ToString("MM/yyyy") · DV @hd.KyDichVu.ToString("MM/yyyy")</span>
                         </td>
                         <td class="text-end" data-label="Tiền phòng"><strong>@hd.TienPhong.ToString("N0") đ</strong></td>
                         <td class="text-end" data-label="Dịch vụ"><strong>@hd.TongTienDichVu.ToString("N0") đ</strong>@if (hd.TongTienPhatSinh > 0) { <span class="invoices-cell-meta">+ @hd.TongTienPhatSinh.ToString("N0") đ phát sinh</span> }</td>

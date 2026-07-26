@@ -1,6 +1,8 @@
 @model QuanLyNhaTro.Models.PhieuThuHtmlViewModel
 @{
-    ViewData["Title"] = $"Phiếu thu #{Model.HoaDon.Id}";
+    var laPhieuThu = Model.LichSuThanhToan.Any();
+    var tenPhieu = laPhieuThu ? "Phiếu thu" : "Phiếu tính tiền";
+    ViewData["Title"] = $"{tenPhieu} #{Model.HoaDon.Id}";
     ViewData["ActiveMenu"] = "hoadon";
     var conLai = Model.ConLai;
     var tienThucThu = Model.TienThucThu;
@@ -18,15 +20,15 @@
             </a>
         </div>
         <button type="button" class="btn btn-primary" data-print-receipt>
-            <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg>In phiếu thu</span>
+            <span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg>In @tenPhieu.ToLowerInvariant()</span>
         </button>
     </div>
 
-    <main class="receipt-sheet" aria-label="Phiếu thu tiền phòng">
+    <main class="receipt-sheet" aria-label="@tenPhieu tiền phòng và dịch vụ">
         <div class="text-center mb-4">
             <div class="text-uppercase fw-semibold">@Model.HoaDon.TenNhaSnapshot</div>
-            <h4 class="receipt-title fw-bold mt-2 mb-1">PHIẾU THU TIỀN PHÒNG</h4>
-            <div class="text-muted">Kỳ tháng @Model.HoaDon.Thang/@Model.HoaDon.Nam · Phiếu #@Model.HoaDon.Id</div>
+            <h4 class="receipt-title fw-bold mt-2 mb-1">@tenPhieu.ToUpperInvariant()</h4>
+            <div class="text-muted">Kỳ thu @Model.HoaDon.KyThu.ToString("MM/yyyy") · Tiền phòng @Model.HoaDon.KyTienPhong.ToString("MM/yyyy") · Dịch vụ @Model.HoaDon.KyDichVu.ToString("MM/yyyy")</div>
         </div>
 
         <div class="row g-3 mb-3">
@@ -62,7 +64,20 @@
                     </tr>
                     <tr>
                         <td class="text-muted">Trạng thái</td>
-                        <td>@Html.Raw(TrangThaiBadge(Model.HoaDon.TrangThaiThanhToan))</td>
+                        <td>
+                            @if (Model.HoaDon.TrangThaiThanhToan == "DaThu")
+                            {
+                                <span class="app-status-badge is-success"><span class="app-status-dot" aria-hidden="true"></span>Đã thu đủ</span>
+                            }
+                            else if (Model.HoaDon.TrangThaiThanhToan == "ThuMotPhan")
+                            {
+                                <span class="app-status-badge is-warning"><span class="app-status-dot" aria-hidden="true"></span>Thu một phần</span>
+                            }
+                            else
+                            {
+                                <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Chưa thu</span>
+                            }
+                        </td>
                     </tr>
                 </table>
             </div>
@@ -116,7 +131,25 @@
                     stt++;
                     <tr>
                         <td>@stt</td>
-                        <td>@ct.TenDichVuSnapshot</td>
+                        <td>
+                            @ct.TenDichVuSnapshot
+                            <small class="d-block text-muted">Kỳ @ct.KySuDung.ToString("MM/yyyy")</small>
+                            @if (ct.LaDichVuTheoChiSo)
+                            {
+                                <small class="d-block text-muted">
+                                    @ct.ChiSoDauSnapshot?.ToString("N2") → @ct.ChiSoCuoiSnapshot?.ToString("N2")
+                                    · đọc @ct.NgayDocSnapshot?.ToString("dd/MM/yyyy")
+                                </small>
+                                @if (ct.LoaiGhiNhanSnapshot == "Reset")
+                                {
+                                    <small class="d-block text-muted">
+                                        Reset: trước @ct.ChiSoTruocResetSnapshot?.ToString("N2")
+                                        → sau @ct.ChiSoSauResetSnapshot?.ToString("N2")
+                                        · @ct.LyDoDieuChinhSnapshot
+                                    </small>
+                                }
+                            }
+                        </td>
                         <td>@ct.DonViTinhSnapshot</td>
                         <td class="text-end">@ct.SoLuong.ToString("N2")</td>
                         <td class="text-end">@ct.DonGia.ToString("N0")</td>
@@ -145,6 +178,16 @@
                         <td></td>
                         <td></td>
                         <td class="text-end fw-semibold">@Model.HoaDon.TienNoKyTruoc.ToString("N0")</td>
+                    </tr>
+                }
+                @if (Model.HoaDon.TienTinDungApDung > 0)
+                {
+                    stt++;
+                    <tr class="text-success">
+                        <td>@stt</td>
+                        <td>Tín dụng tiền phòng áp dụng</td>
+                        <td></td><td></td><td></td>
+                        <td class="text-end fw-semibold">−@Model.HoaDon.TienTinDungApDung.ToString("N0")</td>
                     </tr>
                 }
             </tbody>
@@ -220,10 +263,4 @@
         _ => hinhThuc
     };
 
-    static string TrangThaiBadge(string? trangThai) => trangThai switch
-    {
-        "DaThu" => "<span class='app-status-badge is-success'><span class='app-status-dot' aria-hidden='true'></span>Đã thu đủ</span>",
-        "ThuMotPhan" => "<span class='app-status-badge is-warning'><span class='app-status-dot' aria-hidden='true'></span>Thu một phần</span>",
-        _ => "<span class='app-status-badge is-danger'><span class='app-status-dot' aria-hidden='true'></span>Chưa thu</span>"
-    };
 }

@@ -4,7 +4,8 @@
     ViewData["ActiveMenu"] = "chiso";
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     var room = Model.Phong;
-    var defaultDate = new DateTime(Model.Nam, Model.Thang, DateTime.DaysInMonth(Model.Nam, Model.Thang));
+    var defaultDate = Model.NgayBanGiao
+        ?? QuanLyNhaTro.Services.MeterReadingWindowPolicy.RegularWindow(Model.Thang, Model.Nam).Start;
     if (Model.HopDong?.NgayKetThuc is DateTime end && end.Date < defaultDate) defaultDate = end.Date;
     if (Model.HopDong != null && Model.HopDong.NgayBatDau.Date > defaultDate) defaultDate = Model.HopDong.NgayBatDau.Date;
 }
@@ -22,6 +23,7 @@
     @if (TempData["Error"] != null) { <div class="app-notice is-danger" role="alert"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Chưa thể lưu</strong><p>@TempData["Error"]</p></div></div> }
     @if (TempData["Success"] != null) { <div class="app-notice is-success" role="status"><svg class="app-icon" aria-hidden="true"><use href="#icon-check"></use></svg><div><strong>Đã cập nhật</strong><p>@TempData["Success"]</p></div></div> }
     @if (Model.NgoaiHopDong) { <div class="app-notice is-warning"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><div><strong>Phạm vi không hợp đồng</strong><p>Dữ liệu sẽ mang <code>HopDongId = NULL</code>. Mốc cuối có thể được dùng làm mốc mở cho đoạn hợp đồng hoặc kỳ tiếp theo.</p></div></div> }
+    @if (Model.LaChiSoBanGiao) { <div class="app-notice is-info" role="note"><svg class="app-icon" aria-hidden="true"><use href="#icon-info"></use></svg><div><strong>Chỉ số bàn giao/kết thúc</strong><p>Ngày đọc được khóa theo ngày thực tế @Model.NgayBanGiao!.Value.ToString("dd/MM/yyyy"), thuộc kỳ sử dụng @Model.Thang/@Model.Nam.</p></div></div> }
     @if (Model.CoDuLieuDaKhoa) { <div class="app-notice is-danger"><svg class="app-icon" aria-hidden="true"><use href="#icon-alert"></use></svg><div><strong>Dữ liệu kỳ này đã lên hóa đơn</strong><p>Biểu mẫu được khóa để không tạo một lần lưu chắc chắn bị server từ chối. Xử lý hóa đơn liên quan trước khi sửa chỉ số.</p></div></div> }
 
     @if (!Model.DichVuTheoChiSo.Any())
@@ -35,6 +37,7 @@
             @if (Model.NgoaiHopDong) { <input type="hidden" name="phongId" value="@room?.Id" /><input type="hidden" name="returnHopDongId" value="@Model.ReturnHopDongId" /> }
             else { <input type="hidden" name="hopDongId" value="@Model.HopDong?.Id" /> }
             <input type="hidden" name="thang" value="@Model.Thang" /><input type="hidden" name="nam" value="@Model.Nam" />
+            @if (Model.NgayBanGiao.HasValue) { <input type="hidden" name="ngayBanGiao" value="@Model.NgayBanGiao.Value.ToString("yyyy-MM-dd")" /> }
 
             <fieldset disabled="@Model.CoDuLieuDaKhoa">
             @foreach (var service in Model.DichVuTheoChiSo)
@@ -58,7 +61,7 @@
                         <div class="meters-core-fields">
                             <input type="hidden" name="dichVuIds" value="@service.Id" /><input type="hidden" name="chiSoIds" value="@(current?.Id ?? 0)" />
                             <div class="app-field"><label>Chỉ số cuối <span aria-hidden="true">*</span></label><input type="number" name="chiSoCuois" step="0.01" min="@start.ToString(inv)" class="form-control meters-reading-input" value="@(current?.ChiSoCuoi.ToString(inv) ?? start.ToString(inv))" data-meter-end-input required /></div>
-                            <div class="app-field"><label>Ngày đọc</label><input type="date" name="ngayDocs" class="form-control" value="@readDate.ToString("yyyy-MM-dd")" required /></div>
+                            <div class="app-field"><label>Ngày đọc</label><input type="date" name="ngayDocs" class="form-control" value="@readDate.ToString("yyyy-MM-dd")" readonly="@Model.LaChiSoBanGiao" required /></div>
                             <div class="app-field meters-type-field"><label>Loại ghi nhận</label><select name="loaiGhiNhans" class="form-select" data-meter-type><option value="BinhThuong" selected="@(type == "BinhThuong")">Bình thường</option><option value="Reset" selected="@isReset">Reset / thay đồng hồ</option></select></div>
                         </div>
                         <div class="meters-reset-panel @(isReset ? "" : "d-none")" data-reset-fields>

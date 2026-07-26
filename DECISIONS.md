@@ -12,13 +12,40 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
 |---|---|---|---|
 | 1 | `Huy` chỉ được dùng trước ngày bắt đầu và khi chưa có hóa đơn/chỉ số/cọc, hay có trường hợp hủy sau khi đã nhận phòng? | Vòng đời hợp đồng; phân biệt Hủy và Trả phòng | Cao |
 | 5 | Có cho khách trả dư/ứng trước không; nếu có số dư thuộc hợp đồng, chuỗi khách qua chuyển phòng hay hồ sơ khách? | Thanh toán, công nợ, chuyển phòng | Cao |
-| 6 | Ngày đến hạn của hóa đơn kỳ N là ngày nào trong tháng N+1; nếu cấu hình ngày 29-31 nhưng tháng ngắn hơn thì xử lý thế nào? | Báo cáo công nợ và nhắc nợ | Cao |
 | 7 | Giao dịch cọc thủ công có cho backdate/điều chỉnh không; có cần lưu phương thức thu/hoàn và chứng từ? | Ledger cọc và audit tiền thật | Cao |
 | 8 | Hóa đơn cần snapshot tối thiểu thông tin nào: nhà, phòng, khách đại diện, CCCD, tên/đơn vị dịch vụ? | Bảo toàn chứng từ lịch sử | Cao |
 | 9 | Hợp đồng tương lai dùng trạng thái `ChoHieuLuc` riêng hay trạng thái được suy ra từ ngày? | Chống chồng kỳ và trạng thái phòng | Cao |
 | 10 | Có cho chuyển một phòng vật lý sang Nhà khác sau khi đã có dữ liệu, hay phải tạo phòng mới để giữ lịch sử? | Nhà-Phòng và báo cáo lịch sử | Trung bình |
 | 13 | Có gửi nhắc nợ tự động không, gửi cho chủ nhà bằng Telegram Bot hay gửi khách thuê qua ZNS/SMS? | Giai đoạn sau; hiện chỉ có màn nhắc nợ | Thấp |
 | 14 | Có thêm index theo kết quả benchmark dữ liệu lớn không? | Tối ưu query | Thấp |
+
+---
+
+## Quyết định BILLING-ADVANCE-RENT-ARREARS-SERVICE-CUTOVER-202608 ngày 26/07/2026
+
+- Chính sách mới bắt đầu từ `KyThu=01/08/2026`: kỳ thu tháng M gồm tiền phòng tháng M
+  và toàn bộ dịch vụ tháng M-1. `HoaDon.KyThu`, `KyTienPhong`, `KyDichVu` là ba
+  snapshot `DATE` ngày đầu tháng; `Thang/Nam` tiếp tục biểu diễn kỳ thu để tương thích,
+  không còn được dùng như một kỳ dịch vụ ngầm định.
+- Hạn thanh toán là ngày 10 của `KyThu`. Chỉ số kỳ N chỉ được nhập thông thường từ
+  ngày 01 đến 05 tháng N+1; chỉ số bàn giao/trả phòng là ngoại lệ có ngày thực tế bắt
+  buộc khớp ngày lifecycle. Thiếu chỉ số hoặc quan hệ cư trú cần thiết phải fail closed.
+- Chi tiết hóa đơn đóng băng kỳ sử dụng, ngày đọc, chỉ số đầu/cuối và đầy đủ dấu vết
+  reset công tơ. Sau khi có thanh toán hoặc bút toán tín dụng, trigger khóa snapshot.
+  Chứng từ chưa có tiền thật là “Phiếu tính tiền”; chỉ khi có `ThanhToan` mới là
+  “Phiếu thu”.
+- Hợp đồng mới giữa tháng tạo hóa đơn khởi tạo chỉ có tiền phòng pro-rata; cọc vẫn là
+  ledger riêng và không được gộp vào hóa đơn. Kỳ kế tiếp thu tiền phòng hiện tại và
+  dịch vụ của phần tháng đầu.
+- Trả phòng: phần tiền phòng trả trước chưa sử dụng trở thành tín dụng; waterfall là
+  tín dụng -> dịch vụ cuối -> khoản phát sinh -> nợ cũ -> hoàn tín dụng dư -> cọc ->
+  số khách còn phải trả. Chuyển phòng so sánh tổng tiền phòng pro-rata hai phòng với
+  tiền đã trả trước; chênh tăng thu ngay, chênh giảm là tín dụng của hợp đồng mới và
+  tự trừ kỳ kế tiếp.
+- Hợp đồng #10/phòng 602 chỉ được đóng bằng workflow guard/audit, không sửa SQL trực
+  tiếp, không tạo chứng từ hay chỉ số lịch sử giả, và chống replay hoàn cọc.
+- Migration sequence 13 là cổng production riêng. Batch 26/07/2026 chỉ tạo và rehearsal
+  trên database QA; chưa apply migration hoặc chạy cutover trên database vận hành.
 
 ---
 

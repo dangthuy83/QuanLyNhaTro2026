@@ -43,17 +43,34 @@
                 }
                 else if (Model.CanSinhHoaDonMoi)
                 {
-                    <div class="app-notice app-notice-warning" role="status">Sẽ sinh hóa đơn kỳ cuối tính <strong>@Model.SoNgayO / @Model.SoNgayTrongThang ngày</strong>.</div>
+                    <div class="app-notice app-notice-warning" role="status">
+                        Sẽ sinh hóa đơn quyết toán kỳ cuối cho <strong>@Model.SoNgayO / @Model.SoNgayTrongThang ngày ở</strong>.
+                        Hóa đơn kỳ thu đã có và lịch sử thanh toán không bị sửa ngược.
+                    </div>
                 }
-                else
-                {
-                    <div class="app-notice app-notice-info" role="status">Hóa đơn kỳ trả phòng hiện hữu đã khớp số ngày ở; không sinh hóa đơn mới.</div>
-                }
+                <div class="app-notice app-notice-info" role="note">
+                    Dịch vụ theo chỉ số của tháng cuối phải có mốc kết thúc thực tế.
+                    <a asp-controller="ChiSo" asp-action="Nhap"
+                       asp-route-hopDongId="@Model.HopDongId"
+                       asp-route-thang="@Model.NgayTraPhong.Month"
+                       asp-route-nam="@Model.NgayTraPhong.Year"
+                       asp-route-ngayBanGiao="@Model.NgayTraPhong.ToString("yyyy-MM-dd")">
+                        Nhập chỉ số kết thúc
+                    </a>
+                </div>
 
                 <dl class="lifecycle-settlement-list">
                     @if (Model.CanSinhHoaDonMoi)
                     {
                         <div><dt>Tiền phòng tháng cuối</dt><dd>@Model.TienPhongProRata.ToString("N0") đ</dd></div>
+                        @if (Model.TienPhongDaTraTruoc > 0)
+                        {
+                            <div><dt>Tiền phòng đã trả trước</dt><dd>@Model.TienPhongDaTraTruoc.ToString("N0") đ</dd></div>
+                        }
+                        @if (Model.TinDungTienPhongTaoMoi > 0)
+                        {
+                            <div><dt>Credit ngày chưa ở</dt><dd>@Model.TinDungTienPhongTaoMoi.ToString("N0") đ</dd></div>
+                        }
                         <div><dt>Dịch vụ tháng cuối</dt><dd>@Model.TongTienDichVuThangCuoi.ToString("N0") đ</dd></div>
                     }
                     @if (Model.TongTienPhatSinhChuaXuLy > 0)
@@ -61,6 +78,14 @@
                         <div><dt>Phát sinh chưa xử lý</dt><dd>@Model.TongTienPhatSinhChuaXuLy.ToString("N0") đ</dd></div>
                     }
                     <div><dt>Tổng nợ còn lại</dt><dd>@Model.TongNoConLai.ToString("N0") đ</dd></div>
+                    @if (Model.TinDungApDung > 0)
+                    {
+                        <div><dt>Credit đã bù nghĩa vụ</dt><dd>−@Model.TinDungApDung.ToString("N0") đ</dd></div>
+                    }
+                    @if (Model.TienHoanTinDung > 0)
+                    {
+                        <div><dt>Credit hoàn lại trước khi dùng cọc</dt><dd>@Model.TienHoanTinDung.ToString("N0") đ</dd></div>
+                    }
                     @if (Model.TienTruNoTuCoc > 0)
                     {
                         <div><dt>Trừ nợ vào cọc</dt><dd>@Model.TienTruNoTuCoc.ToString("N0") đ</dd></div>

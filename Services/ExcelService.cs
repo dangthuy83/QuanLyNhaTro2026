@@ -15,12 +15,14 @@ public class ExcelService
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Phiếu Thu");
 
-        ws.Cell("A1").Value = "PHIẾU THU TIỀN PHÒNG TRỌ";
+        var daCoThanhToan = lichSuThanhToan.Any();
+        ws.Cell("A1").Value = daCoThanhToan ? "PHIẾU THU" : "PHIẾU TÍNH TIỀN";
         ws.Range("A1:F1").Merge().Style
             .Font.SetBold(true).Font.SetFontSize(14)
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
-        ws.Cell("A2").Value = $"Kỳ: Tháng {hoaDon.Thang}/{hoaDon.Nam}";
+        ws.Cell("A2").Value =
+            $"Kỳ thu {hoaDon.KyThu:MM/yyyy} | Tiền phòng {hoaDon.KyTienPhong:MM/yyyy} | Dịch vụ {hoaDon.KyDichVu:MM/yyyy}";
         ws.Range("A2:F2").Merge().Style
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
@@ -61,7 +63,15 @@ public class ExcelService
         foreach (var ct in chiTiet)
         {
             ws.Cell(row, 1).Value = stt++;
-            ws.Cell(row, 2).Value = ct.TenDichVuSnapshot;
+            var moTa = ct.LaDichVuTheoChiSo
+                ? $"{ct.TenDichVuSnapshot} - kỳ {ct.KySuDung:MM/yyyy} "
+                  + $"({ct.ChiSoDauSnapshot:N2} -> {ct.ChiSoCuoiSnapshot:N2}; đọc {ct.NgayDocSnapshot:dd/MM/yyyy})"
+                : $"{ct.TenDichVuSnapshot} - kỳ {ct.KySuDung:MM/yyyy}";
+            if (ct.LoaiGhiNhanSnapshot == "Reset")
+                moTa += $"\nReset: trước {ct.ChiSoTruocResetSnapshot:N2} -> "
+                    + $"sau {ct.ChiSoSauResetSnapshot:N2}; {ct.LyDoDieuChinhSnapshot}";
+            ws.Cell(row, 2).Value = moTa;
+            ws.Cell(row, 2).Style.Alignment.WrapText = true;
             ws.Cell(row, 3).Value = ct.DonViTinhSnapshot;
             ws.Cell(row, 4).Value = ct.SoLuong;
             ws.Cell(row, 5).Value = ct.DonGia;
@@ -90,6 +100,15 @@ public class ExcelService
             ws.Cell(row, 1).Value = stt++;
             ws.Cell(row, 2).Value = hoaDon.TienNoKyTruoc > 0 ? "Nợ kỳ trước" : "Thừa kỳ trước";
             ws.Cell(row, 6).Value = hoaDon.TienNoKyTruoc;
+            ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
+            row++;
+        }
+
+        if (hoaDon.TienTinDungApDung > 0)
+        {
+            ws.Cell(row, 1).Value = stt++;
+            ws.Cell(row, 2).Value = "Tín dụng tiền phòng áp dụng";
+            ws.Cell(row, 6).Value = -hoaDon.TienTinDungApDung;
             ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0";
             row++;
         }
@@ -213,12 +232,12 @@ public class ExcelService
         var ws = wb.Worksheets.Add("Công Nợ");
 
         ws.Cell("A1").Value = $"BÁO CÁO CÔNG NỢ — {DateTime.Today:dd/MM/yyyy}";
-        ws.Range("A1:J1").Merge().Style
+        ws.Range("A1:K1").Merge().Style
             .Font.SetBold(true).Font.SetFontSize(13)
             .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
         int row = 3;
-        string[] headers = ["Nhà", "Phòng", "Khách thuê", "SĐT", "Kỳ", "Đến hạn", "Tổng cộng", "Đã thu", "Còn lại", "Quá hạn"];
+        string[] headers = ["Nhà", "Phòng", "Khách thuê", "SĐT", "Ba kỳ", "Đến hạn", "Tổng cộng", "Tín dụng", "Đã thu", "Còn lại", "Quá hạn"];
         for (int i = 0; i < headers.Length; i++)
             ws.Cell(row, i + 1).Value = headers[i];
         ws.Row(row).Style.Font.SetBold(true)
@@ -231,14 +250,17 @@ public class ExcelService
             ws.Cell(row, 2).Value = x.TenPhong;
             ws.Cell(row, 3).Value = x.TenKhachChinh;
             ws.Cell(row, 4).Value = x.SoDienThoai ?? "";
-            ws.Cell(row, 5).Value = $"T{x.Thang}/{x.Nam}";
+            ws.Cell(row, 5).Value =
+                $"Thu {x.KyThu:MM/yyyy}\nPhòng {x.KyTienPhong:MM/yyyy}\nDV {x.KyDichVu:MM/yyyy}";
+            ws.Cell(row, 5).Style.Alignment.WrapText = true;
             ws.Cell(row, 6).Value = x.NgayDenHan;
             ws.Cell(row, 6).Style.DateFormat.Format = "dd/MM/yyyy";
             ws.Cell(row, 7).Value = x.TongCong;
-            ws.Cell(row, 8).Value = x.SoTienDaThu;
-            ws.Cell(row, 9).Value = x.ConLai;
-            ws.Cell(row, 10).Value = x.SoNgayQuaHan > 0 ? $"{x.SoNgayQuaHan} ngày" : "Chưa quá hạn";
-            for (int c = 7; c <= 9; c++)
+            ws.Cell(row, 8).Value = x.TienTinDungApDung;
+            ws.Cell(row, 9).Value = x.SoTienDaThu;
+            ws.Cell(row, 10).Value = x.ConLai;
+            ws.Cell(row, 11).Value = x.SoNgayQuaHan > 0 ? $"{x.SoNgayQuaHan} ngày" : "Chưa quá hạn";
+            for (int c = 7; c <= 10; c++)
                 ws.Cell(row, c).Style.NumberFormat.Format = "#,##0";
             if (!x.DangOHienTai)
                 ws.Row(row).Style.Font.SetFontColor(XLColor.Gray);
@@ -246,12 +268,12 @@ public class ExcelService
         }
 
         row++;
-        ws.Cell(row, 8).Value = "TỔNG NỢ:";
-        ws.Cell(row, 8).Style.Font.SetBold(true);
-        ws.Cell(row, 9).Value = ds.Sum(x => x.ConLai);
-        ws.Cell(row, 9).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
+        ws.Cell(row, 9).Value = "TỔNG NỢ:";
+        ws.Cell(row, 9).Style.Font.SetBold(true);
+        ws.Cell(row, 10).Value = ds.Sum(x => x.ConLai);
+        ws.Cell(row, 10).Style.Font.SetBold(true).NumberFormat.Format = "#,##0";
 
-        double[] widths = [18, 12, 24, 15, 10, 14, 16, 16, 16, 14];
+        double[] widths = [18, 12, 24, 15, 18, 14, 16, 16, 16, 16, 14];
         for (int column = 1; column <= widths.Length; column++)
             ws.Column(column).Width = widths[column - 1];
         ws.Column(3).Style.Alignment.WrapText = true;

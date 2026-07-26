@@ -15,6 +15,7 @@
     const roomSelect = transferPage.querySelector("[name='PhongMoiId']");
     const transferDate = transferPage.querySelector("[name='NgayChuyenDi']");
     const meterLink = transferPage.querySelector("#linkNhapChiSoPhongMoi");
+    const oldMeterLink = transferPage.querySelector("#linkNhapChiSoPhongCu");
     const serviceContainer = transferPage.querySelector("#dichVuPhongMoi");
     const selectedIds = new Set((transferPage.dataset.selectedServiceIds || "").split(",").filter(Boolean));
     let restoreSelection = transferPage.dataset.restoreSelection === "true";
@@ -29,15 +30,43 @@
             return;
         }
         const date = new Date(`${dateValue}T00:00:00`);
+        const newContractDate = new Date(date);
+        newContractDate.setDate(newContractDate.getDate() + 1);
+        const newContractDateValue = [
+            newContractDate.getFullYear(),
+            String(newContractDate.getMonth() + 1).padStart(2, "0"),
+            String(newContractDate.getDate()).padStart(2, "0")
+        ].join("-");
         const params = new URLSearchParams({
             phongId: roomId,
-            thang: String(date.getMonth() + 1),
-            nam: String(date.getFullYear()),
+            thang: String(newContractDate.getMonth() + 1),
+            nam: String(newContractDate.getFullYear()),
+            ngayBanGiao: newContractDateValue,
             returnHopDongId: transferPage.dataset.oldContractId || ""
         });
         meterLink.href = `${transferPage.dataset.meterUrl}?${params}`;
         meterLink.classList.remove("disabled");
         meterLink.removeAttribute("aria-disabled");
+    };
+
+    const syncOldMeterLink = () => {
+        const dateValue = transferDate?.value;
+        if (!dateValue || !oldMeterLink) {
+            oldMeterLink?.setAttribute("href", "#");
+            oldMeterLink?.classList.add("disabled");
+            oldMeterLink?.setAttribute("aria-disabled", "true");
+            return;
+        }
+        const date = new Date(`${dateValue}T00:00:00`);
+        const params = new URLSearchParams({
+            hopDongId: transferPage.dataset.oldContractId || "",
+            thang: String(date.getMonth() + 1),
+            nam: String(date.getFullYear()),
+            ngayBanGiao: dateValue
+        });
+        oldMeterLink.href = `${transferPage.dataset.oldMeterUrl}?${params}`;
+        oldMeterLink.classList.remove("disabled");
+        oldMeterLink.removeAttribute("aria-disabled");
     };
 
     const renderServices = (rows) => {
@@ -108,7 +137,11 @@
         syncMeterLink();
         loadServices();
     });
-    transferDate?.addEventListener("change", syncMeterLink);
+    transferDate?.addEventListener("change", () => {
+        syncMeterLink();
+        syncOldMeterLink();
+    });
     syncMeterLink();
+    syncOldMeterLink();
     loadServices();
 })();

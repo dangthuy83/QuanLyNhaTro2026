@@ -13,7 +13,8 @@ public class HopDongService(
     PhongDichVuRepository phongDichVuRepo,
     HopDongDichVuRepository hopDongDichVuRepo,
     GiaoDichCocService giaoDichCocService,
-    PhongLifecycleService phongLifecycle)
+    PhongLifecycleService phongLifecycle,
+    HoaDonSnapshotService snapshotService)
 {
     public async Task HuyHopDongAsync(int hopDongId, DateTime ngayHuy)
     {
@@ -120,6 +121,7 @@ public class HopDongService(
                 hopDong.TienCoc,
                 hopDong.NgayBatDau,
                 "Thu coc ban dau khi tao hop dong");
+            await TaoHoaDonKhoiTaoAsync(conn, tx, hopDongId, hopDong);
 
             await tx.CommitAsync();
             return hopDongId;
@@ -129,6 +131,49 @@ public class HopDongService(
             await tx.RollbackAsync();
             throw;
         }
+    }
+
+    private async Task TaoHoaDonKhoiTaoAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hopDongId,
+        HopDong hopDong)
+    {
+        var ky = new DateTime(hopDong.NgayBatDau.Year, hopDong.NgayBatDau.Month, 1);
+        if (ky < BillingCollectionPeriodPolicy.CutoverPeriod) return;
+
+        var soNgayTrongThang = BillingPeriodCalculator.GetDaysInMonth(ky.Month, ky.Year);
+        var soNgayO = BillingPeriodCalculator.CountOccupiedDays(
+            ky.Month, ky.Year, hopDong.NgayBatDau, null);
+        if (soNgayO <= 0)
+            throw new InvalidOperationException("Hợp đồng mới không có ngày ở trong kỳ khởi tạo.");
+
+        var tienPhong = BillingPeriodCalculator.CalculateRoomCharge(
+            hopDong.TienThueThoaThuan, soNgayO, soNgayTrongThang);
+        var periods = BillingCollectionPeriodPolicy.ResolveSettlement(hopDong.NgayBatDau);
+        await snapshotService.InsertHoaDonAsync(conn, tx, new HoaDon
+        {
+            HopDongId = hopDongId,
+            KyThu = periods.KyThu,
+            KyTienPhong = periods.KyTienPhong,
+            KyDichVu = periods.KyDichVu,
+            LoaiHoaDon = "KhoiTaoHopDong",
+            Thang = ky.Month,
+            Nam = ky.Year,
+            NgayLap = DateTime.Now,
+            NgayDenHan = hopDong.NgayBatDau.Date,
+            TienPhong = tienPhong,
+            TongTienDichVu = 0,
+            TongTienPhatSinh = 0,
+            TienNoKyTruoc = 0,
+            TienTinDungApDung = 0,
+            TongCong = tienPhong,
+            SoTienDaThu = 0,
+            TrangThaiThanhToan = "ChuaThu",
+            SoNgayO = soNgayO == soNgayTrongThang ? null : soNgayO,
+            SoNgayTrongThang = soNgayO == soNgayTrongThang ? null : soNgayTrongThang,
+            GhiChu = $"Kỳ khởi tạo hợp đồng; tiền cọc {hopDong.TienCoc:N0} đ được theo dõi ở ledger cọc."
+        });
     }
 
     public async Task CapNhatDichVuAsync(

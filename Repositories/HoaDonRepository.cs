@@ -34,7 +34,7 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
     /// <summary>Hóa đơn của 1 kỳ cụ thể</summary>
     public async Task<HoaDon?> GetByHopDongKyAsync(int hopDongId, int thang, int nam)
         => await _db.QueryFirstOrDefaultAsync<HoaDon>(
-            "SELECT * FROM HoaDon WHERE HopDongId = @HopDongId AND Thang = @Thang AND Nam = @Nam",
+            "SELECT * FROM HoaDon WHERE HopDongId = @HopDongId AND Thang = @Thang AND Nam = @Nam AND LoaiHoaDon='DinhKy'",
             new { HopDongId = hopDongId, Thang = thang, Nam = nam });
 
     public async Task<HoaDon?> GetByHopDongKyAsync(
@@ -44,7 +44,7 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
         int thang,
         int nam)
         => await conn.QueryFirstOrDefaultAsync<HoaDon>(
-            "SELECT * FROM HoaDon WHERE HopDongId = @HopDongId AND Thang = @Thang AND Nam = @Nam",
+            "SELECT * FROM HoaDon WHERE HopDongId = @HopDongId AND Thang = @Thang AND Nam = @Nam AND LoaiHoaDon='DinhKy'",
             new { HopDongId = hopDongId, Thang = thang, Nam = nam },
             transaction: tx);
 
@@ -55,8 +55,39 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
         int thang,
         int nam)
         => await conn.QueryFirstOrDefaultAsync<HoaDon>(
-            "SELECT * FROM HoaDon WHERE HopDongId = @HopDongId AND Thang = @Thang AND Nam = @Nam FOR UPDATE",
+            "SELECT * FROM HoaDon WHERE HopDongId = @HopDongId AND Thang = @Thang AND Nam = @Nam AND LoaiHoaDon='DinhKy' FOR UPDATE",
             new { HopDongId = hopDongId, Thang = thang, Nam = nam },
+            transaction: tx);
+
+    public async Task<HoaDon?> GetByHopDongKyLoaiAsync(
+        int hopDongId,
+        int thang,
+        int nam,
+        string loaiHoaDon)
+        => await _db.QueryFirstOrDefaultAsync<HoaDon>(
+            """
+            SELECT * FROM HoaDon
+            WHERE HopDongId=@HopDongId AND Thang=@Thang AND Nam=@Nam
+              AND LoaiHoaDon=@LoaiHoaDon
+            LIMIT 1
+            """,
+            new { HopDongId = hopDongId, Thang = thang, Nam = nam, LoaiHoaDon = loaiHoaDon });
+
+    public async Task<HoaDon?> GetByHopDongKyLoaiForUpdateAsync(
+        IDbConnection conn,
+        IDbTransaction tx,
+        int hopDongId,
+        int thang,
+        int nam,
+        string loaiHoaDon)
+        => await conn.QueryFirstOrDefaultAsync<HoaDon>(
+            """
+            SELECT * FROM HoaDon
+            WHERE HopDongId=@HopDongId AND Thang=@Thang AND Nam=@Nam
+              AND LoaiHoaDon=@LoaiHoaDon
+            LIMIT 1 FOR UPDATE
+            """,
+            new { HopDongId = hopDongId, Thang = thang, Nam = nam, LoaiHoaDon = loaiHoaDon },
             transaction: tx);
 
     /// <summary>Hóa đơn kỳ trước (dùng lấy nợ tồn)</summary>
@@ -174,7 +205,7 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
     /// <summary>Hóa đơn theo hợp đồng + tháng/năm cụ thể.</summary>
     public async Task<HoaDon?> GetByHopDongThangNamAsync(int hopDongId, int thang, int nam)
         => await _db.QueryFirstOrDefaultAsync<HoaDon>(
-            "SELECT * FROM HoaDon WHERE HopDongId=@HopDongId AND Thang=@Thang AND Nam=@Nam LIMIT 1",
+            "SELECT * FROM HoaDon WHERE HopDongId=@HopDongId AND Thang=@Thang AND Nam=@Nam AND LoaiHoaDon='DinhKy' LIMIT 1",
             new { HopDongId = hopDongId, Thang = thang, Nam = nam });
 
     /// <summary>Hóa đơn cuối cùng của hợp đồng.</summary>
@@ -190,7 +221,8 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
             new { HopDongId = hopDongId });
 
     /// <summary>Query công nợ tồn đọng — dùng cho BaoCaoController.</summary>
-    public async Task<IEnumerable<BaoCaoCongNoViewModel>> GetCongNoAsync()
+    public async Task<IEnumerable<BaoCaoCongNoViewModel>> GetCongNoAsync(
+        DateTime? ngayDoiChieu = null)
     {
         const string sql = """
             SELECT
@@ -202,17 +234,22 @@ public class HoaDonRepository(IDbConnection db) : BaseRepository(db)
                 hd.Id          AS HoaDonId,
                 hd.Thang,
                 hd.Nam,
+                hd.KyThu,
+                hd.KyTienPhong,
+                hd.KyDichVu,
+                hd.TienTinDungApDung,
                 hd.TongCong,
                 hd.SoTienDaThu,
                 hd.NgayDenHan,
                 hop.TrangThai  AS TrangThaiHopDong,
-                GREATEST(0, DATEDIFF(CURDATE(), hd.NgayDenHan)) AS SoNgayQuaHan
+                GREATEST(0, DATEDIFF(@NgayDoiChieu, hd.NgayDenHan)) AS SoNgayQuaHan
             FROM HoaDon hd
             JOIN HopDong hop ON hd.HopDongId = hop.Id
             LEFT JOIN KhachThue k ON k.Id = hd.KhachDaiDienIdSnapshot
             WHERE hd.SoTienDaThu < hd.TongCong AND hd.TongCong > 0
             ORDER BY hop.TrangThai DESC, hd.Nam, hd.Thang, hd.TenPhongSnapshot
             """;
-        return await _db.QueryAsync<BaoCaoCongNoViewModel>(sql);
+        return await _db.QueryAsync<BaoCaoCongNoViewModel>(
+            sql, new { NgayDoiChieu = (ngayDoiChieu ?? DateTime.Today).Date });
     }
 }

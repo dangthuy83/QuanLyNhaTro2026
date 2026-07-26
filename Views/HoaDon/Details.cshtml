@@ -1,6 +1,6 @@
 @model QuanLyNhaTro.Models.HoaDon
 @{
-    ViewData["Title"] = $"Hóa đơn {Model.Thang}/{Model.Nam}";
+    ViewData["Title"] = $"Kỳ thu {Model.KyThu:MM/yyyy}";
     ViewData["ActiveMenu"] = "hoadon";
     bool chuaDaThu = Model.TrangThaiThanhToan != "DaThu";
     decimal conLai = Model.SoTienConLai;
@@ -21,11 +21,11 @@
                 else { <span class="app-status-badge is-danger"><span class="app-status-dot" aria-hidden="true"></span>Chưa thu</span> }
                 <span>Hóa đơn #@Model.Id</span>
             </div>
-            <h1>@Model.TenPhongSnapshot · @Model.Thang/@Model.Nam</h1>
+            <h1>@Model.TenPhongSnapshot · kỳ thu @Model.KyThu.ToString("MM/yyyy")</h1>
             <p class="app-page-subtitle">@Model.TenNhaSnapshot · @Model.TenKhachDaiDienSnapshot · Hợp đồng #@Model.HopDongId</p>
         </div>
         <div class="app-page-actions">
-            <a asp-action="InPhieuThu" asp-route-id="@Model.Id" class="btn btn-outline-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg>In phiếu thu</span></a>
+            <a asp-action="InPhieuThu" asp-route-id="@Model.Id" class="btn btn-outline-primary"><span class="app-button-content"><svg class="app-icon" aria-hidden="true"><use href="#icon-receipt"></use></svg>@(Model.SoTienDaThu > 0 ? "In phiếu thu" : "In phiếu tính tiền")</span></a>
             <a asp-action="XuatPhieuThu" asp-route-id="@Model.Id" class="btn btn-outline-success">Xuất Excel</a>
         </div>
     </header>
@@ -46,6 +46,12 @@
         <div><span>Tiền thực thu</span><strong class="is-success">@tienThucThu.ToString("N0") đ</strong><small>Tiền mặt + chuyển khoản</small></div>
         <div><span>Bút toán công nợ</span><strong>@butToanPhiTienMat.ToString("N0") đ</strong><small>Kết chuyển nợ + trừ cọc</small></div>
         <div><span>Còn phải thu</span><strong class="@(conLai > 0 ? "is-danger" : "is-success")">@Math.Max(0, conLai).ToString("N0") đ</strong><small>Hạn @Model.NgayDenHan.ToString("dd/MM/yyyy")</small></div>
+    </section>
+
+    <section class="invoices-period-strip" aria-label="Ba kỳ của hóa đơn">
+        <div><span>Kỳ thu</span><strong>@Model.KyThu.ToString("MM/yyyy")</strong><small>Hạn @Model.NgayDenHan.ToString("dd/MM/yyyy")</small></div>
+        <div><span>Kỳ tiền phòng</span><strong>@Model.KyTienPhong.ToString("MM/yyyy")</strong><small>Thu trước</small></div>
+        <div><span>Kỳ dịch vụ</span><strong>@Model.KyDichVu.ToString("MM/yyyy")</strong><small>Thu sau</small></div>
     </section>
 
 <div class="invoices-details-grid">
@@ -72,6 +78,22 @@
                                 <td>
                                     @ct.TenDichVu
                                     <small class="text-muted">(@ct.SoLuong.ToString("N2") × @ct.DonGia.ToString("N0"))</small>
+                                    <small class="d-block text-muted">Kỳ sử dụng @ct.KySuDung.ToString("MM/yyyy")</small>
+                                    @if (ct.LaDichVuTheoChiSo)
+                                    {
+                                        <small class="d-block text-muted">
+                                            Đọc @ct.NgayDocSnapshot?.ToString("dd/MM/yyyy"):
+                                            @ct.ChiSoDauSnapshot?.ToString("N2") → @ct.ChiSoCuoiSnapshot?.ToString("N2")
+                                        </small>
+                                        @if (ct.LoaiGhiNhanSnapshot == "Reset")
+                                        {
+                                            <small class="d-block text-muted">
+                                                Reset: trước @ct.ChiSoTruocResetSnapshot?.ToString("N2")
+                                                → sau @ct.ChiSoSauResetSnapshot?.ToString("N2")
+                                                · @ct.LyDoDieuChinhSnapshot
+                                            </small>
+                                        }
+                                    }
                                 </td>
                                 <td class="text-end">@ct.ThanhTien.ToString("N0") đ</td>
                             </tr>
@@ -98,6 +120,13 @@
                             <tr class="@(Model.TienNoKyTruoc > 0 ? "text-danger" : "text-success")">
                                 <td>@(Model.TienNoKyTruoc > 0 ? "Nợ kỳ trước" : "Dư kỳ trước")</td>
                                 <td class="text-end">@Model.TienNoKyTruoc.ToString("N0") đ</td>
+                            </tr>
+                        }
+                        @if (Model.TienTinDungApDung > 0)
+                        {
+                            <tr class="text-success">
+                                <td>Tín dụng tiền phòng áp dụng</td>
+                                <td class="text-end">−@Model.TienTinDungApDung.ToString("N0") đ</td>
                             </tr>
                         }
                     </tbody>

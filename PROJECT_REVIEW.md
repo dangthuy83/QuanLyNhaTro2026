@@ -6,6 +6,46 @@ Vai tro review: Solution Architect + Business Analyst cho ung dung quan ly nha t
 
 ---
 
+## BILLING-ADVANCE-RENT-ARREARS-SERVICE-CUTOVER-202608 - 26/07/2026
+
+Mô hình cũ dùng `HoaDon.Thang/Nam` như một kỳ duy nhất và thu tiền phòng/dịch vụ cùng
+tháng. Mô hình mới, áp dụng từ kỳ thu 08/2026, có một nguồn sự thật gồm
+`KyThu=08/2026`, `KyTienPhong=08/2026`, `KyDichVu=07/2026`; hạn thanh toán 10/08.
+Giá phòng được resolve theo kỳ tiền phòng, giá/hình thức/số lượng dịch vụ theo kỳ dịch
+vụ. Preview, chốt lẻ và chốt hàng loạt cùng dùng `BillingCollectionPeriodPolicy` và
+`HoaDonService`; controller không tự tính tiền.
+
+Schema mới bổ sung ba kỳ, loại hóa đơn, snapshot ngày đọc/chỉ số/reset, ledger tín
+dụng tiền phòng và audit cutover. Unique kỳ thu tiếp tục chặn submit trùng; CHECK
+chặn kỳ sai và trạng thái tiền sai; trigger khóa snapshot khi hóa đơn đã có thanh toán
+hoặc tín dụng. Opening balance vẫn giữ nguyên `SoDuMoSo/CongNoMoSo/ChiSoMoSo`, không
+tạo hóa đơn, thanh toán, thu cọc hay settlement lịch sử giả.
+
+Lifecycle dùng transaction và row lock. Hợp đồng mới giữa tháng tạo hóa đơn khởi tạo
+tiền phòng pro-rata, cọc ở ledger riêng. Trả phòng tạo credit ngày chưa ở, quyết toán
+dịch vụ tháng cuối ngay và dùng waterfall đã chốt trước khi đụng cọc. Chuyển phòng
+tách ngày ở hai phòng, tính dịch vụ theo chỉ số bàn giao, chỉ tính dịch vụ cố định một
+lần; chênh lệch giảm trở thành credit hợp đồng mới và tự trừ kỳ tiếp theo. Workflow
+hợp đồng #10 đóng ngày 30/06/2026, hoàn cọc 2.700.000 ngày 03/07/2026, ghi audit và
+chống replay mà không tạo dữ liệu lịch sử giả.
+
+QA có bằng chứng trực tiếp trên snapshot reset độc lập cho từng flow. Fresh schema
+27 bảng/9 trigger và upgrade migration 13 đều pass; migration source lại không hỏng
+dữ liệu và Runner hết pending trên QA. Service harness pass các nhánh bình thường,
+blocker, snapshot, reset, trả phòng, chuyển phòng, race, công nợ và cutover. OpenXML
+assert chứng minh Excel đã thanh toán dùng “PHIẾU THU”, chứng từ chỉ settlement tín
+dụng dùng “PHIẾU TÍNH TIỀN”, ba kỳ và chỉ số/reset đúng snapshot.
+
+Browser QA xác minh route đọc invoice/index/details/create/batch/print, nhập chỉ số,
+preview lifecycle, nhắc nợ/công nợ và cutover. Không có overflow/console error tại
+1440/768/390, target mobile đạt 44px và drawer trả focus sau Escape. Không submit
+execute/result lifecycle qua UI; phần này chỉ có bằng chứng service/transaction nên
+acceptance UI còn có giới hạn. Package audit direct/transitive cũng còn blocked vì
+không có quyền truy cập NuGet. Migration 13 chưa áp production, cutover #10 chưa chạy
+production và chưa có release/deploy.
+
+---
+
 ## UPGRADE-NET10 - 20/07/2026
 
 Phạm vi kỹ thuật đã hoàn tất ở workspace: app MVC và ba tool target `net10.0`, SDK khóa tại

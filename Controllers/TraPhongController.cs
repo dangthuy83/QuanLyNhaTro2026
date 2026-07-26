@@ -15,7 +15,10 @@ public class TraPhongController(
         if (hd == null || hd.TrangThai != "DangHieuLuc")
             return BadRequest("Hợp đồng không hợp lệ.");
 
-        var vm = await svc.TinhPreviewAsync(hopDongId, ngayTraPhong ?? DateTime.Today);
+        var ngayMacDinh = DateTime.Today < BillingCollectionPeriodPolicy.CutoverPeriod
+            ? BillingCollectionPeriodPolicy.CutoverPeriod
+            : DateTime.Today;
+        var vm = await svc.TinhPreviewAsync(hopDongId, ngayTraPhong ?? ngayMacDinh);
         if (!vm.CoTheTraPhong && !string.IsNullOrWhiteSpace(vm.LyDoChanTraPhong))
             ModelState.AddModelError(string.Empty, vm.LyDoChanTraPhong);
         return View(vm);

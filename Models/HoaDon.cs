@@ -4,6 +4,10 @@ public class HoaDon
 {
     public int Id { get; set; }
     public int HopDongId { get; set; }
+    public DateTime KyThu { get; set; }
+    public DateTime KyTienPhong { get; set; }
+    public DateTime KyDichVu { get; set; }
+    public string LoaiHoaDon { get; set; } = "DinhKy";
     public int Thang { get; set; }
     public int Nam { get; set; }
     public DateTime NgayLap { get; set; }
@@ -13,6 +17,7 @@ public class HoaDon
     public decimal TienPhong { get; set; }
     public decimal TongTienDichVu { get; set; }
     public decimal TongTienPhatSinh { get; set; }
+    public decimal TienTinDungApDung { get; set; }
     public decimal TienNoKyTruoc { get; set; }  // Âm = khách đang dư
     public decimal TongCong { get; set; }       // = TienPhong + TongTienDichVu + TongTienPhatSinh + TienNoKyTruoc
 

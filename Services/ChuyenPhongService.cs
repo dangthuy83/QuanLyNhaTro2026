@@ -53,8 +53,6 @@ public class ChuyenPhongService(
         var dvCu = (await hopDongDichVuRepo.GetPhongDichVuByHopDongKyAsync(
             vm.HopDongCuId, thang, nam)).ToList();
 
-        decimal noXuyen = await hoaDonRepo.GetTongNoConLaiAsync(vm.HopDongCuId);
-
         var conn = new MySqlConnection(config.GetConnectionString("DefaultConnection"));
         await conn.OpenAsync();
         await using var tx = await conn.BeginTransactionAsync();
@@ -75,6 +73,17 @@ public class ChuyenPhongService(
                 throw new InvalidOperationException("Hop dong khong con hieu luc de chuyen phong.");
             if (hdCuDaKhoa.PhongId != hdCu.PhongId)
                 throw new InvalidOperationException("Phong cua hop dong da thay doi. Vui long tai lai du lieu.");
+            var hoaDonKyThu = await hoaDonRepo.GetByHopDongKyForUpdateAsync(
+                conn, tx, vm.HopDongCuId, thang, nam);
+            if (hoaDonKyThu != null && hoaDonKyThu.SoTienDaThu < hoaDonKyThu.TienPhong)
+                throw new InvalidOperationException(
+                    $"Hóa đơn kỳ thu #{hoaDonKyThu.Id} chưa ghi nhận đủ phần tiền phòng trả trước.");
+            decimal tienPhongDaTraTruoc = hoaDonKyThu == null
+                ? 0
+                : Math.Min(hoaDonKyThu.TienPhong, hoaDonKyThu.SoTienDaThu);
+            decimal tongTienPhongThucTe = tienPhongCu + tienPhongMoi;
+            decimal tienPhongPhaiThuThem = Math.Max(0, tongTienPhongThucTe - tienPhongDaTraTruoc);
+            decimal tinDungChuyenPhong = Math.Max(0, tienPhongDaTraTruoc - tongTienPhongThucTe);
 
             var phongMoiDaKhoa = await phongLifecycle.KhoaPhongAsync(conn, tx, vm.PhongMoiId);
             PhongLifecycleService.DamBaoKhongDangSua(phongMoiDaKhoa);
@@ -115,6 +124,9 @@ public class ChuyenPhongService(
                     CanXuLyCoc = vm.TienCocMoi != hdCu.TienCoc,
                     GhiChu = $"Chuyen tu {phongCu.TenPhong} ngay {vm.NgayChuyenDi:dd/MM/yyyy}"
                 }, tx);
+            await TinDungTienPhongService.ChuyenSangHopDongAsync(
+                conn, tx, vm.HopDongCuId, hdMoiId, tinDungChuyenPhong,
+                vm.NgayChuyenDi, "Hệ thống");
 
             await CuTruService.ChuyenSangHopDongMoiAsync(
                 conn, tx, vm.HopDongCuId, hdMoiId, vm.NgayChuyenDi, vm.NgayBatDauMoi);
@@ -142,24 +154,37 @@ public class ChuyenPhongService(
             var khoanPhatSinhCu = await khoanPhatSinhRepo.GetChuaXuLyDenNgayAsync(
                 conn, tx, vm.HopDongCuId, vm.NgayChuyenDi);
             decimal tongPhatSinhCu = khoanPhatSinhCu.Sum(x => x.SoTienConLai);
-            decimal tongCongCu = tienPhongCu + tongDvCu + tongPhatSinhCu;
+            decimal noTruocQuyetToan = await TinhTongNoConLaiAsync(
+                conn, tx, vm.HopDongCuId);
+            decimal noTinhVaoHoaDonCu = chuyenCuoiThang ? noTruocQuyetToan : 0;
+            decimal tongCongCu = tongDvCu + tongPhatSinhCu + noTinhVaoHoaDonCu;
+            var settlementPeriods = BillingCollectionPeriodPolicy.ResolveSettlement(vm.NgayChuyenDi);
 
             var hdCuId = await snapshotService.InsertHoaDonAsync(conn, tx, new HoaDon
                 {
                     HopDongId = vm.HopDongCuId,
+                    KyThu = settlementPeriods.KyThu,
+                    KyTienPhong = settlementPeriods.KyTienPhong,
+                    KyDichVu = settlementPeriods.KyDichVu,
+                    LoaiHoaDon = "QuyetToanChuyenPhongCu",
                     Thang = thang,
                     Nam = nam,
                     NgayLap = DateTime.Now,
-                    TienPhong = tienPhongCu,
+                    NgayDenHan = settlementPeriods.NgayDenHan,
+                    TienPhong = 0,
                     TongTienDichVu = tongDvCu,
                     TongTienPhatSinh = tongPhatSinhCu,
+                    TienNoKyTruoc = noTinhVaoHoaDonCu,
                     TongCong = tongCongCu,
                     SoNgayO = soNgayOCu,
                     SoNgayTrongThang = soNgayTrongThang,
-                    TrangThaiThanhToan = "ChuaThu"
+                    TrangThaiThanhToan = tongCongCu == 0 ? "DaThu" : "ChuaThu",
+                    GhiChu = $"Quyết toán phòng cũ; tiền phòng thực tế {tienPhongCu:N0} đ, "
+                        + $"tổng tiền phòng hai phòng {tongTienPhongThucTe:N0} đ, "
+                        + $"đã trả trước {tienPhongDaTraTruoc:N0} đ."
                 });
 
-            await InsertChiTietAsync(conn, tx, hdCuId, chiTietDvCu);
+            await InsertChiTietAsync(conn, tx, hdCuId, chiTietDvCu, thang, nam);
             await khoanPhatSinhRepo.GanVaoHoaDonAsync(
                 conn, tx, khoanPhatSinhCu.Select(x => x.Id), hdCuId);
 
@@ -168,24 +193,44 @@ public class ChuyenPhongService(
             {
                 var chiTietDvMoi = await TinhChiTietDichVuAsync(conn, tx, vm.PhongMoiId, hdMoiId, dvMoi, thang, nam);
                 decimal tongDvMoi = chiTietDvMoi.Sum(d => d.ThanhTien);
-                decimal tongCongMoi = tienPhongMoi + tongDvMoi + noXuyen;
+                decimal noXuyen = await TinhTongNoConLaiAsync(conn, tx, vm.HopDongCuId);
+                decimal truocTinDung = tienPhongPhaiThuThem + tongDvMoi + noXuyen;
+                decimal soDuTinDung = await TinDungTienPhongService.GetSoDuForUpdateAsync(
+                    conn, tx, hdMoiId);
+                decimal tinDungApDung = Math.Min(soDuTinDung, truocTinDung);
+                decimal tongCongMoi = truocTinDung - tinDungApDung;
 
                 hdMoiHdId = await snapshotService.InsertHoaDonAsync(conn, tx, new HoaDon
                     {
                         HopDongId = hdMoiId,
+                        KyThu = settlementPeriods.KyThu,
+                        KyTienPhong = settlementPeriods.KyTienPhong,
+                        KyDichVu = settlementPeriods.KyDichVu,
+                        LoaiHoaDon = "QuyetToanChuyenPhongMoi",
                         Thang = thang,
                         Nam = nam,
                         NgayLap = DateTime.Now,
-                        TienPhong = tienPhongMoi,
+                        NgayDenHan = settlementPeriods.NgayDenHan,
+                        TienPhong = tienPhongPhaiThuThem,
                         TongTienDichVu = tongDvMoi,
                         TongCong = tongCongMoi,
                         TienNoKyTruoc = noXuyen,
+                        TienTinDungApDung = tinDungApDung,
                         SoNgayO = soNgayOMoi,
                         SoNgayTrongThang = soNgayTrongThang,
-                        TrangThaiThanhToan = "ChuaThu"
+                        TrangThaiThanhToan = tongCongMoi == 0 ? "DaThu" : "ChuaThu",
+                        GhiChu = $"Quyết toán phòng mới; tiền phòng thực tế {tienPhongMoi:N0} đ, "
+                            + $"chênh lệch cần thu {tienPhongPhaiThuThem:N0} đ, "
+                            + $"credit tạo mới {tinDungChuyenPhong:N0} đ."
                     });
 
-                await InsertChiTietAsync(conn, tx, hdMoiHdId.Value, chiTietDvMoi);
+                await InsertChiTietAsync(conn, tx, hdMoiHdId.Value, chiTietDvMoi, thang, nam);
+                var tinDungDaApDung = await TinDungTienPhongService.ApDungVaoHoaDonAsync(
+                    conn, tx, hdMoiId, hdMoiHdId.Value, truocTinDung,
+                    vm.NgayChuyenDi, "Hệ thống");
+                if (tinDungDaApDung != tinDungApDung)
+                    throw new InvalidOperationException(
+                        "Số dư tín dụng thay đổi trong lúc quyết toán chuyển phòng.");
 
                 await conn.ExecuteAsync(
                     "UPDATE HoaDon SET HoaDonGhepId=@Ghep WHERE Id=@Id",
@@ -197,16 +242,28 @@ public class ChuyenPhongService(
 
                 if (noXuyen > 0)
                 {
-                    await congNoSettlementService.ThanhToanNoAsync(
+                    var daKetChuyen = await congNoSettlementService.ThanhToanNoAsync(
                         conn,
                         tx,
                         vm.HopDongCuId,
                         noXuyen,
                         vm.NgayChuyenDi,
                         "KetChuyenNo",
-                        $"Ket chuyen no sang hop dong #{hdMoiId}",
-                        [hdCuId]);
+                        $"Kết chuyển nợ sang hợp đồng #{hdMoiId}");
+                    if (daKetChuyen != noXuyen)
+                        throw new InvalidOperationException(
+                            "Số tiền nợ chuyển sang hợp đồng mới không khớp.");
                 }
+            }
+            else if (noTruocQuyetToan > 0)
+            {
+                var daKetChuyen = await congNoSettlementService.ThanhToanNoAsync(
+                    conn, tx, vm.HopDongCuId, noTruocQuyetToan, vm.NgayChuyenDi,
+                    "KetChuyenNo", $"Kết chuyển nợ vào quyết toán chuyển phòng #{hdCuId}",
+                    [hdCuId]);
+                if (daKetChuyen != noTruocQuyetToan)
+                    throw new InvalidOperationException(
+                        "Số tiền nợ cũ không khớp khi chuyển phòng cuối tháng.");
             }
 
             await giaoDichCocService.ChuyenCocSangHopDongMoiAsync(
@@ -278,7 +335,9 @@ public class ChuyenPhongService(
         MySqlConnection conn,
         MySqlTransaction tx,
         int hoaDonId,
-        IEnumerable<ChiTietDichVuTam> chiTiet)
+        IEnumerable<ChiTietDichVuTam> chiTiet,
+        int thang,
+        int nam)
     {
         await snapshotService.InsertChiTietAsync(
             conn,
@@ -290,7 +349,8 @@ public class ChuyenPhongService(
                 ChiSoDienNuocId = ct.ChiSoDienNuocId,
                 SoLuong = ct.SoLuong,
                 DonGia = ct.DonGia,
-                ThanhTien = ct.ThanhTien
+                ThanhTien = ct.ThanhTien,
+                KySuDung = new DateTime(nam, thang, 1)
             }));
     }
 
@@ -331,6 +391,18 @@ public class ChuyenPhongService(
             new { PhongId = phongId, HopDongId = hopDongId, DichVuId = dichVuId, Thang = thang, Nam = nam },
             tx);
     }
+
+    private static async Task<decimal> TinhTongNoConLaiAsync(
+        MySqlConnection conn,
+        MySqlTransaction tx,
+        int hopDongId)
+        => await conn.ExecuteScalarAsync<decimal>(
+            """
+            SELECT COALESCE(SUM(TongCong-SoTienDaThu),0)
+            FROM HoaDon
+            WHERE HopDongId=@HopDongId AND TongCong>SoTienDaThu
+            """,
+            new { HopDongId = hopDongId }, tx);
 
     private sealed record ChiTietDichVuTam(
         int DichVuId,

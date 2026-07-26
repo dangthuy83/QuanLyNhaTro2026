@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | RELEASE net10.0 + Remember Me đã switch NSSM và hoàn tất manual login/persistent-cookie smoke ngày 21/07/2026 |
-| Build | Phiên 73: app và ba tool `net10.0` build với SDK 10.0.302, `0 warning / 0 error` khi bật `-warnaserror` |
-| Restore | Phiên 73: restore đủ bốn project; audit direct/transitive không có package deprecated/vulnerable |
-| Database | Phiên 73: DB vận hành chỉ chạy `MigrationRunner status` trước/sau và giữ journal 1..12; mọi POST/import chạy trên DB tạm `qlnt_upgrade_net10_019f8032`, sau đó dọn bỏ. |
+| Giai đoạn | Batch billing thu tiền phòng trước/dịch vụ sau đã hoàn tất code và QA local; chờ duyệt migration production, stage/commit và release riêng |
+| Build | Phiên 74: app và ba tool vận hành `net10.0` build SDK 10.0.302 với `-warnaserror`, `0 warning / 0 error` |
+| Restore | Assets local đủ để build; package audit direct/transitive phiên 74 bị chặn vì môi trường không được phép truy cập NuGet, chưa được ghi nhận pass |
+| Database | Phiên 74: DB vận hành SELECT-only, journal 1..12 và fingerprint trước/sau phải khớp; migration 13 và mọi flow ghi chỉ chạy trên hai DB QA tạm rồi drop |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -57,6 +57,41 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 ---
 
 ## Phiên Làm Việc
+
+### Phiên 74 - BILLING-ADVANCE-RENT-ARREARS-SERVICE-CUTOVER-202608
+
+- Baseline `HEAD=main=origin/main=ab6154cfa9591f8451d3beefd76e751f9d08c5b1`;
+  đầu phiên chỉ có hai file opening-balance local được bảo vệ. DB vận hành có journal
+  1..12, không có hóa đơn/thanh toán/thu chi và fingerprint
+  `F77517E5CCBF85E2CE33C39BAA1709BC9435DE01913431E811E2236D1DDA1DD9`.
+- Thêm ba kỳ `KyThu/KyTienPhong/KyDichVu`, hạn ngày 10, cửa sổ đọc chỉ số 01-05,
+  snapshot chỉ số/reset, ledger tín dụng tiền phòng, hóa đơn khởi tạo giữa tháng,
+  settlement trả/chuyển phòng và workflow cutover có audit cho hợp đồng #10.
+- Tạo migration sequence 13
+  `20260726_advance_rent_collection_periods.sql`, SHA-256
+  `64430E364AD41662E8B967E1DF0168CA88DC12D11939414C2F96CD073E40928E`.
+  Upgrade snapshot QA, apply một lần, source lại an toàn và Runner status không còn
+  pending. Fresh schema có 27 bảng, 9 trigger và baseline qua sequence 13.
+- Database QA ghi dữ liệu:
+  `QuanLyNhaTro_BILLING_ADVANCE_QA_20260726` và
+  `QuanLyNhaTro_BILLING_ADVANCE_FRESH_20260726`; reset snapshot giữa các flow.
+  Kết quả pass: thiếu chỉ số; kỳ thu 08/2026; snapshot bất biến; cutover/replay;
+  hợp đồng mới giữa tháng; công nợ active; bốn nhánh trả phòng; reset công tơ;
+  chuyển phòng rẻ/đắt/cuối tháng/race; tín dụng kỳ sau; Excel phiếu thu và phiếu
+  tính tiền.
+- Browser QA có đăng nhập trên QA: 13 route invoice/meter/lifecycle/report/cutover
+  không có HTTP 500 hoặc tràn ngang ở 1440px; các màn trọng yếu pass 768/390px,
+  target tương tác 44px, drawer Escape trả focus, console sạch. POST execute/result
+  trả/chuyển phòng được xác minh qua harness service/transaction, chưa submit qua UI
+  nên không ghi acceptance UI 100%.
+- `git diff --check` sạch; Impeccable detector trả `[]`; không có inline
+  style/handler/`Html.Raw` mới. App và ba tool vận hành build warning-as-error sạch.
+  Package audit direct/transitive chưa chạy được vì quyền network NuGet bị từ chối.
+- Cleanup hoàn tất: dừng listener 5097, drop cả hai database QA, xóa snapshot, harness,
+  script launcher và log tạm. Fingerprint production hậu kiểm khớp tuyệt đối baseline;
+  hợp đồng #10 vẫn đang hiệu lực và migration 13 vẫn `pending`.
+- Chưa apply migration/cutover production, chưa publish/release/deploy/NSSM, chưa
+  stage/commit/push.
 
 ### Phiên 73 - UPGRADE-NET10
 
@@ -2999,3 +3034,82 @@ Khi kết thúc phiên:
 - DB vận hành chỉ SELECT; dump fingerprint trước/sau release trùng tuyệt đối:
   `C187E63E4263AACDA6D785F0C06A9E336E051E7B01294060F96D913E9C48C76F` (25 bảng). Không migration,
   import, schema change hoặc xoay Data Protection keys.
+
+## 26/07/2026 - BILLING-ADVANCE-RENT-LIFECYCLE-UI-ACCEPTANCE-CLOSURE-202608
+
+- Baseline Git giữ nguyên `HEAD = main = origin/main = ab6154cfa9591f8451d3beefd76e751f9d08c5b1`,
+  staged = 0; database vận hành chỉ đọc: journal 01..12 và sequence 13 vẫn pending.
+- QA `QuanLyNhaTro_BILLING_UI_ACCEPTANCE_QA_20260726_A3` được restore từ dump
+  `--single-transaction` mới, apply đúng sequence 13 qua MigrationRunner và status 1..13. Schema
+  QA, dump và profile runtime tạm đã bị xóa sau lượt thử.
+- Không thể chạy Browser POST acceptance: sandbox từ chối key ring Data Protection tại profile Windows;
+  thử một lần profile APPDATA/LOCALAPPDATA/USERPROFILE tạm trong workspace vẫn không bind listener
+  5097 trong 15 giây. Vì vậy mọi POST Browser/print/Excel/responsive 1440/768/390 của closure này là
+  **BLOCKED, chưa kiểm chứng**, không suy diễn pass từ service/harness.
+- App và ba tool build `net10.0` với warning-as-error đều 0 warning/0 error; `git diff --check` sạch;
+  Impeccable detector `[]`; audit NuGet elevated không liệt kê package vulnerable hoặc deprecated.
+  Không sửa công thức nghiệp vụ, không apply/cutover production, không stage/commit/push.
+- Acceptance QA A4 (cùng batch, 26/07/2026): `MigrationRunner status` read-only trên
+  `QuanLyNhaTro_BILLING_UI_ACCEPTANCE_QA_20260726_A4` xác nhận sequence `01..13`; listener
+  `127.0.0.1:5097` đang chạy. Browser admin mở `/HoaDon` bình thường, không HTTP 500, mặc định
+  kỳ thu `08/2026` và không có hóa đơn trong kỳ. Read-only DB trước POST: `HoaDon=0`,
+  `ThanhToan=0`, `ThuChi=0`, `GiaoDichTinDungTienPhong=0`.
+- Browser `/HoaDon/ChotHangLoat?thang=8&nam=2026` cho `10` hợp đồng active nhưng `0` dòng sẵn
+  sàng: tất cả đều blocker `Thiếu chỉ số Điện`. Preview lẻ hợp đồng `#1`/Phòng 101 tại
+  `/HoaDon/Create?hopDongId=1&thang=8&nam=2026` hiển thị đúng ba kỳ `Kỳ thu=08/2026`,
+  `Kỳ tiền phòng=08/2026`, `Kỳ dịch vụ=07/2026`, tổng dự kiến `1.890.000 đ`, nhưng trạng thái
+  `Đang bị chặn` và nút POST `Tạo hóa đơn 8/2026` disabled. Không có warning/error console.
+  Vì scope không cho tự nhập chỉ số/seed dữ liệu, **POST tạo hóa đơn, đối chiếu DB sau POST,
+  replay và InPhieuThu là BLOCKED, chưa kiểm chứng**; không tạo invoice, thanh toán, thu chi,
+  ledger hoặc credit nào. QA A4 được giữ nguyên, không chạy Trả phòng/Chuyển phòng/cutover 602.
+- Quyết định handoff ngày 26/07/2026: trước mọi gate release hoặc acceptance hóa đơn tiếp theo,
+  ưu tiên hoàn tất **cutover QA HĐ #10 / Phòng 602** trên một database QA restore mới, tách khỏi
+  A4. A4 tiếp tục được giữ nguyên làm evidence blocker chỉ số. Prompt thực thi có kiểm soát:
+  `NEXT_SESSION_CUTOVER_QA_10.md`. Đây là quyết định QA-only; không cho phép cutover production,
+  migration production, release/publish/deploy, stage/commit/push hoặc chạy lifecycle khác.
+
+## 26/07/2026 - CUTOVER-QA-HOPDONG10-602-20260726
+
+- Git status trước QA giữ nguyên batch billing/cutover local chưa commit và hai file opening-balance
+  được bảo vệ; không reset/clean/stash/check-out, không stage/commit/push. `MigrationRunner status`
+  trên database vận hành, chỉ đọc, xác nhận journal 01..12 và migration 13 vẫn `pending`.
+- Tạo B1 `QuanLyNhaTro_CUTOVER_QA_20260726_B1` từ `mysqldump --single-transaction` production
+  read-only, SHA-256 dump `36A5B42E3E788C83C51E636AEB28EDB2AFA7585C364112CAAF279616C6175A00`;
+  apply đúng một lần sequence 13 bằng MigrationRunner và status B1 01..13 đều `Runner`/evidence,
+  không pending. A4 và listener `127.0.0.1:5097` không bị dùng, reset hoặc dừng.
+- Inventory B1 trước POST: HĐ #10/phòng 602 `DangHieuLuc`, bắt đầu `01/10/2025`, kết thúc dự kiến
+  `30/09/2026`, chưa có ngày trả, cọc ledger `2.700.000`; đúng 2 cư trú và 6 dịch vụ còn hiệu lực.
+  `HoaDon`, `ThanhToan`, khoản phát sinh chưa xử lý, `CongNoMoSo`, `ChiSoDienNuoc`,
+  `ChiSoNgoaiHopDong` phòng 602, `GiaoDichTinDungTienPhong`, `ThuChi` phòng 602 và audit cutover
+  đều 0; ledger chỉ có một `ThuCoc` 2.700.000 ngày `01/10/2025`.
+- Khởi động app QA riêng tại `http://127.0.0.1:5098` chỉ trỏ B1, HTTPS tắt và Data Protection
+  ephemeral. In-app Browser tới `/Cutover/DongHopDongTruocCutover?hopDongId=10` không HTTP 500
+  nhưng được chuyển tới Login vì profile Data Protection tạm không thể giải mã cookie admin của A4.
+  **BLOCKED tại xác thực, chưa submit POST**: chưa xác minh form/input/console, chưa ghi hoàn cọc,
+  audit hay bất kỳ trạng thái nghiệp vụ nào; chưa replay và chưa mở batch invoice. B1 được giữ lại
+  nguyên để tiếp tục sau khi đăng nhập admin trên app QA riêng; các gate production, release,
+  deploy, migration production và Git vẫn đóng.
+
+- Tiếp tục sau khi admin đăng nhập B1: GET
+  `/Cutover/DongHopDongTruocCutover?hopDongId=10` render sạch, không HTTP 500/warning/error
+  console; action POST là `/Cutover/DongHopDongTruocCutover`. Các input mặc định khớp contract:
+  trả phòng `30/06/2026`, tiền phòng và dịch vụ đã thanh toán đến `01/06/2026`, công nợ `0`,
+  hoàn cọc `2.700.000` ngày `03/07/2026`; nhập `Sổ thu của gia đình`, lý do cutover mặc định
+  không rỗng, bật đúng hai xác nhận bắt buộc. Gửi **đúng một** POST qua UI, không gửi payment/receipt.
+- UI sau POST redirect `/HopDong/Details/10`, hiển thị `Đã kết thúc`, ngày kết thúc `30/06/2026`,
+  số dư cọc `0 đ` và thông báo thành công. Hậu kiểm B1 SELECT-only: HĐ #10 `DaKetThuc`,
+  `NgayKetThuc=NgayTraPhongThucTe=30/06/2026`, phòng 602 `Trong`; 2 cư trú cùng kết thúc
+  `30/06/2026`, 6 dịch vụ cùng `KyKetThuc=01/07/2026`. Ledger có đúng một `HoanCoc=-2.700.000`,
+  số dư sau giao dịch `0`, ngày `03/07/2026`, nguồn `Sổ thu của gia đình`; không có `ThanhToan`
+  hoặc `ThuChi` giả.
+- Audit B1 đúng một dòng: ba mốc đã chốt, công nợ `0`, hoàn cọc `2.700.000`, nguồn đúng,
+  actor `admin`, `IdempotencyKey=DONG_TRUOC_CUTOVER:10`. `HoaDon`, `KhoanPhatSinhHopDong`,
+  `CongNoMoSo`, `ChiSoDienNuoc`, `ChiSoNgoaiHopDong` phòng 602 và
+  `GiaoDichTinDungTienPhong` liên quan HĐ #10 đều còn `0`.
+- Replay UI GET cutover hiển thị trạng thái đã xử lý; toàn bộ form/checkbox và submit đều disabled,
+  console vẫn sạch. SELECT-only xác nhận `AuditCount=1`, `HoanCocCount=1`, tổng ledger HĐ #10 là 2
+  dòng, không tạo bản ghi trùng. GET `/HoaDon/ChotHangLoat?thang=8&nam=2026` trên B1 có đúng 9
+  hợp đồng active (#1..#9), không có HĐ #10; không tạo invoice cho bất kỳ dòng nào.
+- **PASS acceptance UI workflow cutover HĐ #10/phòng 602.** Giữ nguyên B1 cùng listener QA tạm
+  `127.0.0.1:5098` cho acceptance tiếp theo; A4 `127.0.0.1:5097` cũng giữ nguyên. Không apply
+  production, không release/publish/deploy/NSSM, không stage/commit/push; các gate đó vẫn đóng.

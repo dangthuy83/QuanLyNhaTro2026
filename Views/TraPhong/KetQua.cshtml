@@ -13,6 +13,18 @@
         <div class="app-panel-header"><h2 id="result-title">Kết quả quyết toán</h2></div>
         <div class="app-panel-body">
             <dl class="lifecycle-settlement-list">
+                @if (Model.TinDungTienPhongTaoMoi > 0)
+                {
+                    <div><dt>Credit tiền phòng đã tạo</dt><dd>@Model.TinDungTienPhongTaoMoi.ToString("N0") đ</dd></div>
+                }
+                @if (Model.TinDungApDung > 0)
+                {
+                    <div><dt>Credit đã bù nghĩa vụ</dt><dd>@Model.TinDungApDung.ToString("N0") đ</dd></div>
+                }
+                @if (Model.TienHoanTinDung > 0)
+                {
+                    <div><dt>Credit đã hoàn</dt><dd>@Model.TienHoanTinDung.ToString("N0") đ</dd></div>
+                }
                 <div><dt>Tiền cọc</dt><dd>@Model.TienCoc.ToString("N0") đ</dd></div>
                 <div><dt>Tổng nợ còn lại</dt><dd>@Model.TongNoConLai.ToString("N0") đ</dd></div>
                 @if (Model.TongTienPhatSinhConLai > 0)
@@ -34,7 +46,6 @@
             }
         </div>
         <div class="lifecycle-result-actions">
-            <a asp-controller="ChiSoNgoaiHopDong" asp-action="Index" asp-route-phongId="@Model.PhongId" class="btn btn-warning">Ghi chỉ số ngoài hợp đồng</a>
             <a asp-controller="Phong" asp-action="Index" class="btn btn-primary">Danh sách phòng</a>
             <a asp-controller="BaoCao" asp-action="CongNo" class="btn btn-outline-secondary">Xem công nợ</a>
         </div>

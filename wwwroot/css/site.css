@@ -266,6 +266,147 @@ body {
     text-rendering: optimizeLegibility;
 }
 
+.cutover-page {
+    display: grid;
+    gap: var(--space-lg);
+    min-width: 0;
+}
+
+.invoices-period-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-sm);
+}
+
+.invoices-period-strip > div {
+    display: grid;
+    gap: .15rem;
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+}
+
+.invoices-period-strip span,
+.invoices-period-strip small {
+    color: var(--color-muted);
+    font-size: .75rem;
+}
+
+.invoices-period-strip strong {
+    color: var(--color-text);
+    font-size: 1.05rem;
+}
+
+.cutover-page .app-page-heading p,
+.cutover-page .app-panel-header p {
+    max-width: 70ch;
+    margin: .25rem 0 0;
+    color: var(--color-muted);
+}
+
+.cutover-page .app-back-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+.cutover-form {
+    display: grid;
+    gap: var(--space-lg);
+    max-width: 64rem;
+}
+
+.cutover-fieldset {
+    display: grid;
+    gap: var(--space-lg);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.cutover-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
+    padding: var(--space-lg);
+}
+
+.cutover-page .app-field {
+    display: grid;
+    gap: .35rem;
+}
+
+.cutover-page .app-field label {
+    color: var(--color-muted);
+    font-size: .8125rem;
+    font-weight: 700;
+}
+
+.cutover-wide {
+    grid-column: 1 / -1;
+}
+
+.cutover-confirmations {
+    display: grid;
+    gap: var(--space-sm);
+    padding-bottom: var(--space-lg);
+}
+
+.cutover-check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    min-height: 2.75rem;
+    margin: 0 var(--space-lg);
+    padding: .75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    cursor: pointer;
+}
+
+.cutover-check .form-check-input {
+    flex: 0 0 auto;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: .05rem 0 0;
+}
+
+.cutover-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+}
+
+@media (max-width: 48rem) {
+    .invoices-period-strip {
+        grid-template-columns: 1fr;
+    }
+    .cutover-fields {
+        grid-template-columns: 1fr;
+        padding: var(--space-md);
+    }
+
+    .cutover-wide {
+        grid-column: auto;
+    }
+
+    .cutover-check {
+        margin-inline: var(--space-md);
+    }
+
+    .cutover-actions {
+        flex-direction: column-reverse;
+    }
+
+    .cutover-actions .btn,
+    .cutover-page .form-control {
+        min-height: 2.75rem;
+    }
+}
+
 button,
 input,
 select,

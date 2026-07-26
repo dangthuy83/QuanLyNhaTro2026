@@ -4,6 +4,27 @@ Baseline này dành cho một quản trị viên. Tất cả route nghiệp vụ
 `/Account/Login`, `/Account/AccessDenied` và `/healthz` được truy cập ẩn danh. Không mở app
 trực tiếp ra Internet.
 
+## Gate migration 13 và cutover 08/2026
+
+Source hiện có migration sequence 13
+`20260726_advance_rent_collection_periods.sql`, nhưng database vận hành vẫn ở journal
+1..12. Không được suy ra quyền apply từ việc build/QA local đã pass.
+
+Trình tự production dự kiến, mỗi bước cần phê duyệt riêng:
+
+1. Dừng mọi nghiệp vụ ghi, chạy `MigrationRunner status` read-only và fingerprint dữ liệu.
+2. Tạo backup mới, restore vào database rehearsal riêng và đối chiếu counts/fingerprint.
+3. Chạy blocker đầu migration, kiểm tra manifest SHA-256 rồi mới `apply-next` đúng một lần.
+4. Hậu kiểm journal 1..13, cột/index/CHECK/trigger, rồi smoke health/auth/preview/read-only.
+5. Chỉ sau một phê duyệt nghiệp vụ khác mới chạy UI “Đóng hợp đồng trước cutover” cho
+   hợp đồng #10/phòng 602. Không chạy SQL UPDATE, không tạo chứng từ/chỉ số lịch sử giả.
+6. Publish release mới và switch NSSM là gate sau migration, không thực hiện chung ngầm
+   với `apply-next`. Nếu app smoke lỗi trước khi có business write, rollback artifact;
+   không tự rollback schema hay sửa journal.
+
+Batch 26/07/2026 chưa thực hiện bất kỳ bước production nào ở trên, chưa publish, chưa
+release, chưa đổi NSSM và chưa switch traffic.
+
 ## 1. Cấu hình bí mật
 
 Không commit `appsettings.json`, mật khẩu, connection string hoặc chứng thư. Tạo hash mật

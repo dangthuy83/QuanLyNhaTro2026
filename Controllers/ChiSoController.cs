@@ -94,12 +94,21 @@ public class ChiSoController(
         return View(model);
     }
 
-    public async Task<IActionResult> Nhap(int hopDongId, int? thang, int? nam)
+    public async Task<IActionResult> Nhap(
+        int hopDongId,
+        int? thang,
+        int? nam,
+        DateTime? ngayBanGiao)
     {
         ViewData["ActiveMenu"] = "chiso";
         var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
         thang = ky.Thang;
         nam = ky.Nam;
+        if (ngayBanGiao.HasValue)
+        {
+            thang = ngayBanGiao.Value.Month;
+            nam = ngayBanGiao.Value.Year;
+        }
 
         var hopDong = await hopDongRepo.GetByIdAsync(hopDongId);
         if (hopDong == null) return NotFound();
@@ -114,6 +123,7 @@ public class ChiSoController(
             CancelUrl = Url.Action(nameof(Index), new { thang, nam }) ?? "/ChiSo",
             HopDong = hopDong,
             Phong = hopDong.Phong,
+            NgayBanGiao = ngayBanGiao?.Date,
             DichVuTheoChiSo = formData.DichVuTheoChiSo,
             ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId),
             ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu,
@@ -122,12 +132,22 @@ public class ChiSoController(
         });
     }
 
-    public async Task<IActionResult> NhapTheoPhong(int phongId, int? thang, int? nam, int? returnHopDongId)
+    public async Task<IActionResult> NhapTheoPhong(
+        int phongId,
+        int? thang,
+        int? nam,
+        int? returnHopDongId,
+        DateTime? ngayBanGiao)
     {
         ViewData["ActiveMenu"] = "chiso";
         var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
         thang = ky.Thang;
         nam = ky.Nam;
+        if (ngayBanGiao.HasValue)
+        {
+            thang = ngayBanGiao.Value.Month;
+            nam = ngayBanGiao.Value.Year;
+        }
 
         var phong = await phongRepo.GetByIdAsync(phongId);
         if (phong == null) return NotFound();
@@ -145,6 +165,7 @@ public class ChiSoController(
             CancelUrl = cancelUrl ?? "/ChiSo",
             Phong = phong,
             ReturnHopDongId = returnHopDongId,
+            NgayBanGiao = ngayBanGiao?.Date,
             DichVuTheoChiSo = formData.DichVuTheoChiSo,
             ChiSoHienTai = formData.ChiSoHienTai.ToDictionary(cs => cs.DichVuId),
             ChiSoDauTheoDichVu = formData.ChiSoDauTheoDichVu,
@@ -163,6 +184,7 @@ public class ChiSoController(
         decimal[] chiSoCuois,
         int[] chiSoIds,
         DateTime?[] ngayDocs,
+        DateTime? ngayBanGiao,
         string[] loaiGhiNhans,
         decimal?[] chiSoTruocResets,
         decimal?[] chiSoSauResets,
@@ -182,6 +204,7 @@ public class ChiSoController(
             chiSoCuois,
             chiSoIds,
             ngayDocs,
+            ngayBanGiao,
             loaiGhiNhans,
             chiSoTruocResets,
             chiSoSauResets,
@@ -190,7 +213,7 @@ public class ChiSoController(
         if (errors.Count > 0)
         {
             TempData["Error"] = "Khong the luu chi so. " + string.Join(" ", errors);
-            return RedirectToAction(nameof(Nhap), new { hopDongId, thang, nam });
+            return RedirectToAction(nameof(Nhap), new { hopDongId, thang, nam, ngayBanGiao });
         }
 
         TempData["Success"] = $"Da luu chi so ky {thang}/{nam}.";
@@ -208,6 +231,7 @@ public class ChiSoController(
         decimal[] chiSoCuois,
         int[] chiSoIds,
         DateTime?[] ngayDocs,
+        DateTime? ngayBanGiao,
         string[] loaiGhiNhans,
         decimal?[] chiSoTruocResets,
         decimal?[] chiSoSauResets,
@@ -227,6 +251,7 @@ public class ChiSoController(
             chiSoCuois,
             chiSoIds,
             ngayDocs,
+            ngayBanGiao,
             loaiGhiNhans,
             chiSoTruocResets,
             chiSoSauResets,
@@ -235,7 +260,7 @@ public class ChiSoController(
         if (errors.Count > 0)
         {
             TempData["Error"] = "Khong the luu chi so. " + string.Join(" ", errors);
-            return RedirectToAction(nameof(NhapTheoPhong), new { phongId, thang, nam, returnHopDongId });
+            return RedirectToAction(nameof(NhapTheoPhong), new { phongId, thang, nam, returnHopDongId, ngayBanGiao });
         }
 
         TempData["Success"] = $"Da luu chi so phong {phong.TenPhong} ky {thang}/{nam}.";
@@ -428,6 +453,7 @@ public class ChiSoController(
         decimal[] chiSoCuois,
         int[] chiSoIds,
         DateTime?[] ngayDocs,
+        DateTime? ngayBanGiao,
         string[] loaiGhiNhans,
         decimal?[] chiSoTruocResets,
         decimal?[] chiSoSauResets,
@@ -456,7 +482,7 @@ public class ChiSoController(
 
         try
         {
-            await SaveChiSoItemsAsync(result.Items);
+            await SaveChiSoItemsAsync(result.Items, ngayBanGiao);
         }
         catch (InvalidOperationException ex)
         {
@@ -583,17 +609,14 @@ public class ChiSoController(
         return new ChiSoValidationResult(items, errors);
     }
 
-    private async Task SaveChiSoItemsAsync(IEnumerable<ChiSoNhapItem> items)
-        => await chiSoService.LuuBatchAsync(items.Select(x => x.ChiSo));
+    private async Task SaveChiSoItemsAsync(
+        IEnumerable<ChiSoNhapItem> items,
+        DateTime? ngayBanGiao = null)
+        => await chiSoService.LuuBatchAsync(items.Select(x => x.ChiSo), ngayBanGiao);
 
     private static DateTime ResolveNgayDocMacDinh(int thang, int nam, HopDong hopDong)
     {
-        var ngay = new DateTime(nam, thang, DateTime.DaysInMonth(nam, thang));
-        if (hopDong.NgayKetThuc.HasValue && hopDong.NgayKetThuc.Value.Date < ngay)
-            ngay = hopDong.NgayKetThuc.Value.Date;
-        if (hopDong.NgayBatDau.Date > ngay)
-            ngay = hopDong.NgayBatDau.Date;
-        return ngay;
+        return MeterReadingWindowPolicy.RegularWindow(thang, nam).Start;
     }
 
     private async Task<ChiSoDauInfo> ResolveChiSoDauAsync(

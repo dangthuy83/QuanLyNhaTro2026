@@ -14,14 +14,16 @@ public class HoaDonSnapshotService
         await DienNhanDienAsync(conn, tx, hoaDon);
         const string sql = """
             INSERT INTO HoaDon
-                (HopDongId,Thang,Nam,NgayLap,NgayDenHan,TienPhong,TongTienDichVu,TongTienPhatSinh,
-                 TienNoKyTruoc,TongCong,SoTienDaThu,TrangThaiThanhToan,SoNgayO,
+                (HopDongId,KyThu,KyTienPhong,KyDichVu,LoaiHoaDon,NgayLap,NgayDenHan,
+                 TienPhong,TongTienDichVu,TongTienPhatSinh,TienNoKyTruoc,TienTinDungApDung,
+                 TongCong,SoTienDaThu,TrangThaiThanhToan,SoNgayO,
                  SoNgayTrongThang,HoaDonGhepId,GhiChu,NhaIdSnapshot,TenNhaSnapshot,
                  PhongIdSnapshot,TenPhongSnapshot,KhachDaiDienIdSnapshot,
                  TenKhachDaiDienSnapshot,CccdKhachDaiDienSnapshot)
             VALUES
-                (@HopDongId,@Thang,@Nam,@NgayLap,@NgayDenHan,@TienPhong,@TongTienDichVu,@TongTienPhatSinh,
-                 @TienNoKyTruoc,@TongCong,@SoTienDaThu,@TrangThaiThanhToan,@SoNgayO,
+                (@HopDongId,@KyThu,@KyTienPhong,@KyDichVu,@LoaiHoaDon,@NgayLap,@NgayDenHan,
+                 @TienPhong,@TongTienDichVu,@TongTienPhatSinh,@TienNoKyTruoc,@TienTinDungApDung,
+                 @TongCong,@SoTienDaThu,@TrangThaiThanhToan,@SoNgayO,
                  @SoNgayTrongThang,@HoaDonGhepId,@GhiChu,@NhaIdSnapshot,@TenNhaSnapshot,
                  @PhongIdSnapshot,@TenPhongSnapshot,@KhachDaiDienIdSnapshot,
                  @TenKhachDaiDienSnapshot,@CccdKhachDaiDienSnapshot);
@@ -42,10 +44,14 @@ public class HoaDonSnapshotService
         const string insertSql = """
             INSERT INTO ChiTietHoaDon
                 (HoaDonId,DichVuId,ChiSoDienNuocId,SoLuong,DonGia,ThanhTien,
-                 TenDichVuSnapshot,DonViTinhSnapshot)
+                 TenDichVuSnapshot,DonViTinhSnapshot,KySuDung,NgayDocSnapshot,
+                 ChiSoDauSnapshot,ChiSoCuoiSnapshot,LoaiGhiNhanSnapshot,
+                 ChiSoTruocResetSnapshot,ChiSoSauResetSnapshot,LyDoDieuChinhSnapshot)
             VALUES
                 (@HoaDonId,@DichVuId,@ChiSoDienNuocId,@SoLuong,@DonGia,@ThanhTien,
-                 @TenDichVuSnapshot,@DonViTinhSnapshot)
+                 @TenDichVuSnapshot,@DonViTinhSnapshot,@KySuDung,@NgayDocSnapshot,
+                 @ChiSoDauSnapshot,@ChiSoCuoiSnapshot,@LoaiGhiNhanSnapshot,
+                 @ChiSoTruocResetSnapshot,@ChiSoSauResetSnapshot,@LyDoDieuChinhSnapshot)
             """;
 
         foreach (var item in chiTiet)
@@ -59,6 +65,21 @@ public class HoaDonSnapshotService
             item.HoaDonId = hoaDonId;
             item.TenDichVuSnapshot = dichVu.TenDichVu;
             item.DonViTinhSnapshot = dichVu.DonViTinh;
+            if (item.ChiSoDienNuocId.HasValue)
+            {
+                var meter = await conn.QueryFirstOrDefaultAsync<ChiSoDienNuoc>(
+                    "SELECT * FROM ChiSoDienNuoc WHERE Id=@Id FOR UPDATE",
+                    new { Id = item.ChiSoDienNuocId.Value }, tx)
+                    ?? throw new InvalidOperationException(
+                        $"Không tìm thấy chỉ số #{item.ChiSoDienNuocId.Value} để chốt snapshot hóa đơn.");
+                item.NgayDocSnapshot = meter.NgayDoc;
+                item.ChiSoDauSnapshot = meter.ChiSoDau;
+                item.ChiSoCuoiSnapshot = meter.ChiSoCuoi;
+                item.LoaiGhiNhanSnapshot = meter.LoaiGhiNhan;
+                item.ChiSoTruocResetSnapshot = meter.ChiSoTruocReset;
+                item.ChiSoSauResetSnapshot = meter.ChiSoSauReset;
+                item.LyDoDieuChinhSnapshot = meter.LyDoDieuChinh;
+            }
             await conn.ExecuteAsync(insertSql, item, tx);
         }
     }
@@ -80,7 +101,8 @@ public class HoaDonSnapshotService
             new { hoaDon.HopDongId }, tx)
             ?? throw new InvalidOperationException("Không tìm thấy hợp đồng/phòng/nhà để chốt snapshot hóa đơn.");
 
-        var kyBatDau = new DateTime(hoaDon.Nam, hoaDon.Thang, 1);
+        var periods = BillingCollectionPeriodPolicy.Validate(hoaDon);
+        var kyBatDau = hoaDon.KyThu;
         var kyKetThuc = kyBatDau.AddMonths(1).AddDays(-1);
         var daiDienTrongKy = (await conn.QueryAsync<RepresentativeIdentity>(
             """
@@ -120,11 +142,9 @@ public class HoaDonSnapshotService
         if (scope.NgayThanhToanHangThang is < 1 or > 31)
             throw new InvalidOperationException(
                 $"Hợp đồng #{hoaDon.HopDongId} có ngày thanh toán ngoài khoảng 1-31.");
-        var thangDenHan = kyBatDau.AddMonths(1);
-        var ngayDenHan = Math.Min(
-            scope.NgayThanhToanHangThang,
-            DateTime.DaysInMonth(thangDenHan.Year, thangDenHan.Month));
-        hoaDon.NgayDenHan = new DateTime(thangDenHan.Year, thangDenHan.Month, ngayDenHan);
+        hoaDon.NgayDenHan = hoaDon.LoaiHoaDon == "DinhKy"
+            ? periods.NgayDenHan
+            : hoaDon.NgayDenHan;
     }
 
     private sealed class InvoiceScope
