@@ -3247,4 +3247,12 @@ Khi kết thúc phiên:
   kỳ thu 08/2026. Đã chuyển đến kỳ thu 08/2026.” Console warning/error rỗng.
 - Local QA dùng `UseEphemeralDataProtection=true` vì profile key ring bị từ chối; User Secrets cục bộ
   chỉ dùng để admin đăng nhập và không được ghi/in vào repo. Không deploy/release/NSSM/migration,
-  không ghi production DB, không stage/commit/push. Dừng trước deploy để chờ approval riêng.
+  không ghi production DB, không stage/commit/push. Đã dừng trước deploy và chỉ tiếp tục sau approval
+  riêng.
+- Sau approval deploy: publish Release từ commit `2863277` vào
+  `C:\Apps\QuanLyNhaTro-Releases\2863277-legacy-period-20260726-235900` (55 files; không mang
+  `appsettings`, `Database`, `tools` hoặc hai file opening-balance được bảo vệ). NSSM đã switch
+  `Application`/`AppDirectory` sang artifact này; `QuanLyNhaTro` là `SERVICE_RUNNING`, `/healthz`
+  tại port 5001 trả HTTP 200 `{"status":"healthy"}`. GET chưa đăng nhập `/HoaDon?thang=8&nam=2026`
+  trả 302 về Login đúng auth gate. Không migration, không ghi production DB; artifact `2128d48`
+  được giữ lại làm rollback.

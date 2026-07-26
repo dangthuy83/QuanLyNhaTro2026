@@ -67,8 +67,10 @@ Build warning-as-error pass `0/0`; verifier controller xác nhận `06/2026 -> 0
 và `08/2026` vẫn resolve hợp lệ. Browser smoke QA đã đăng nhập xác nhận Dashboard hiển thị
 `08/2026`, hai link Hóa đơn mang query `thang=8&nam=2026` và link được điều hướng tới Index hợp lệ.
 GET trực tiếp `08/2026` render `Kỳ thu 8/2026`; GET `06/2026` redirect về `08/2026` với thông báo
-chính sách; console warning/error rỗng. Đây vẫn chỉ là validation local; deploy-ready cần approval
-deploy riêng và không được suy ra từ browser QA.
+chính sách; console warning/error rỗng. Sau approval deploy riêng, release
+`2863277-legacy-period-20260726-235900` đã switch qua NSSM, service `SERVICE_RUNNING` và
+`/healthz` trả HTTP 200. Không migration, không ghi production DB và không đổi M13/cutover hay
+contract tài chính.
 
 ---
 

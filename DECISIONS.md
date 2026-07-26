@@ -66,7 +66,10 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   cùng thông báo nghiệp vụ; POST vẫn để policy fail-closed.
 - QA browser đã đăng nhập xác nhận Dashboard và các quick action mang kỳ `08/2026`; GET
   `/HoaDon?thang=8&nam=2026` render bình thường và URL cũ `06/2026` redirect về `08/2026` kèm
-  thông báo chính sách. Đây là bằng chứng local-only, không mở quyền deploy/release/NSSM.
+  thông báo chính sách. Đây là bằng chứng local-only, không tự mở quyền deploy/release/NSSM.
+- Sau approval deploy riêng, release `2863277-legacy-period-20260726-235900` đã được switch qua
+  NSSM. `QuanLyNhaTro` chạy artifact mới và `/healthz` trả HTTP 200; không migration, không ghi
+  production DB và không thay đổi contract cutover/tài chính.
 
 ---
 
