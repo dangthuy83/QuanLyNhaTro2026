@@ -44,8 +44,21 @@ File này ghi các quyết định đã chốt. Mỗi phiên mới nên đọc f
   tự trừ kỳ kế tiếp.
 - Hợp đồng #10/phòng 602 chỉ được đóng bằng workflow guard/audit, không sửa SQL trực
   tiếp, không tạo chứng từ hay chỉ số lịch sử giả, và chống replay hoàn cọc.
-- Migration sequence 13 là cổng production riêng. Batch 26/07/2026 chỉ tạo và rehearsal
-  trên database QA; chưa apply migration hoặc chạy cutover trên database vận hành.
+- Migration sequence 13 là cổng production riêng. Sau backup/restore verify và approval riêng,
+  sequence 13 đã được apply đúng một lần trên production ngày 26/07/2026; release `2128d48` và
+  cutover guard/audit HĐ #10 cũng đã hoàn tất. Mọi migration, release hay collection tiếp theo
+  vẫn là gate độc lập, không được suy ra từ lần apply này.
+
+### Tương thích điều hướng kỳ cũ sau cutover (26/07/2026)
+
+- Từ cutover, mọi màn hình dẫn vào nghiệp vụ hóa đơn/chốt hóa đơn phải dùng cùng default
+  `BillingCollectionPeriodPolicy.DefaultCollectionPeriod()`, không được tự suy ra “tháng trước”
+  qua `DefaultBillingPeriodResolver`.
+- URL có kỳ thu trước `08/2026` là dữ liệu lịch sử không thể xử lý theo policy mới. Controller phải
+  trả thông báo rõ ràng và redirect về kỳ hợp lệ, hoặc trả lỗi nghiệp vụ có chủ đích; không để
+  `InvalidOperationException` không bắt thành HTTP 500.
+- Đây chỉ là quyết định điều hướng/khả dụng. Không tạo hóa đơn lịch sử, không nới `CutoverPeriod`,
+  không sửa migration M13 hay dữ liệu production để hỗ trợ URL cũ.
 
 ---
 

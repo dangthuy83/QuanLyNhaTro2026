@@ -10,10 +10,10 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 
 | Mục | Trạng thái |
 |---|---|
-| Giai đoạn | Batch billing thu tiền phòng trước/dịch vụ sau đã hoàn tất code và QA local; chờ duyệt migration production, stage/commit và release riêng |
+| Giai đoạn | Migration 13, release `2128d48` và cutover production HĐ #10 đã hoàn tất; cần xử lý riêng lỗi điều hướng kỳ trước cutover trên Tổng quan |
 | Build | Phiên 74: app và ba tool vận hành `net10.0` build SDK 10.0.302 với `-warnaserror`, `0 warning / 0 error` |
 | Restore | Assets local đủ để build; package audit direct/transitive phiên 74 bị chặn vì môi trường không được phép truy cập NuGet, chưa được ghi nhận pass |
-| Database | Phiên 74: DB vận hành SELECT-only, journal 1..12 và fingerprint trước/sau phải khớp; migration 13 và mọi flow ghi chỉ chạy trên hai DB QA tạm rồi drop |
+| Database | Production đã có journal 01..13; mọi thao tác DB tiếp theo vẫn phải theo gate riêng và chỉ đọc cho đến khi được phê duyệt ghi |
 | GitHub repo | `https://github.com/dangthuy83/QuanLyNhaTro2026.git` |
 | Quyết định quan trọng | `HopDong.TienThueThoaThuan` là giá gốc riêng; lịch sử tăng/giảm giá thuê scope theo `HopDong`; `Phong.GiaThueMacDinh` chỉ gợi ý hợp đồng mới. |
 
@@ -37,6 +37,7 @@ File này ghi lại tiến trình theo thời gian: đã làm gì, lỗi nào đ
 | 10 | Rà tiếp UI chỉ số nhiều đoạn sau vận hành thật | Phiên 38 đã smoke test qua MVC form thật; in-app browser plugin bị lỗi hạ tầng `failed to write kernel assets` nên chưa có screenshot browser | Thấp |
 | 11 | Rà UI khoản phát sinh sau pilot | Đã có bản tối thiểu cho hợp đồng/hóa đơn/trả phòng; theo dõi nhu cầu ảnh hiện trạng, danh mục tài sản, hoặc báo cáo riêng | Thấp |
 | 12 | Rà màn sẵn sàng vận hành sau khi có dữ liệu thật | Màn `KiemTraDuLieu/Index` đã build pass; cần dùng với dữ liệu thật để tinh chỉnh bộ lọc/badge nếu phát sinh cách vận hành mới | Thấp |
+| 13 | Sửa điều hướng kỳ cũ trước cutover | Tổng quan dùng tháng trước (`06/2026`) nhưng `HoaDon/Index` chỉ nhận `KyThu >= 08/2026`, gây HTTP 500; cần batch code/QA/deploy riêng | Cao |
 
 ### Quy ước GitHub
 
@@ -3113,3 +3114,101 @@ Khi kết thúc phiên:
 - **PASS acceptance UI workflow cutover HĐ #10/phòng 602.** Giữ nguyên B1 cùng listener QA tạm
   `127.0.0.1:5098` cho acceptance tiếp theo; A4 `127.0.0.1:5097` cũng giữ nguyên. Không apply
   production, không release/publish/deploy/NSSM, không stage/commit/push; các gate đó vẫn đóng.
+
+## 26/07/2026 - PRODUCTION-M13-AND-CUTOVER-HOPDONG10-20260726 (dừng preflight)
+
+- Đã đọc contract/runbook M13-cutover, xác nhận source `HEAD=origin/main=2128d48d9aab4187b0975b84bc1c1dbc6cdcc300`.
+  `git status --short` chỉ có hai file untracked được bảo vệ `opening-balance.json` và
+  `tools/OpeningBalanceImporter/templates/opening-balance.sample.json`; không reset/clean/stash/check-out,
+  không sửa, stage hoặc xóa hai file này.
+- **BLOCKED trước mọi thao tác DB production:** phiên Codex không có
+  `QUANLYNHATRO_CONNECTION`, nên không thể chạy `MigrationRunner status` read-only. Không trích xuất
+  credential từ cấu hình NSSM/service. Vì vậy chưa có inventory/fingerprint mới, chưa tạo backup hay
+  restore QA, chưa apply M13, chưa kiểm tra schema hậu apply, chưa mở/POST/replay UI cutover HĐ #10,
+  và chưa mở preview batch 08/2026.
+- Không có thay đổi database, backup, migration, hóa đơn/collection/thanh toán, app release,
+  publish/deploy/NSSM/service, stage/commit/push. B1/A4 không bị reset, drop hoặc sửa; tất cả gate
+  production còn đóng cho tới khi một connection production được cấp rõ ràng cho runner và toàn bộ
+  preflight/backup-restore pass.
+
+## 26/07/2026 - PRODUCTION-M13-AND-CUTOVER-HOPDONG10-20260726 (M13 hoàn tất; cutover dừng)
+
+- Connection production được đọc kín từ `appsettings.json`, chỉ gán tạm cho `MigrationRunner` và
+  không in/lưu secret. Preflight read-only: journal 01..12 liên tục, chỉ sequence 13 pending;
+  HĐ #10/phòng 602 còn `DangHieuLuc`/`DangThue`, cọc ledger `2.700.000`, 2 cư trú, 6 dịch vụ;
+  `HoaDon`, `ThanhToan`, khoản phát sinh, `CongNoMoSo`, chỉ số trong/ngoài HĐ và `ThuChi` liên quan đều 0.
+- Backup mới `I:\CODEX\QuanLyNhaTro\.tmp\production-backups\quanlynhatro_m13_pre_20260726_202955.sql`
+  tạo bằng `mysqldump --single-transaction --routines --triggers --skip-lock-tables`: 71.493 bytes,
+  SHA-256 `7043079EF256EBBA0A6AE340F4C39E8EE00448E3DC005D6A7FBE0E0C79DCEC1E`.
+  Restore tạm `QuanLyNhaTro_M13_RestoreVerify_20260726203009` khớp fingerprint
+  `55F39AA10DDD6D630CF2456FD351734E35B8D38B00F552CB9D9CA3A9F7BC6764`: 25/25 bảng,
+  7/7 trigger, row count/CHECKSUM và journal 01..12 đều khớp; schema QA đã drop sau xác minh.
+- Đã chạy đúng một `MigrationRunner apply-next` trên production: sequence 13
+  `20260726_advance_rent_collection_periods` thành công. Status hậu kiểm là 01..13, không pending.
+  Schema M13 có ba kỳ hóa đơn, snapshot chỉ số/reset, `GiaoDichTinDungTienPhong`,
+  `AuditDongHopDongTruocCutover`, CHECK/FK/index/unique và hai trigger snapshot bất biến.
+- Inventory hậu M13 của HĐ #10/phòng 602 không đổi. `CHECKSUM TABLE` của `GiaoDichCoc` đổi do
+  M13 ALTER thêm cột audit; để loại trừ thay đổi dữ liệu, hash nội dung toàn bộ cột đã tồn tại trước
+  M13 so với restore là `4998FA96F7F438A46480A0BA8CB5A4AF300732C83C6E24C50BBC6D95431A6C11`
+  ở cả hai bên (10 rows). Không có invoice/payment/thu-chi/meter/phát sinh/nợ/credit mới.
+- **Dừng trước cutover UI HĐ #10:** service `QuanLyNhaTro` hiện chạy từ thư mục release
+  `C:\Apps\QuanLyNhaTro-Releases\35adf93-remember-20260721-223902` tại port 5001; tree Git của
+  commit `35adf93` không có source Cutover. GET chưa đăng nhập tới route trả 302 về Login, chỉ chứng
+  minh auth middleware chặn request và **không đủ xác minh provenance runtime là commit `2128d48`**.
+  Không publish/deploy/NSSM/service change, không GET form đã xác thực/POST/replay cutover, không mở
+  preview/POST collection 08/2026. A4/B1 không bị reset, drop hoặc sửa.
+- Không stage/commit/push. Hai file opening-balance được bảo vệ giữ nguyên. Gate còn đóng: deploy
+  artifact `2128d48` theo approval release riêng, rồi mới re-preflight route/form và thực hiện đúng
+  một UI cutover HĐ #10; collection/chốt hóa đơn 08/2026 tiếp tục bị cấm trong batch này.
+
+## 26/07/2026 - RELEASE-2128D48-AND-CUTOVER-LOGIN-GATE
+
+- Được phê duyệt deploy artifact `2128d48` và xác minh runtime/form trước một POST cutover.
+  `dotnet build -c Release --no-restore -warnaserror` pass `0 warning / 0 error`.
+  Publish versioned tại `C:\Apps\QuanLyNhaTro-Releases\2128d48-cutover-20260726-203704` có 56 file;
+  `QuanLyNhaTro.dll` SHA-256 `C7C5A4FF0E3063026392FF9843ED67C3B0371F9AF6E77DB59EB16B7FC1370B96`;
+  không có `appsettings*.json`, `Database`, `tools` hoặc opening-balance trong artifact.
+- NSSM `QuanLyNhaTro` đã switch từ artifact `35adf93` sang artifact trên và restart thành công.
+  `/healthz` tại port 5001 trả HTTP 200; artifact cũ vẫn giữ nguyên để rollback. Không đổi secret,
+  connection string, firewall hay cấu hình nghiệp vụ.
+- GET route `/Cutover/DongHopDongTruocCutover?hopDongId=10` sau switch đi tới Login, xác nhận
+  runtime đã nhận route Cutover nhưng Browser session chưa đăng nhập. Màn Login production đã mở
+  ở chế độ handoff. **Chưa GET form đã xác thực, chưa POST, chưa ghi HĐ/cọc/audit và chưa mở
+  preview/collection 08/2026.** Chờ admin đăng nhập rồi mới kiểm tra form/console/input và gửi đúng một POST.
+
+## 26/07/2026 - PRODUCTION-CUTOVER-HOPDONG10-602 HOÀN TẤT
+
+- Sau khi admin đăng nhập, form production `/Cutover/DongHopDongTruocCutover?hopDongId=10` render
+  đúng cho Phòng 602, console warning/error rỗng. Giá trị form được xác minh trước POST: trả phòng
+  `30/06/2026`; tiền phòng và dịch vụ đã thanh toán đến `01/06/2026`; công nợ `0`; hoàn cọc
+  `2.700.000` ngày `03/07/2026`; nguồn `Sổ thu của gia đình`; lý do cutover không rỗng; hai checkbox
+  bắt buộc được bật. Đã gửi **đúng một** POST UI, không gửi payment/receipt riêng.
+- POST redirect `/HopDong/Details/10`, hiển thị `Đã kết thúc`, ngày `30/06/2026`, số dư cọc `0 đ`
+  và thông báo thành công. Hậu kiểm production SELECT-only: HĐ #10 `DaKetThuc`,
+  `NgayKetThuc=NgayTraPhongThucTe=30/06/2026`; Phòng 602 `Trong`; 2 cư trú cùng kết thúc
+  `30/06/2026`; 6 dịch vụ cùng `KyKetThuc=01/07/2026`.
+- Ledger HĐ #10 có đúng một `HoanCoc=-2.700.000`, số dư sau `0`, ngày `03/07/2026`, nguồn
+  `Sổ thu của gia đình`. Audit có đúng một dòng với ba mốc đã chốt, công nợ `0`, actor `admin` và
+  `IdempotencyKey=DONG_TRUOC_CUTOVER:10`. `HoaDon`, `ThanhToan`, `ThuChi`, chỉ số trong/ngoài HĐ,
+  khoản phát sinh, `CongNoMoSo` và credit liên quan HĐ #10 đều `0`.
+- Replay GET Cutover hiển thị trạng thái đã xử lý; input/checkbox/submit đều disabled, console sạch.
+  Preview GET batch 08/2026 có 9 hợp đồng active (#1..#9), không có HĐ #10; 0 dòng sẵn sàng do
+  thiếu chỉ số và **không POST** batch/invoice. A4/B1 không bị reset, drop hoặc sửa.
+- Không tạo collection/invoice/payment khác, không stage/commit/push. Backup M13 và artifact rollback
+  `35adf93` vẫn giữ; service đang chạy artifact `2128d48` đã health 200. Gate còn đóng: collection/
+  chốt hóa đơn 08/2026 chỉ được thực hiện theo phê duyệt nghiệp vụ riêng sau khi có chỉ số 01-05/08.
+
+## 26/07/2026 - DASHBOARD-LEGACY-COLLECTION-PERIOD-500 (chẩn đoán, chưa sửa)
+
+- Người dùng báo link `Kỳ theo dõi` trên Tổng quan hiển thị `06/2026` và trả HTTP 500. Đã đối chiếu
+  source runtime `2128d48`: `HomeController` dùng `DefaultBillingPeriodResolver.Resolve()` nên ngày
+  26/07/2026 trả tháng trước `06/2026`; Razor chuyển nguyên tham số này tới
+  `/HoaDon?thang=6&nam=2026`.
+- `HoaDonController.Index` gọi `BillingCollectionPeriodPolicy.Resolve(thang, nam)`. Policy fail-closed
+  với mọi kỳ thu trước `08/2026` và exception chưa được chuyển thành thông báo/redirect, nên route cũ
+  thành HTTP 500. Đây là lỗi tương thích URL/period-default sau cutover, không phải lỗi dữ liệu hay
+  M13/cutover HĐ #10.
+- Chưa sửa code, không build/release/deploy, không ghi production DB. Batch kế tiếp phải thống nhất
+  default của Dashboard với `BillingCollectionPeriodPolicy.DefaultCollectionPeriod()` và xử lý URL
+  kỳ cũ bằng redirect/thông báo an toàn, rồi build + Browser smoke có xác thực trước một deploy gate
+  riêng.

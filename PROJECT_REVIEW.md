@@ -41,8 +41,23 @@ preview lifecycle, nhắc nợ/công nợ và cutover. Không có overflow/conso
 1440/768/390, target mobile đạt 44px và drawer trả focus sau Escape. Không submit
 execute/result lifecycle qua UI; phần này chỉ có bằng chứng service/transaction nên
 acceptance UI còn có giới hạn. Package audit direct/transitive cũng còn blocked vì
-không có quyền truy cập NuGet. Migration 13 chưa áp production, cutover #10 chưa chạy
-production và chưa có release/deploy.
+không có quyền truy cập NuGet. Cập nhật 26/07/2026: migration 13 đã được apply production sau
+backup/restore verify; release `2128d48` đang chạy và cutover #10 đã hoàn tất đúng một lần qua UI,
+hậu kiểm bằng SELECT-only. Collection/chốt hóa đơn 08/2026 vẫn chưa được phê duyệt thực hiện.
+
+---
+
+### Follow-up production sau cutover - điều hướng kỳ cũ (26/07/2026)
+
+Sau release `2128d48`, Tổng quan vẫn dùng `DefaultBillingPeriodResolver` nên ngày 26/07/2026 hiển
+thị và điều hướng `06/2026`. `HoaDon/Index` đã chuyển sang `BillingCollectionPeriodPolicy`, policy
+này chỉ nhận kỳ thu từ `08/2026`; exception chưa xử lý làm URL cũ trả HTTP 500. Đây là lỗi tương
+thích giữa default cũ và contract cutover, không phải bằng chứng sai dữ liệu hóa đơn.
+
+Batch sửa kế tiếp cần giới hạn ở việc đồng bộ default Dashboard, các quick action liên quan và xử lý
+GET kỳ cũ thành redirect/thông báo rõ ràng. Phải giữ fail-closed cho lập/chốt hóa đơn, không tạo dữ
+liệu lịch sử giả, không nới `CutoverPeriod`; build và Browser smoke đã đăng nhập phải pass trước khi
+mở một gate deploy riêng.
 
 ---
 
