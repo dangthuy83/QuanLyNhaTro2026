@@ -18,7 +18,15 @@ public class KiemTraDuLieuController(
         string trangThaiDong = "TatCa")
     {
         ViewData["ActiveMenu"] = "kiemtra";
-        var ky = DefaultBillingPeriodResolver.Resolve(thang, nam);
+        CollectionPeriods ky;
+        try
+        {
+            ky = BillingCollectionPeriodPolicy.Resolve(thang, nam);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return RedirectToDefaultCollectionPeriod(ex);
+        }
         thang = ky.Thang;
         nam = ky.Nam;
         tuKhoa = tuKhoa?.Trim();
@@ -48,6 +56,13 @@ public class KiemTraDuLieuController(
         };
 
         return View(model);
+    }
+
+    private IActionResult RedirectToDefaultCollectionPeriod(InvalidOperationException ex)
+    {
+        var kyMacDinh = BillingCollectionPeriodPolicy.DefaultCollectionPeriod();
+        TempData["Error"] = $"{ex.Message} Đã chuyển đến kỳ thu {kyMacDinh.Month:D2}/{kyMacDinh.Year}.";
+        return RedirectToAction(nameof(Index), new { thang = kyMacDinh.Month, nam = kyMacDinh.Year });
     }
 
     private static string NormalizeTrangThaiDong(string? trangThaiDong)
